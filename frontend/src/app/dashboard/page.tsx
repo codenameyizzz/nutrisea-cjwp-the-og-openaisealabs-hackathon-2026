@@ -15,7 +15,7 @@ export default async function DashboardPage() {
 
   let access;
   try { access = sessionAccess(sessionClaims); }
-  catch (error) { return <p role="alert">{error instanceof Error ? error.message : "Pemeriksaan sesi gagal."}</p>; }
+  catch (error) { return <p role="alert">{error instanceof Error ? error.message : "Session verification failed."}</p>; }
   if (access.is_admin) redirect("/admin");
   if (access.can_edit_menus) redirect("/merchant");
 

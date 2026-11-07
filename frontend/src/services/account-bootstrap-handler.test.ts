@@ -21,11 +21,11 @@ test("authenticated localhost bootstrap initializes the correct account and requ
   };
   const result = await accountBootstrapResponse(request(), dependencies);
   assert.equal(result.status, 200);
-  assert.deepEqual(await result.json(), { role: "CONSUMER", initialized: true, account: { user_id: "user-signed-in", name: "Pengguna NutriSea", email: null } });
+  assert.deepEqual(await result.json(), { role: "CONSUMER", initialized: true, account: { user_id: "user-signed-in", name: "NutriSea user", email: null } });
   assert.deepEqual(writes, [["user-signed-in", { publicMetadata: { role: "CONSUMER" } }]]);
   // Retry after a failed token refresh must still lead to persona selection.
   const retried = await accountBootstrapResponse(request(), dependencies);
-  assert.deepEqual(await retried.json(), { role: "CONSUMER", initialized: false, account: { user_id: "user-signed-in", name: "Pengguna NutriSea", email: null } });
+  assert.deepEqual(await retried.json(), { role: "CONSUMER", initialized: false, account: { user_id: "user-signed-in", name: "NutriSea user", email: null } });
   assert.equal(writes.length, 1);
 });
 

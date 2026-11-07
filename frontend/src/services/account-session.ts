@@ -9,6 +9,9 @@ export interface AccountProfile {
   kcal_target: number;
 }
 export interface AccountSnapshot {
+  dietary_needs?: string[] | null;
+  dietary_guidance?: "professional" | "personal" | "undisclosed" | null;
+  allergy_status?: "reported" | "none" | "undisclosed" | null;
   user: { id: string; name: string; role: string };
   onboarding_complete: boolean;
   main_persona_id: string | null;
@@ -24,7 +27,7 @@ export async function initializeAccountSession(userId: string,
   const provision = await responseJson<{ role: string; initialized: boolean; account: { user_id: string; name: string; email: string | null } }>(
     await fetcher("/api/auth/bootstrap", { method: "POST", cache: "no-store", signal }));
   signal?.throwIfAborted();
-  if (provision.account.user_id !== userId) throw new Error("Identitas akun berubah. Silakan muat ulang.");
+  if (provision.account.user_id !== userId) throw new Error("Your account identity changed. Please reload the page.");
   const token = await getToken({ skipCache: true });
   signal?.throwIfAborted();
   const access = refreshedSessionAccess(token, userId);
@@ -32,6 +35,6 @@ export async function initializeAccountSession(userId: string,
     method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
     body: JSON.stringify(provision.account), cache: "no-store", signal,
   }));
-  if (account.user.id !== userId) throw new Error("Sinkronisasi akun tidak sesuai sesi.");
+  if (account.user.id !== userId) throw new Error("The synced account does not match your session.");
   return { account, needsPersona: access.role === "CONSUMER" && !account.onboarding_complete };
 }

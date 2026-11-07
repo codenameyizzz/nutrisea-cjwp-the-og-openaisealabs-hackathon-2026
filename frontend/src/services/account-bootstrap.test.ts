@@ -12,7 +12,7 @@ test("first login writes only CONSUMER into the authenticated Clerk account", as
       },
       updateUserMetadata: async (...args: unknown[]) => { writes.push(args); },
     };
-    assert.deepEqual(await ensureCustomerRole(users, "user-self"), { role: "CONSUMER", initialized: true, account: { user_id: "user-self", name: "Pengguna NutriSea", email: null } });
+    assert.deepEqual(await ensureCustomerRole(users, "user-self"), { role: "CONSUMER", initialized: true, account: { user_id: "user-self", name: "NutriSea user", email: null } });
     assert.deepEqual(writes, [["user-self", { publicMetadata: { role: "CONSUMER" } }]]);
   }
 });
@@ -24,7 +24,7 @@ test("existing roles and merchant assignments are preserved on repeated logins",
       getUser: async () => ({ publicMetadata: { role, merchant_ids: ["MTR-existing"] } }),
       updateUserMetadata: async () => { writes++; },
     };
-    assert.deepEqual(await ensureCustomerRole(users, "user-self"), { role, initialized: false, account: { user_id: "user-self", name: "Pengguna NutriSea", email: null } });
+    assert.deepEqual(await ensureCustomerRole(users, "user-self"), { role, initialized: false, account: { user_id: "user-self", name: "NutriSea user", email: null } });
     assert.equal(writes, 0);
   }
 });
@@ -34,7 +34,7 @@ test("legacy Clerk persona metadata does not decide database onboarding status",
     getUser: async () => ({ publicMetadata: { role: "CONSUMER" }, unsafeMetadata: { main_persona_id: "PERSONA-1" } }),
     updateUserMetadata: async () => { assert.fail("Existing role must be preserved"); },
   };
-  assert.deepEqual(await ensureCustomerRole(users, "user-self"), { role: "CONSUMER", initialized: false, account: { user_id: "user-self", name: "Pengguna NutriSea", email: null } });
+  assert.deepEqual(await ensureCustomerRole(users, "user-self"), { role: "CONSUMER", initialized: false, account: { user_id: "user-self", name: "NutriSea user", email: null } });
 });
 
 test("invalid roles are rejected and Clerk write failures are not hidden", async () => {

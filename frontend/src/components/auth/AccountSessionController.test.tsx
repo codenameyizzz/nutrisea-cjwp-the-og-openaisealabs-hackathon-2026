@@ -72,7 +72,35 @@ test("saved onboarding is re-read from the server rather than a stale Clerk mark
 test("sync failure is visible and does not advance to persona or a ready account", async () => {
   const { props, redirects } = setup();
   await render({ ...props, initialize: async () => { throw new Error("Database unavailable"); } });
-  assert.match(host.querySelector('[role="alert"]')!.textContent!, /Database unavailable/);
+  assert.match(host.querySelector('[role="alert"]')!.textContent!, /setup is incomplete/);
+  assert.match(host.querySelector('details')!.textContent!, /Database unavailable/);
   assert.doesNotMatch(host.textContent!, /Account user-new/);
   assert.deepEqual(redirects, []);
+});
+
+test("unresponsive initialization offers retry instead of an endless registration screen", async () => {
+  const { props, redirects } = setup();
+  let signal: AbortSignal | undefined;
+  await render({ ...props, initializationTimeoutMs: 10, initialize: async (_id, _token, _fetch, abort) => {
+    signal = abort;
+    return new Promise(() => {});
+  } });
+  await act(async () => { await new Promise(resolve => setTimeout(resolve, 30)); });
+  assert.equal(signal?.aborted, true);
+  assert.match(host.textContent!, /Your profile is not ready/);
+  assert.match(host.textContent!, /Retry profile setup/);
+  assert.deepEqual(redirects, []);
+});
+
+test("retry after initialization failure restores the same account without a second registration", async () => {
+  const { props, redirects } = setup();
+  let calls = 0;
+  await render({ ...props, initialize: async id => {
+    if (++calls === 1) throw new Error("Temporary outage");
+    return { account: account(id, false), needsPersona: true };
+  } });
+  await act(async () => { host.querySelector('button')!.click(); });
+  assert.equal(calls, 2);
+  assert.match(host.textContent!, /Account user-new/);
+  assert.deepEqual(redirects, ["/onboarding/personas"]);
 });

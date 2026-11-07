@@ -34,54 +34,54 @@ interface RoleOption {
 const ROLES: RoleOption[] = [
   {
     id: "CONSUMER",
-    title: "Customer (Konsumen ShopeeFood)",
-    badge: "Rekomendasi Cerdas & Cashback",
-    subtitle: "Untuk Pelanggan & Pencari Makanan Sehat",
-    description: "Pesan menu sehat yang disesuaikan dengan BMR/TDEE harianmu dari Warteg & Resto terdekat, nikmati cashback SeaBank 10% di setiap transaksi.",
+    title: "ShopeeFood customer",
+    badge: "Food choices for your preferences",
+    subtitle: "For customers",
+    description: "Find food for your budget, preferences, and declared allergies. Orders in this app are simulated.",
     icon: <User size={24} color="#EE4D2D" />,
     iconBg: { background: "#FFF0EB", border: "#FFD0C0" },
     benefits: [
-      "Menu disesuaikan target kalori (Mifflin-St Jeor Formula)",
-      "Deteksi otomatis kalori menu Warteg & barcode makanan",
-      "Cashback SeaBank 10% langsung cair ke dompet digital",
-      "Filter alergi, batas natrium, dan preferensi diet",
+      "Recommendations based on your profile and available nutrition information",
+      "AI food estimates from photos",
+      "Cart and simulated order confirmation",
+      "Allergy, sodium, and dietary preference filters",
     ],
     destination: AUTH_ROUTES.PERSONA_SELECTION,
-    destLabel: "Lanjut Pilih Persona (1 Utama + 3 Pendamping)",
+    destLabel: "Set your food preferences",
   },
   {
     id: "MERCHANT",
-    title: "Merchant (Mitra Warteg & Resto)",
-    badge: "Komisi Spesial 5% & AI Gizi",
-    subtitle: "Untuk Pemilik Warteg, Depot & Restoran",
-    description: "Kelola gerai multi-outlet, estimasi gizi & kalori menu masakan secara instan dengan AI, serta raih sertifikasi dapur higienis untuk potongan komisi.",
+    title: "Food stall and restaurant partner",
+    badge: "Menu and outlet management",
+    subtitle: "For food stall and restaurant owners",
+    description: "Manage outlets, ingredients, and menu information. Partner access follows a review of your application.",
     icon: <Store size={24} color="#00B14F" />,
     iconBg: { background: "#EBF9F1", border: "#C2EFD7" },
     benefits: [
-      "Manajemen cabang & inventaris menu masakan harian",
-      "AI Nutrition Tagger otomatis (Terkalibrasi FatSecret)",
-      "Potongan komisi platform ke 5% (Hemat 15% dari standar)",
-      "Inspeksi & badge sertifikasi dapur higienis resmi",
+      "Branch management and daily menu inventory",
+      "Menu nutrition information and its sources",
+      "Menu pricing and availability",
+      "Outlet application review status",
     ],
     destination: "/merchant",
-    destLabel: "Masuk Portal Mitra Warteg",
+    destLabel: "Open the partner portal",
   },
   {
     id: "SHOPEE_ADMIN",
-    title: "Admin (Shopee SuperAdmin)",
-    badge: "Tata Kelola & Pengawasan Ekosistem",
-    subtitle: "Untuk Tim Internal Operasional & Audit",
-    description: "Akses pusat kendali makro: verifikasi sertifikasi dapur higienis merchant, pantau pertumbuhan GMV makanan sehat, dan analisis peta defisit gizi per kecamatan.",
+    title: "Administrator",
+    badge: "Platform management and oversight",
+    subtitle: "For internal operations and audit teams",
+    description: "Review partner applications and manage outlet information. Available only to accounts with administrator access.",
     icon: <ShieldCheck size={24} color="#2563EB" />,
     iconBg: { background: "#EFF6FF", border: "#BFDBFE" },
     benefits: [
-      "Executive KPI: GMV, cashback SeaBank, & kepatuhan dapur",
-      "Audit & persetujuan sertifikasi higienis 1-klik",
-      "Heatmap gizi intervensi stunting Kemenkes & BKKBN",
-      "Monitoring performa merchant & tren kuliner sehat",
+      "Activity summaries and demonstration data",
+      "Partner application review",
+      "Ingredient and menu data management",
+      "Partner activity monitoring",
     ],
     destination: "/admin",
-    destLabel: "Buka Shopee SuperAdmin Portal",
+    destLabel: "Open the administrator portal",
   },
 ];
 
@@ -128,7 +128,7 @@ export default function OnboardingRolePage() {
 
     try {
       if (!availableRoles.includes(selectedRole)) {
-        setErrorMessage("Akses ini belum ditetapkan oleh pengelola.");
+        setErrorMessage("This access has not been assigned by an administrator.");
         setIsSubmitting(false);
         return;
       }
@@ -141,18 +141,18 @@ export default function OnboardingRolePage() {
       }
 
       router.push(targetPath);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Failed to set role:", err);
-      setErrorMessage("Terjadi kendala saat menetapkan peran. Silakan coba lagi.");
+      setErrorMessage("Your role could not be selected. Please try again.");
       setIsSubmitting(false);
     }
   };
 
-  const userName = user?.firstName || user?.fullName || "Pengguna";
+  const userName = user?.firstName || user?.fullName || "User";
 
   if (isCheckingPersona) {
     return (
-      <div className="onboarding-page-container" style={{ justifyContent: "center", minHeight: "80vh", display: "flex", alignItems: "center" }}>
+      <div lang="en" className="onboarding-page-container" style={{ justifyContent: "center", minHeight: "80vh", display: "flex", alignItems: "center" }}>
         <div style={{ textAlign: "center", color: "#64748B" }}>
           <div style={{
             width: 32,
@@ -163,14 +163,14 @@ export default function OnboardingRolePage() {
             animation: "spin 0.8s linear infinite",
             margin: "0 auto 12px auto"
           }} />
-          <p style={{ fontSize: 13, fontWeight: 600 }}>Memeriksa status persona & profil...</p>
+          <p style={{ fontSize: 13, fontWeight: 600 }}>Checking your persona and profile...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="onboarding-page-container">
+    <div lang="en" className="onboarding-page-container">
       <div className="onboarding-wrapper">
         {/* Top Branding & Progress */}
         <div style={{ textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", gap: 12 }}>
@@ -196,27 +196,33 @@ export default function OnboardingRolePage() {
             letterSpacing: 0.4
           }}>
             <Sparkles size={14} />
-            <span>Langkah Penyiapan Akun Baru</span>
+            <span>New account setup</span>
           </div>
 
           <h1 style={{ fontSize: 24, fontWeight: 800, color: "#0F172A", margin: 0 }}>
-            Pilih Peran Anda di Ekosistem NutriSea
+            How would you like to use NutriSea?
           </h1>
           <p style={{ fontSize: 13.5, color: "#64748B", maxWidth: 620, margin: 0, lineHeight: 1.55 }}>
-            Selamat datang, <strong style={{ color: "#0F172A" }}>{userName}</strong>! Tentukan profil penggunaan Anda untuk membuka dashboard, fitur AI, dan hak akses yang disesuaikan.
+            Welcome, <strong style={{ color: "#0F172A" }}>{userName}</strong>! Choose how you will use NutriSea to access the features available to your role.
           </p>
         </div>
 
         {/* 3 Role Selection Cards */}
         {roleAccessError && <p role="alert">{roleAccessError}</p>}
-        <p>Akun baru mendapat akses Customer. Akses Merchant dan Admin ditetapkan oleh pengelola setelah verifikasi.</p>
-        {!availableRoles.includes("MERCHANT") && <p style={{ marginBottom: 20 }}><Link href="/merchant/register" className="btn-shopee-primary">Daftar sebagai Merchant / Cek Pengajuan</Link></p>}
-        <div className="onboarding-roles-grid">
+        <p>New accounts can browse food. Partner and administrator access is assigned by an administrator.</p>
+        {!availableRoles.includes("MERCHANT") && <p style={{ marginBottom: 20 }}><Link href="/merchant/register" className="btn-shopee-primary">Register as a partner / view application</Link></p>}
+        <div className="onboarding-roles-grid" role="radiogroup" aria-label="Account role">
           {ROLES.filter((role) => availableRoles.includes(role.id)).map((role) => {
             const isSelected = selectedRole === role.id;
             return (
               <div
                 key={role.id}
+                role="radio"
+                aria-checked={isSelected}
+                tabIndex={0}
+                onKeyDown={(event) => {
+                  if (event.key === " " || event.key === "Enter") { event.preventDefault(); setSelectedRole(role.id); }
+                }}
                 onClick={() => setSelectedRole(role.id)}
                 className={`onboarding-role-card ${isSelected ? "selected" : ""}`}
               >
@@ -284,7 +290,7 @@ export default function OnboardingRolePage() {
 
                   <div style={{ borderTop: "1px solid #F1F5F9", paddingTop: 12, display: "flex", flexDirection: "column", gap: 8 }}>
                     <p style={{ fontSize: 10, fontWeight: 800, textTransform: "uppercase", color: "#94A3B8", letterSpacing: 0.5, margin: 0 }}>
-                      Kapabilitas Utama:
+                      Main features:
                     </p>
                     <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: 6, fontSize: 11.5, color: "#334155" }}>
                       {role.benefits.map((benefit, i) => (
@@ -298,8 +304,7 @@ export default function OnboardingRolePage() {
                 </div>
 
                 <div style={{ marginTop: 16, paddingTop: 12, borderTop: "1px solid #F1F5F9" }}>
-                  <button
-                    type="button"
+                  <div
                     style={{
                       width: "100%",
                       padding: "9px 14px",
@@ -317,9 +322,9 @@ export default function OnboardingRolePage() {
                       boxShadow: isSelected ? "0 2px 6px rgba(238, 77, 45, 0.3)" : "none"
                     }}
                   >
-                    <span>{isSelected ? "Peran Dipilih" : "Pilih Peran Ini"}</span>
+                    <span>{isSelected ? "Role selected" : "Select this role"}</span>
                     {isSelected && <ArrowRight size={14} />}
-                  </button>
+                  </div>
                 </div>
               </div>
             );
@@ -348,16 +353,16 @@ export default function OnboardingRolePage() {
         }}>
           <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
             <span style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", color: "#94A3B8", letterSpacing: 0.5 }}>
-              Peran yang Dipilih Saat Ini
+              Selected role
             </span>
             <div style={{ fontSize: 16, fontWeight: 800, color: "#0F172A", display: "flex", alignItems: "center", gap: 8 }}>
               <span>{selectedConfig.title}</span>
               <span style={{ fontSize: 10, fontWeight: 700, backgroundColor: "#FFF0EB", color: "#EE4D2D", padding: "2px 8px", borderRadius: 9999 }}>
-                {selectedRole}
+                {selectedRole === "CONSUMER" ? "Customer" : selectedRole === "MERCHANT" ? "Partner" : "Administrator"}
               </span>
             </div>
             <p style={{ fontSize: 11.5, color: "#64748B", margin: 0 }}>
-              Tujuan berikutnya: <strong style={{ color: "#334155" }}>{selectedConfig.destLabel}</strong>
+              Next step: <strong style={{ color: "#334155" }}>{selectedConfig.destLabel}</strong>
             </p>
           </div>
 
@@ -382,7 +387,7 @@ export default function OnboardingRolePage() {
                 opacity: isSubmitting ? 0.5 : 1
               }}
             >
-              <span>Konfirmasi & Lanjutkan</span>
+              <span>{isSubmitting ? "Opening page..." : selectedRole === "CONSUMER" ? "Continue as a customer" : selectedConfig.destLabel}</span>
               <ArrowRight size={16} />
             </button>
           </div>
@@ -391,10 +396,10 @@ export default function OnboardingRolePage() {
         {/* Footer Note */}
         <div style={{ textAlign: "center", display: "flex", flexDirection: "column", gap: 4, fontSize: 11.5, color: "#64748B" }}>
           <p>
-            Anda dapat berpindah peran kapan saja melalui <strong>Bilah Peran</strong> di bagian atas layar untuk demonstrasi hackathon.
+            You can switch using <strong>the role selector</strong> according to your account permissions.
           </p>
           <p style={{ color: "#94A3B8" }}>
-            NutriSea by ShopeeFood • Sea Labs AI & Nutrition Engine
+            NutriSea by ShopeeFood • Sea Labs food recommendation system
           </p>
         </div>
       </div>

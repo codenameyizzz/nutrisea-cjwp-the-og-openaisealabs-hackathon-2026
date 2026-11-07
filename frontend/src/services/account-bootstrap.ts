@@ -9,7 +9,7 @@ export interface ClerkUsers {
 // Called only on the server with the user ID from Clerk auth(), never a request body.
 export async function ensureCustomerRole(users: ClerkUsers, userId: string) {
   const user = await users.getUser(userId);
-  const account = { user_id: userId, name: [user.firstName, user.lastName].filter(Boolean).join(" ") || "Pengguna NutriSea",
+  const account = { user_id: userId, name: [user.firstName, user.lastName].filter(Boolean).join(" ") || "NutriSea user",
     email: user.primaryEmailAddress?.emailAddress || null };
   const role = user.publicMetadata.role;
   if (role !== undefined && role !== null && role !== "") {
@@ -22,7 +22,7 @@ export async function ensureCustomerRole(users: ClerkUsers, userId: string) {
 }
 
 export function refreshedSessionAccess(token: string | null, userId: string) {
-  if (!token) throw new Error("Sesi tidak tersedia. Silakan masuk kembali.");
+  if (!token) throw new Error("Your session is unavailable. Please sign in again.");
   try {
     // This decode checks UI readiness only. The backend verifies the signature.
     const payload = token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/");
@@ -30,6 +30,6 @@ export function refreshedSessionAccess(token: string | null, userId: string) {
     if (claims.sub !== userId || !claims.metadata?.role) throw new Error();
     return sessionAccess(claims);
   } catch {
-    throw new Error("Role sudah diperiksa di Clerk, tetapi metadata belum tersedia pada sesi. Periksa custom session claims lalu coba lagi.");
+    throw new Error("Your role was checked in Clerk, but session metadata is unavailable. Check the custom session claims and try again.");
   }
 }

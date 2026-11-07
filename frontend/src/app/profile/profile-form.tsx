@@ -5,11 +5,16 @@ import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { API_BASE_URL, responseJson } from "@/lib/api";
 import { ACCOUNT_UPDATED } from "@/services/account-session";
+import type { AccountProfile } from "@/services/account-session";
+import { profileSignature } from "@/services/onboarding-contract";
+import Link from "next/link";
 import { useAccountSession } from "@/context/AccountSessionContext";
 import { AUTH_ROUTES } from "@/domains/auth/config/auth-routes";
 import styles from "./profile.module.css";
 import {
   profileFormValue,
+  profilePayload,
+  ALLERGY_LABELS,
   type Allergy,
   type Goal,
   type NutriSeaProfile,
@@ -30,7 +35,7 @@ export default function ProfileForm() {
   const { isLoaded, user } = useUser();
 
   if (!isLoaded || !user) {
-    return <p className={styles.loading}>Memuat profil...</p>;
+    return <p className={styles.loading}>Loading profile...</p>;
   }
 
   return <ProfileEditor key={user.id} user={user} />;
@@ -44,6 +49,7 @@ function ProfileEditor({
   const router = useRouter();
   const { getToken } = useAuth();
   const { account } = useAccountSession();
+  const [baseline] = useState(account?.profile ?? null);
   const [profile, setProfile] = useState<NutriSeaProfile>(() => {
     return account?.profile ? profileFormValue(account.profile) : EMPTY_PROFILE;
   });
@@ -76,23 +82,26 @@ function ProfileEditor({
     setIsSaving(true);
 
     try {
+      const payload = profilePayload(profile, baseline);
       const token = await getToken();
-      if (!token) throw new Error("Silakan masuk kembali.");
+      if (!token) throw new Error("Please sign in again.");
+      const currentResponse = await fetch(`${API_BASE_URL}/api/users/${user.id}/health-profile`, {
+        headers: { Authorization: `Bearer ${token}` }, cache: "no-store",
+      });
+      const current = currentResponse.status === 404 ? null : await responseJson<AccountProfile>(currentResponse);
+      if (profileSignature(current) !== profileSignature(baseline)) {
+        throw new Error("Your profile changed elsewhere. Your entries have not been saved. Reload to use the latest profile.");
+      }
       await responseJson(await fetch(`${API_BASE_URL}/api/users/${user.id}/health-profile`, {
         method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ age: Number(profile.age), sex: profile.gender === "laki-laki" ? "M" : "F",
-          height_cm: Number(profile.heightCm), weight_kg: Number(profile.weightKg), occupation: profile.occupation,
-          activity_level: account?.profile?.activity_level || "LIGHT",
-          goal: profile.goal === "turun-berat-badan" ? "LOSE_WEIGHT" : "MAINTAIN", allergies: profile.allergies,
-          meal_budget_idr: Number(profile.mealBudget), has_medical_condition: account?.profile?.has_medical_condition || false,
-          max_dinner_cut_pct: account?.profile?.max_dinner_cut_pct ?? 25 })
+        body: JSON.stringify(payload)
       }));
       window.dispatchEvent(new Event(ACCOUNT_UPDATED));
 
       router.push(AUTH_ROUTES.PROFILE);
     } catch (error) {
       console.error("Failed to save NutriSea profile:", error);
-      setErrorMessage("Profil belum berhasil disimpan. Silakan coba lagi.");
+      setErrorMessage(error instanceof Error ? error.message : "Your profile could not be saved. Your entries are still here; try again.");
       setIsSaving(false);
     }
   };
@@ -100,32 +109,32 @@ function ProfileEditor({
   return (
     <section className={styles.page}>
       <div className={styles.card}>
-        <p className={styles.eyebrow}>PERSONALISASI NUTRISEA</p>
-        <h1>Lengkapi profilmu</h1>
+        <p className={styles.eyebrow}>NUTRISEA PERSONALIZATION</p>
+        <h1>{baseline ? "Edit your profile" : "Complete your profile"}</h1>
         <p className={styles.intro}>
-          Data ini membantu kami menyiapkan rekomendasi makanan yang sesuai
-          dengan kebutuhan dan preferensimu.
+          This information helps us prepare food recommendations that match
+          your needs and preferences.
         </p>
 
         <form className={styles.form} onSubmit={handleSubmit}>
           <label className={styles.field}>
-            <span>Usia</span>
+            <span>Age</span>
             <div className={styles.inputWithUnit}>
               <input
                 type="number"
-                min="1"
-                max="120"
+                min="18"
+                max="100"
                 required
-                placeholder="Contoh: 25"
+                placeholder="Example: 25"
                 value={profile.age}
                 onChange={(event) => updateField("age", event.target.value)}
               />
-              <span>tahun</span>
+              <span>years</span>
             </div>
           </label>
 
           <label className={styles.field}>
-            <span>Jenis kelamin</span>
+            <span>Sex</span>
             <select
               required
               value={profile.gender}
@@ -137,22 +146,23 @@ function ProfileEditor({
               }
             >
               <option value="" disabled>
-                Pilih jenis kelamin
+                Select sex
               </option>
-              <option value="laki-laki">Laki-laki</option>
-              <option value="perempuan">Perempuan</option>
+              <option value="laki-laki">Male</option>
+              <option value="perempuan">Female</option>
             </select>
           </label>
 
           <label className={styles.field}>
-            <span>Tinggi badan</span>
+            <span>Height</span>
             <div className={styles.inputWithUnit}>
               <input
                 type="number"
-                min="50"
-                max="250"
+                min="120"
+                max="230"
+                step="any"
                 required
-                placeholder="Contoh: 165"
+                placeholder="Example: 165"
                 value={profile.heightCm}
                 onChange={(event) => updateField("heightCm", event.target.value)}
               />
@@ -161,14 +171,15 @@ function ProfileEditor({
           </label>
 
           <label className={styles.field}>
-            <span>Berat badan</span>
+            <span>Weight</span>
             <div className={styles.inputWithUnit}>
               <input
                 type="number"
-                min="20"
-                max="400"
+                min="30"
+                max="250"
+                step="any"
                 required
-                placeholder="Contoh: 58"
+                placeholder="Example: 58"
                 value={profile.weightKg}
                 onChange={(event) => updateField("weightKg", event.target.value)}
               />
@@ -177,12 +188,11 @@ function ProfileEditor({
           </label>
 
           <label className={styles.field}>
-            <span>Pekerjaan</span>
+            <span>Occupation (optional)</span>
             <input
               type="text"
               maxLength={100}
-              required
-              placeholder="Contoh: Mahasiswa, desainer"
+              placeholder="Example: Student, designer"
               value={profile.occupation}
               onChange={(event) =>
                 updateField("occupation", event.target.value)
@@ -191,7 +201,7 @@ function ProfileEditor({
           </label>
 
           <label className={styles.field}>
-            <span>Target kesehatan</span>
+            <span>Health goal</span>
             <select
               required
               value={profile.goal}
@@ -200,46 +210,37 @@ function ProfileEditor({
               }
             >
               <option value="" disabled>
-                Pilih target
+                Select a goal
               </option>
-              <option value="turun-berat-badan">Turun berat badan</option>
-              <option value="maintain">Maintain berat badan</option>
+              <option value="turun-berat-badan">Lose weight</option>
+              <option value="maintain">Maintain weight</option>
+              <option value="otot">Build muscle</option>
             </select>
           </label>
 
           <fieldset className={`${styles.field} ${styles.allergies}`}>
-            <legend>Alergi makanan</legend>
-            <label className={styles.checkbox}>
-              <input
-                type="checkbox"
-                checked={profile.allergies.includes("kacang")}
-                onChange={() => toggleAllergy("kacang")}
-              />
-              Kacang
-            </label>
-            <label className={styles.checkbox}>
-              <input
-                type="checkbox"
-                checked={profile.allergies.includes("seafood")}
-                onChange={() => toggleAllergy("seafood")}
-              />
-              Seafood
-            </label>
+            <legend>Food allergies</legend>
+            {[...new Set([...Object.keys(ALLERGY_LABELS), ...(baseline?.allergies || [])])].map(allergy => (
+              <label key={allergy} className={styles.checkbox}>
+                <input type="checkbox" checked={profile.allergies.includes(allergy)} onChange={() => toggleAllergy(allergy)} />
+                {ALLERGY_LABELS[allergy] || allergy}
+              </label>
+            ))}
             <span className={styles.hint}>
-              Kosongkan jika tidak memiliki alergi tersebut.
+              Select known allergies. Unchecked options are not confirmed negatives. Saved allergies remain selected until you remove them.
             </span>
           </fieldset>
 
           <label className={styles.field}>
-            <span>Batas budget makan</span>
+            <span>Meal budget limit</span>
             <div className={styles.inputWithUnit}>
               <span>Rp</span>
               <input
                 type="number"
-                min="1"
-                step="1000"
+                min="5000"
+                step="1"
                 required
-                placeholder="Contoh: 30000"
+                placeholder="Example: 30000"
                 value={profile.mealBudget}
                 onChange={(event) =>
                   updateField("mealBudget", event.target.value)
@@ -255,8 +256,9 @@ function ProfileEditor({
           )}
 
           <button className={styles.submit} type="submit" disabled={isSaving}>
-            {isSaving ? "Menyimpan profil..." : "Simpan dan lanjutkan"}
+            {isSaving ? "Saving profile..." : "Save profile"}
           </button>
+          <Link className={styles.cancel} href={AUTH_ROUTES.PROFILE}>Cancel and return to profile</Link>
         </form>
       </div>
     </section>

@@ -6,7 +6,7 @@ import Link from "next/link";
 import { PencilLine } from "lucide-react";
 import { AUTH_ROUTES } from "@/domains/auth/config/auth-routes";
 import styles from "./profile.module.css";
-import { profileFormValue } from "./profile-types";
+import { ALLERGY_LABELS, profileFormValue } from "./profile-types";
 import { useAccountSession } from "@/context/AccountSessionContext";
 
 export default function ProfileSummary() {
@@ -15,102 +15,103 @@ export default function ProfileSummary() {
   const { account } = useAccountSession();
 
   if (!isLoaded || !user) {
-    return <p className={styles.loading}>Memuat profil...</p>;
+    return <p className={styles.loading}>Loading profile...</p>;
   }
 
   const fullName = [user.firstName, user.lastName].filter(Boolean).join(" ");
   const profile = account?.profile ? profileFormValue(account.profile) : null;
   const allergies = profile?.allergies.length
-    ? profile.allergies.map((allergy) =>
-        allergy === "kacang" ? "Kacang" : "Seafood",
-      )
-    : ["Tidak ada"];
+    ? profile.allergies.map((allergy) => ALLERGY_LABELS[allergy] || allergy)
+    : [account?.allergy_status === "none" ? "No known food allergies" : "Not provided"];
 
   return (
     <section className={styles.page}>
       <div className={styles.card}>
-        <p className={styles.eyebrow}>AKUN NUTRISEA</p>
+        <p className={styles.eyebrow}>NUTRISEA ACCOUNT</p>
+        <h1>Your profile</h1>
         <p className={styles.intro}>
-          Periksa informasi akun dan preferensi kesehatanmu.
+          Review your account information and health preferences.
         </p>
 
-        <div style={{ padding: "20px 0" }}>
-          <h2>Usaha & akses Merchant</h2>
-          <p>Kelola usaha dengan akun yang sama. Anda tetap dapat berbelanja sebagai Customer.</p>
-          <Link href={availableRoles.includes("MERCHANT") ? "/merchant" : "/merchant/register"} className="btn-shopee-primary" style={{ display: "inline-block", marginTop: 12 }}>
-            {availableRoles.includes("MERCHANT") ? "Buka Dashboard Merchant" : "Daftar sebagai Merchant / Cek Pengajuan"}
-          </Link>
-        </div>
         <dl className={styles.summary}>
           <div className={styles.summarySection}>
-            <h2>Informasi akun</h2>
+            <h2>Account information</h2>
             <div className={styles.summaryGrid}>
               <SummaryItem
-                label="Nama"
-                value={fullName || user.username || "Belum diisi"}
+                label="Name"
+                value={fullName || user.username || "Not provided"}
               />
               <SummaryItem
                 label="Email"
-                value={user.primaryEmailAddress?.emailAddress || "Belum diisi"}
+                value={user.primaryEmailAddress?.emailAddress || "Not provided"}
               />
             </div>
           </div>
 
           <div className={styles.summarySection}>
-            <h2>Data diri dan preferensi</h2>
+            <h2>Personal details and preferences</h2>
             <Link
               className={styles.summaryEditButton}
               href={AUTH_ROUTES.PROFILE_EDIT}
             >
               <PencilLine size={16} aria-hidden="true" />
-              {profile ? "Edit profil" : "Lengkapi profil"}
+              {profile ? "Edit profile" : "Complete profile"}
             </Link>
             {profile ? (
               <div className={styles.summaryGrid}>
-                <SummaryItem label="Usia" value={`${profile.age} tahun`} />
+                <SummaryItem label="Age" value={`${profile.age} years`} />
                 <SummaryItem
-                  label="Jenis kelamin"
+                  label="Sex"
                   value={
                     profile.gender === "laki-laki"
-                      ? "Laki-laki"
+                      ? "Male"
                       : profile.gender === "perempuan"
-                        ? "Perempuan"
-                        : "Belum diisi"
+                        ? "Female"
+                        : "Not provided"
                   }
                 />
                 <SummaryItem
-                  label="Tinggi badan"
+                  label="Height"
                   value={`${profile.heightCm} cm`}
                 />
                 <SummaryItem
-                  label="Berat badan"
+                  label="Weight"
                   value={`${profile.weightKg} kg`}
                 />
-                <SummaryItem label="Pekerjaan" value={profile.occupation} />
+                <SummaryItem label="Occupation" value={profile.occupation} />
                 <SummaryItem
                   label="Target"
                   value={
                     profile.goal === "turun-berat-badan"
-                      ? "Turun berat badan"
+                      ? "Lose weight"
+                      : profile.goal === "otot"
+                        ? "Build muscle"
                       : profile.goal === "maintain"
-                        ? "Maintain berat badan"
-                        : "Belum diisi"
+                        ? "Maintain weight"
+                        : "Not provided"
                   }
                 />
-                <SummaryItem label="Alergi" value={allergies.join(", ")} />
+                <SummaryItem label="Allergies" value={allergies.join(", ")} />
                 <SummaryItem
-                  label="Batas budget makan"
-                  value={`Rp ${Number(profile.mealBudget).toLocaleString("id-ID")}`}
+                  label="Meal budget limit"
+                  value={`Rp ${Number(profile.mealBudget).toLocaleString("en-US")}`}
                 />
               </div>
             ) : (
               <p className={styles.emptySummary}>
-                Data profil belum diisi. Lengkapi profil agar rekomendasi
-                NutriSea lebih sesuai untukmu.
+                Your profile is incomplete. Complete it to make NutriSea recommendations
+                more relevant to you.
               </p>
             )}
           </div>
         </dl>
+        <div className={styles.business}>
+          <h2>Business access</h2>
+          <p>You can manage a business and keep shopping with this account.</p>
+          <Link href={availableRoles.includes("MERCHANT") ? "/merchant" : "/merchant/register"}>
+            {availableRoles.includes("MERCHANT") ? "Open merchant dashboard" : "Register a business or check your application"}
+          </Link>
+        </div>
       </div>
     </section>
   );
@@ -120,7 +121,7 @@ function SummaryItem({ label, value }: { label: string; value: string }) {
   return (
     <div className={styles.summaryItem}>
       <dt>{label}</dt>
-      <dd>{value || "Belum diisi"}</dd>
+      <dd>{value || "Not provided"}</dd>
     </div>
   );
 }
