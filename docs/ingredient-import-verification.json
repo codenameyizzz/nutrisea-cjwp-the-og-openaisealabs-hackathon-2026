@@ -1,0 +1,29 @@
+{
+  "batch_sha256": "4671f4ca7eb5c0830ed742eddc1486c8bdf99cfc6617d338145a82c109ac8b31",
+  "source_counts": {
+    "foods": 77,
+    "servings": 406
+  },
+  "insert_counts": {
+    "ingredients": 0,
+    "ingredient_aliases": 0,
+    "ingredient_source_foods": 0,
+    "ingredient_source_servings": 0
+  },
+  "unchanged": {
+    "source_foods_unchanged": 77,
+    "source_servings_unchanged": 406
+  },
+  "needs_review": [],
+  "conflicts": [],
+  "mode": "dry_run",
+  "timestamp_utc": "2026-11-07T06:30:48.157848+00:00",
+  "before_counts": {
+    "ingredients": 75,
+    "ingredient_aliases": 75,
+    "ingredient_source_foods": 77,
+    "ingredient_source_servings": 406
+  },
+  "planned_ingredient_names": [],
+  "status": "dry_run_complete"
+}

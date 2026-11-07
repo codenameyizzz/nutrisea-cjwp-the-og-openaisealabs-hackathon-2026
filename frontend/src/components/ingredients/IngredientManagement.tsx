@@ -6,6 +6,7 @@ import { useIngredientApi } from "../../services/ingredient-api";
 import { INGREDIENT_UNITS } from "../../services/ingredient-types";
 import type { Ingredient, IngredientPage, IngredientUnit, IngredientWrite } from "../../services/ingredient-types";
 import IngredientDialog from "./IngredientDialog";
+import IngredientNutrition from "./IngredientNutrition";
 import IngredientGuard from "./IngredientGuard";
 import styles from "./ingredients.module.css";
 
@@ -41,6 +42,7 @@ function ManagementContent() {
   const [revision, setRevision] = useState(0);
   const [editing, setEditing] = useState<{ item: Ingredient | null } | null>(null);
   const [deleting, setDeleting] = useState<Ingredient | null>(null);
+  const [nutrition, setNutrition] = useState<Ingredient | null>(null);
   const [busy, setBusy] = useState(false);
   const [dialogError, setDialogError] = useState("");
 
@@ -88,7 +90,8 @@ function ManagementContent() {
         <tbody>{data?.items.map(item => <tr key={item.id}>
           <td><strong>{item.name}</strong><p className={styles.muted}>{item.aliases.join(", ") || "Tanpa alias"}</p></td>
           <td>{item.category}</td><td>{item.default_unit}</td><td>{item.is_active ? "Aktif" : "Nonaktif"}</td>
-          <td><button onClick={() => { setDialogError(""); setEditing({ item }); }} aria-label={`Edit ${item.name}`}>Edit</button>
+          <td><button onClick={() => setNutrition(item)} aria-label={`Nutrisi ${item.name}`}>Nutrisi</button>
+            <button onClick={() => { setDialogError(""); setEditing({ item }); }} aria-label={`Edit ${item.name}`}>Edit</button>
             <button disabled={!item.is_active} onClick={() => { setDialogError(""); setDeleting(item); }} aria-label={`Nonaktifkan ${item.name}`}>Nonaktifkan</button></td>
         </tr>)}</tbody></table></div>
       {!data?.items.length && <p>Belum ada bahan yang cocok. Tambahkan master bahan untuk mulai memilih komposisi.</p>}
@@ -98,6 +101,7 @@ function ManagementContent() {
       <span>Halaman {page} dari {Math.max(1, Math.ceil((data?.total ?? 0) / 20))}</span>
       <button disabled={loading || !!error || !data?.has_more} onClick={() => { setPage(p => p + 1); setLoading(true); }}>Berikutnya</button>
     </nav>
+    {nutrition && <IngredientNutrition key={nutrition.id} ingredientId={nutrition.id} name={nutrition.name} onClose={() => setNutrition(null)} />}
     {editing && <IngredientDialog title={editing.item ? "Edit bahan" : "Tambah bahan"} busy={busy} onClose={() => setEditing(null)}>
       {dialogError && <p role="alert" className={styles.notice}>{dialogError}</p>}
       <IngredientForm item={editing.item} busy={busy} onSave={save} />

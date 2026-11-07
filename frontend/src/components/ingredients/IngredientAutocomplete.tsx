@@ -3,6 +3,7 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { INGREDIENT_UNITS, quantityIsValid } from "../../services/ingredient-types";
 import type { IngredientPage, IngredientSelection, IngredientUnit } from "../../services/ingredient-types";
+import IngredientNutrition from "./IngredientNutrition";
 import styles from "./ingredients.module.css";
 
 interface Props {
@@ -23,6 +24,7 @@ export default function IngredientAutocomplete({ value, onChange, search, disabl
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [active, setActive] = useState(-1);
+  const [nutrition, setNutrition] = useState<IngredientSelection | null>(null);
   const suggestions = results.filter(item => item.is_active && !value.some(v => v.ingredient_id === item.id));
 
   function close() { generation.current++; setOpen(false); setLoading(false); }
@@ -100,7 +102,8 @@ export default function IngredientAutocomplete({ value, onChange, search, disabl
     <div className={styles.selected} aria-label="Bahan terpilih">
       {!value.length && <p className={styles.muted}>Belum ada bahan dipilih. Data ini belum menyatakan resep lengkap atau bebas alergen.</p>}
       {value.map((item, index) => <div className={styles.selectedRow} key={item.ingredient_id}>
-        <strong>{item.name}{!item.is_active && <small> (nonaktif)</small>}</strong>
+        <strong>{item.name}{!item.is_active && <small> (nonaktif)</small>} <button type="button" disabled={disabled}
+          aria-label={`Nutrisi ${item.name}`} onClick={() => setNutrition(item)}>Nutrisi</button></strong>
         <label>Takaran {item.name}<input type="number" min="0.001" max="999999.999" step="0.001" required
           value={item.quantity} disabled={disabled || !item.is_active} aria-invalid={!quantityIsValid(item.quantity)}
           onChange={e => update(index, "quantity", e.target.value)} /></label>
@@ -112,5 +115,6 @@ export default function IngredientAutocomplete({ value, onChange, search, disabl
         {!quantityIsValid(item.quantity) && <p className={styles.error} role="alert">Takaran harus positif, maksimum 999999.999 dan 3 desimal.</p>}
       </div>)}
     </div>
+    {nutrition && <IngredientNutrition key={nutrition.ingredient_id} ingredientId={nutrition.ingredient_id} name={nutrition.name} onClose={() => setNutrition(null)} />}
   </div>;
 }

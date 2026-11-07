@@ -302,6 +302,19 @@ Rekam satu demo berhasil setelah versi stabil tersedia. Periksa bahwa rekaman ti
 
 ## Status pekerjaan tim
 
+### Impor ingredients dan graph sumber
+
+Branch terpisah `feat/ingredient-data-import` dibuat dari baseline tim `95e1c04`. Teman tim tidak mengubah modul ingredients atau Knowledge Graph. Rincian implementasi, perintah, batas data, dan langkah demo ada di [docs/ingredient-data-import.md](docs/ingredient-data-import.md).
+
+- Importer append-only, migrasi sumber, API nutrisi per porsi, graph sumber berbasis resep tersimpan, dan tampilan nutrisi admin/merchant sudah dibuat.
+- Dry run Aiven menemukan 75 master bahan, 75 alias, 77 sumber, dan 406 porsi untuk ditambahkan; nol konflik. Leeks dan Kidney Beans ditahan untuk peninjauan identitas.
+- Status impor live: berhasil pada 7 November 2026 pukul 13:29 WIB. Sebanyak 75 bahan, 75 alias, 77 sumber, dan 406 porsi ditambahkan. Receipt `docs/ingredient-import-result.json` berstatus `committed`; pemeriksaan ulang menghasilkan nol penambahan dan nol konflik.
+- Setelah verifikasi impor, pengecekan endpoint aplikasi kembali terhalang slot Aiven penuh. Impor selesai; kestabilan akses live masih perlu ditangani.
+- Verifikasi lokal: 104 test backend, 52 test frontend, typecheck, dan lint file frontend yang berubah lulus.
+- Pool backend dibatasi menjadi 2 koneksi per worker secara default agar lebih sesuai untuk database yang dipakai bersama tim.
+- Setelah impor, uji browser lalu isi komposisi menu demo dari resep merchant yang benar. Graph sumber belum mengubah ranking AI, aturan medis, atau makro menu.
+- Lanjutkan acceptance test alur utama dan rekaman demo. Penambahan dataset tidak berarti seluruh P0 selesai.
+
 ### Integrasi perubahan Firman
 
 Perubahan commit `9bb0084` dari repo `nutrisea-openai-sea-hackathon` disalin ke working tree ini tanpa pull, merge, atau cherry-pick Git. File sumber tetap utuh.

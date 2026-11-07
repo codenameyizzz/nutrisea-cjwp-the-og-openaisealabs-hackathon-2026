@@ -4,7 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from .core.config import settings
 from .core.database import create_all_tables
 from .api import profile, recommend, scan, recalibrate, merchant, chat, users, dishes, nutrition, admin, personas, actions, graph
-from .api import ingredients, merchant_applications, preferences
+from .api import ingredients, ingredient_sources, merchant_applications, preferences
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -36,6 +36,7 @@ app.include_router(personas.router)
 app.include_router(dishes.router)
 app.include_router(ingredients.router)
 app.include_router(ingredients.menu_router)
+app.include_router(ingredient_sources.router)
 app.include_router(merchant_applications.router)
 app.include_router(merchant_applications.admin_router)
 app.include_router(nutrition.router)

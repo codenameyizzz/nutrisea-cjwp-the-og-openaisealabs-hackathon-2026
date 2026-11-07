@@ -2,7 +2,7 @@ import os
 import json
 from typing import Union, List, Optional
 from pydantic_settings import BaseSettings
-from pydantic import field_validator
+from pydantic import Field, field_validator
 from dotenv import load_dotenv
 
 ENV_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), ".env")
@@ -50,6 +50,9 @@ class Settings(BaseSettings):
     EMBEDDING_MODEL: str = os.getenv("EMBEDDING_MODEL", "text-embedding-3-small")
     DATABASE_URL: str = os.getenv("DATABASE_URL") or get_aiven_url_from_pgconnect() or "sqlite:///./nutrisea.db"
     DB_SSL_REQUIRE: bool = os.getenv("DB_SSL_REQUIRE", "true").lower() in ("true", "1", "yes")
+    DB_POOL_SIZE: int = Field(default=2, ge=1, le=10)
+    DB_MAX_OVERFLOW: int = Field(default=0, ge=0, le=10)
+    DB_POOL_TIMEOUT_SECONDS: int = Field(default=10, ge=1, le=60)
     FATSECRET_CLIENT_ID: str = os.getenv("FATSECRET_CLIENT_ID") or os.getenv("FATSECRET_CONSUMER_KEY", "")
     FATSECRET_CLIENT_SECRET: str = os.getenv("FATSECRET_CLIENT_SECRET") or os.getenv("FATSECRET_CONSUMER_SECRET", "")
     CORS_ORIGINS: Union[List[str], str] = [

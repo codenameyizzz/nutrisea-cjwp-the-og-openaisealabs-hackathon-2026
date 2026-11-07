@@ -49,6 +49,7 @@ Thumbs.db
 
 *.db
 *.sqlite3
+docs/ingredient-import-*.json.pending
 
 # Legacy / Draft SQL files
 legacy/sql_example.txt

@@ -41,11 +41,14 @@ from .persona import Persona
 from .user_memory import UserMemoryItem
 from .user_action import UserActionLog
 from .ingredient import Ingredient, IngredientAlias, MenuIngredient
+from .ingredient_source import IngredientSourceFood, IngredientSourceServing
 
 __all__ = [
     "Ingredient",
     "IngredientAlias",
     "MenuIngredient",
+    "IngredientSourceFood",
+    "IngredientSourceServing",
     # 16 Dedicated Models (1 per table)
     "AppUser",
     "HealthProfile",

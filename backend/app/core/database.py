@@ -16,8 +16,10 @@ if settings.DATABASE_URL.startswith("sqlite"):
     engine_kwargs["connect_args"] = connect_args
 else:
     # PostgreSQL / Aiven configuration
-    engine_kwargs["pool_size"] = 10
-    engine_kwargs["max_overflow"] = 20
+    # Shared hackathon database: each worker must have a bounded connection budget.
+    engine_kwargs["pool_size"] = settings.DB_POOL_SIZE
+    engine_kwargs["max_overflow"] = settings.DB_MAX_OVERFLOW
+    engine_kwargs["pool_timeout"] = settings.DB_POOL_TIMEOUT_SECONDS
     if settings.DB_SSL_REQUIRE and "sslmode" not in settings.DATABASE_URL:
         connect_args["sslmode"] = "require"
     if connect_args:
@@ -43,7 +45,8 @@ def create_all_tables():
         # Import models so they are registered with Base.metadata
         from .. import models  # noqa: F401
         # Ingredient and account-assignment DDL is provisioned only by SQL migrations.
-        migration_only = {"ingredients", "ingredient_aliases", "menu_ingredients", "merchant_application"}
+        migration_only = {"ingredients", "ingredient_aliases", "menu_ingredients", "merchant_application",
+                          "ingredient_source_foods", "ingredient_source_servings"}
         Base.metadata.create_all(bind=engine, tables=[
             t for t in Base.metadata.sorted_tables if t.name not in migration_only
         ])

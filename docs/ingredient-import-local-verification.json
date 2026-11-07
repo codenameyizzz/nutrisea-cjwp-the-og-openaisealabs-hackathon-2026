@@ -1,0 +1,30 @@
+{
+  "mode": "isolated_sqlite_only",
+  "status": "passed",
+  "batch_sha256": "4671f4ca7eb5c0830ed742eddc1486c8bdf99cfc6617d338145a82c109ac8b31",
+  "insert_counts": {
+    "ingredients": 75,
+    "ingredient_aliases": 75,
+    "ingredient_source_foods": 77,
+    "ingredient_source_servings": 406
+  },
+  "reimport_insert_counts": {
+    "ingredients": 0,
+    "ingredient_aliases": 0,
+    "ingredient_source_foods": 0,
+    "ingredient_source_servings": 0
+  },
+  "ingredients_with_nutrition_and_graph_verified": 75,
+  "linked_source_servings_verified": 398,
+  "stats": {
+    "basis": "persisted_catalog_and_recipes",
+    "ingredients": 75,
+    "source_foods": 77,
+    "source_servings": 406,
+    "linked_source_foods": 75,
+    "sources_needing_review": 2,
+    "recipe_edges": 0,
+    "menus_with_recipe": 0,
+    "clinical_rules_added": 0
+  }
+}
