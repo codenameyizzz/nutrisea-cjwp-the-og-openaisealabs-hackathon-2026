@@ -1,9 +1,10 @@
 "use client";
 
-import React, { useState, useMemo, useEffect, useRef } from "react";
+import React, { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useUser } from "@clerk/nextjs";
+import { useUser, useAuth } from "@clerk/nextjs";
+import { API_BASE_URL, responseJson } from "@/lib/api";
 import { AUTH_ROUTES } from "@/domains/auth/config/auth-routes";
 import {
   Utensils,
@@ -25,6 +26,7 @@ import { rankRecommendations, UserRecommendationProfile } from "@/services/recom
 import { useApp } from "@/context/AppContext";
 
 interface AiRecommendation {
+  source?: string;
   recommendation_id?: string;
   selected_meal?: {
     merchant_name: string;
@@ -56,6 +58,12 @@ interface AiRecommendation {
 export default function HomePage() {
   const router = useRouter();
   const { user, isLoaded, isSignedIn } = useUser();
+  const { getToken } = useAuth();
+  const [adaptiveDish, setAdaptiveDish] = useState<DishItem | null>(null);
+  const [candidateIds, setCandidateIds] = useState<string[]>([]);
+  const [preferenceSummary, setPreferenceSummary] = useState("");
+  const [recommendationError, setRecommendationError] = useState("");
+  const recommendationRequest = useRef(0);
   const {
     bmiStats,
     addToCart,
@@ -179,20 +187,40 @@ export default function HomePage() {
   };
 
   // Fetch Live AI Recommendation from AI Backend
-  const fetchAiRecommendation = async () => {
+  const fetchAiRecommendation = useCallback(async () => {
+    const requestId = ++recommendationRequest.current;
     setIsLoadingAi(true);
+    setAdaptiveDish(null);
+    setAiRec(null);
+    setCandidateIds([]);
+    setPreferenceSummary("");
+    setRecommendationError("");
     try {
-      const res = await fetch(`http://127.0.0.1:8000/api/recommend/lunch?persona_id=${verifiedPersonaId || "CORP_LILY_SCBD_001"}`);
-      if (res.ok) {
-        const data = await res.json();
-        setAiRec(data);
-      }
+      const token = await getToken();
+      if (!token) throw new Error("Silakan masuk untuk melihat rekomendasi Anda.");
+      const data = await responseJson<{ dish: DishItem | null; candidate_ids: string[]; excluded_foods: string[]; reason: string; source: string }>(
+        await fetch(`${API_BASE_URL}/api/preferences/recommendation`, {
+          headers: { Authorization: `Bearer ${token}` }, cache: "no-store",
+        })
+      );
+      if (requestId !== recommendationRequest.current) return;
+      setAdaptiveDish(data.dish);
+      setCandidateIds(data.candidate_ids);
+      setPreferenceSummary(data.excluded_foods.length ? `Preferensi tersimpan: tidak suka ${data.excluded_foods.join(", ")}.` : "Belum ada makanan yang dikecualikan berdasarkan preferensi.");
+      if (!data.dish) setRecommendationError(data.reason);
+      else setAiRec({ source: data.source, selected_meal: {
+        item_id: data.dish.id, item_name: data.dish.name, merchant_name: data.dish.merchantName,
+        rationale: data.reason, final_cooking_instructions: data.dish.cookingNotes,
+        estimated_macros: { kcal: data.dish.macros.kcal, protein_g: data.dish.macros.proteinG,
+          carbs_g: data.dish.macros.carbsG, fat_g: data.dish.macros.fatG, sodium_mg: data.dish.macros.sodiumMg },
+      }});
     } catch (err) {
-      console.warn("Backend AI fetch failed, using fallback:", err);
+      if (requestId === recommendationRequest.current)
+        setRecommendationError(err instanceof Error ? err.message : "Rekomendasi belum tersedia.");
     } finally {
-      setIsLoadingAi(false);
+      if (requestId === recommendationRequest.current) setIsLoadingAi(false);
     }
-  };
+  }, [getToken, user?.id]);
 
   useEffect(() => {
     setIsLoadingCatalog(true);
@@ -203,10 +231,14 @@ export default function HomePage() {
   }, []);
 
   useEffect(() => {
-    if (verifiedPersonaId) {
-      fetchAiRecommendation();
-    }
-  }, [verifiedPersonaId]);
+    void fetchAiRecommendation();
+    const refresh = () => { void fetchAiRecommendation(); };
+    window.addEventListener("nutrisea:preferences-updated", refresh);
+    return () => {
+      recommendationRequest.current++;
+      window.removeEventListener("nutrisea:preferences-updated", refresh);
+    };
+  }, [fetchAiRecommendation, verifiedPersonaId]);
 
   // User recommendation profile mapping existing NutriSea data
   const userProfile: UserRecommendationProfile = useMemo(() => {
@@ -227,10 +259,10 @@ export default function HomePage() {
   // Full scored recommendations
   const allScoredDishes = useMemo(() => {
     if (catalog.length === 0) return [];
-    return rankRecommendations(catalog, userProfile, {
+    return rankRecommendations(catalog.filter(d => candidateIds.includes(d.id)), userProfile, {
       searchQuery: searchQuery || undefined
     });
-  }, [catalog, userProfile, searchQuery]);
+  }, [catalog, userProfile, searchQuery, candidateIds]);
 
   // Recommended section: strictly top 10 dishes with score above 70% (score >= 0.70)
   const recommendedDishes = useMemo(() => {
@@ -424,7 +456,7 @@ export default function HomePage() {
                   gap: 4
                 }}
               >
-                <Sparkles size={12} /> AI Smart Planner
+                <Sparkles size={12} /> {aiRec?.source === "openai" ? "AI Meal Planner" : "Pilihan berdasarkan aturan"}
               </span>
             </div>
 
@@ -446,7 +478,7 @@ export default function HomePage() {
               }}
             >
               <RefreshCw size={11} className={isLoadingAi ? "spin-icon" : ""} />
-              {isLoadingAi ? "Menganalisis..." : "Minta Menu Lain (AI)"}
+              {isLoadingAi ? "Memuat..." : "Perbarui Rekomendasi"}
             </button>
           </div>
 
@@ -455,10 +487,13 @@ export default function HomePage() {
             {isLoadingAi ? (
               <div style={{ padding: "20px 0", textAlign: "center", color: "#666", fontSize: "13px" }}>
                 <RefreshCw size={18} className="spin-icon" color="#EE4D2D" style={{ margin: "0 auto 8px" }} />
-                AI sedang menganalisis kebutuhan kalori & 24 mitra warteg terdekat...
+                Memuat katalog dan preferensi Anda...
               </div>
+            ) : !adaptiveDish ? (
+              <p role="status">{recommendationError || "Rekomendasi belum tersedia."}</p>
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                <p role="status">{preferenceSummary}</p>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 8 }}>
                   <div>
                     <h3 style={{ fontSize: "15px", fontWeight: 600, color: "#222" }}>
@@ -491,7 +526,7 @@ export default function HomePage() {
                     borderLeft: "3px solid #EE4D2D"
                   }}
                 >
-                  <strong style={{ color: "#222" }}>Alasan Klinis AI: </strong>
+                  <strong style={{ color: "#222" }}>Alasan pilihan: </strong>
                   {aiRationale}
                 </div>
 
@@ -518,27 +553,8 @@ export default function HomePage() {
                 <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 4 }}>
                   <button
                     onClick={() => {
-                      const baselineDish = catalog[0] || {
-                        id: "DISH-01",
-                        category: "protein" as const,
-                        district: "Kuningan",
-                        distanceKm: 0.8,
-                        rating: 4.8,
-                        soldCount: "1.8rb+",
-                        basePrice: 32000,
-                        discountedPrice: 25600,
-                        imageUrl: "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=500&q=80",
-                        healthyTags: ["Minyak Baru", "Sayur Bening"],
-                        hygieneBadges: ["Minyak Baru Terverifikasi", "Dapur Higienis"]
-                      };
-                      addToCart({
-                        ...baselineDish,
-                        id: "itm-ai-rec",
-                        name: mealName,
-                        merchantName: merchantName,
-                        cookingNotes: cookingNotes,
-                        macros: { kcal: calories, proteinG: protein, carbsG: 42, fatG: 8, sodiumMg: 580 }
-                      });
+                      if (!adaptiveDish) return;
+                      addToCart(adaptiveDish);
                       showToast("Menu AI ditambahkan ke Keranjang!");
                     }}
                     style={{

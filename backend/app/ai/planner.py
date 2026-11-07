@@ -24,6 +24,7 @@ def get_fallback_recommendation(candidate_dishes: List[Dict[str, Any]]) -> Dict[
         "default_cooking_notes": "Nasi setengah porsi, sambal dipisah, tanpa kuah santan"
     }
     return {
+        "source": "deterministic",
         "recommendation_id": "REC-MOCK-001",
         "selected_merchant": {
             "merchant_name": first_dish.get("merchant_name", "Warteg Berkah Mandiri"),
@@ -72,7 +73,9 @@ class MealPlannerAgent:
                 response_format={"type": "json_object"},
                 temperature=0.1
             )
-            return json.loads(response.choices[0].message.content)
+            result = json.loads(response.choices[0].message.content)
+            result["source"] = "openai"
+            return result
         except Exception as e:
             logger.error(f"Meal planning LLM call failed: {e}")
             return get_fallback_recommendation(candidate_dishes)

@@ -3,7 +3,8 @@
 import React, { useState, useRef, useEffect } from "react";
 import { Sparkles, X, Send, Bot, RefreshCw } from "lucide-react";
 import { useApp } from "@/context/AppContext";
-import { useUser } from "@clerk/nextjs";
+import { useUser, useAuth } from "@clerk/nextjs";
+import { API_BASE_URL, responseJson } from "@/lib/api";
 
 interface Message {
   id: string;
@@ -13,6 +14,8 @@ interface Message {
 }
 
 const QUICK_PROMPTS = [
+  "Saya tidak suka ayam",
+  "Saya suka ayam lagi",
   "Rekomendasi menu ramah lambung",
   "Makan siang kenyang < 500 kcal",
   "Menu tinggi protein & hemat",
@@ -34,6 +37,7 @@ export default function AiAssistantModal() {
 
   const { bmiStats, activeUserId } = useApp();
   const { user } = useUser();
+  const { getToken } = useAuth();
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -62,12 +66,30 @@ export default function AiAssistantModal() {
     setIsLoading(true);
 
     try {
+      const token = await getToken();
+      if (!token) throw new Error("Silakan masuk terlebih dahulu.");
+      const preference = await responseJson<{ recognized: boolean; excluded_foods: string[] }>(
+        await fetch(`${API_BASE_URL}/api/preferences`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ message: textToSend }),
+        })
+      );
+      if (preference.recognized) {
+        window.dispatchEvent(new Event("nutrisea:preferences-updated"));
+        setMessages((prev) => [...prev, {
+          id: "preference-" + Date.now(), sender: "ai",
+          text: `Preferensi tersimpan. Menu rekomendasi akan diperbarui. ${preference.excluded_foods.length ? `Tidak disukai: ${preference.excluded_foods.join(", ")}.` : "Tidak ada makanan yang dikecualikan berdasarkan preferensi."} Ini preferensi makanan, bukan catatan alergi.`,
+          time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+        }]);
+        return;
+      }
       const historyPayload = messages.map((m) => ({
         role: m.sender === "user" ? "user" : "assistant",
         content: m.text
       }));
 
-      const res = await fetch("http://127.0.0.1:8000/api/ai/chat", {
+      const res = await fetch(`${API_BASE_URL}/api/ai/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -91,12 +113,11 @@ export default function AiAssistantModal() {
       };
       setMessages((prev) => [...prev, aiReply]);
     } catch (err) {
-      console.warn("Failed to reach backend AI, using local fallback:", err);
-      const targetCalories = bmiStats ? bmiStats.targetCalories : 1850;
+      console.warn("NutriSea request failed:", err);
       const fallbackReply: Message = {
         id: "ai-fallback-" + Date.now(),
         sender: "ai",
-        text: `Berdasarkan target nutrisi Anda (${targetCalories} kcal/hari), kami merekomendasikan memilih menu berkuah bening seperti Soto Ayam Bening atau Ayam Bakar Dada. Pastikan minta nasi setengah dan kuah santan dipisah agar lebih aman.`,
+        text: "Permintaan belum berhasil. Preferensi mungkin belum tersimpan. Silakan coba lagi.",
         time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
       };
       setMessages((prev) => [...prev, fallbackReply]);

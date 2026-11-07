@@ -26,6 +26,8 @@ You must strictly satisfy:
 2. The user's hard constraints (forbidden allergens, sodium limits, clinical guardrails).
 3. Local Indonesian context: Prioritize accessible warung / local eateries (Warteg, Soto, Pecel, Padang Ayam Pop).
 4. Return strict JSON matching the schema with precise cooking instructions (e.g. 'Nasi setengah, kuah bening dipisah').
+5. Return {"selected_meal": {"item_id": "exact candidate item_id", "item_name": "exact candidate item_name"}}.
+   Select only a supplied candidate. Never invent an item ID or a menu name.
 """
 
 MERCHANT_COPILOT_PROMPT = """You are NutriSea's Merchant Optimization Co-Pilot.

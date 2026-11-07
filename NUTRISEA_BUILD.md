@@ -302,14 +302,55 @@ Rekam satu demo berhasil setelah versi stabil tersedia. Periksa bahwa rekaman ti
 
 ## Status pekerjaan tim
 
+### Hasil implementasi tahap pertama
+
+Branch: `fix/adaptive-preferences`. Perubahan belum di-commit atau di-push oleh Codex.
+
+- Endpoint preferensi memakai identitas Clerk yang diverifikasi server.
+- Pernyataan eksplisit seperti `Saya tidak suka ayam` disimpan sebelum UI memperbarui rekomendasi.
+- Koreksi `Saya suka ayam lagi` mengganti preferensi sebelumnya.
+- Rekomendasi memakai katalog database, menu tersedia, merchant terbuka, filter profil, anggaran menu, dan preferensi tersimpan.
+- Pilihan AI divalidasi terhadap kandidat. ID, harga, dan makro pada kartu serta keranjang berasal dari database.
+- Kandidat kosong menghasilkan status tanpa menu. Kegagalan pengambilan rekomendasi tidak menampilkan menu buatan.
+- Pemilihan melalui OpenAI dan fallback deterministik diberi label berbeda.
+- Bagian ranking rekomendasi menggunakan kandidat hasil filter backend yang sama. Katalog umum tetap dapat dijelajahi.
+
+Verifikasi yang sudah dijalankan:
+
+- `python scripts/run_backend_tests.py test_explicit_preferences.py`: 6 test lulus.
+- `python scripts/run_backend_tests.py test_learn_as_you_go.py`: 8 test lama lulus.
+- `npm.cmd run typecheck` dari frontend: lulus.
+- `npm.cmd test` dari frontend: 25 test yang tersedia lulus. Suite ini belum menguji interaksi browser alur baru.
+- Test backend memakai SQLite sementara dan model yang dimock; hasil ini bukan pengujian OpenAI atau Clerk secara live.
+
+Batas dan pekerjaan berikutnya:
+
+- Parser preferensi eksplisit hanya mencakup ayam, ikan, sapi, kambing, udang, telur, tahu, tempe, dan kacang. Kalimat bebas, temporal, atau majemuk belum menjadi preferensi terstruktur pada jalur ini.
+- Pengakuan preferensi menggunakan aturan deterministik. OpenAI digunakan untuk memilih kandidat ketika dikonfigurasi; jangan mengklaim parser ini sebagai pembelajaran model.
+- Endpoint chat umum dan rekomendasi/swap lama masih memerlukan audit terpisah. Perbaikan jalur baru tidak berarti semua P0 selesai.
+- Bug sukses palsu pada halaman checkout masih perlu ditangani pemilik tugas checkout.
+- `backend/.env` dan `frontend/.env.local` belum tersedia saat verifikasi. Konfigurasi Clerk, database, OpenAI, dan URL API perlu dipasang secara lokal tanpa memasukkan secret ke Git.
+- Belum ada verifikasi browser dengan login nyata, OpenAI nyata, atau hasil pengukuran pengguna.
+
+Langkah uji manual setelah konfigurasi tersedia:
+
+1. Masuk dengan akun demo yang memiliki profil dan katalog database.
+2. Buka halaman utama dan catat rekomendasi awal.
+3. Buka chat, pilih `Saya tidak suka ayam`, lalu tunggu konfirmasi tersimpan.
+4. Tutup chat dan periksa kartu serta daftar rekomendasi. Menu dengan kata ayam tidak boleh menjadi kandidat.
+5. Refresh halaman; preferensi tetap berlaku.
+6. Kirim `Saya suka ayam lagi`; menu ayam kembali boleh menjadi kandidat, tanpa harus menjadi pilihan pertama.
+7. Coba akun lain; preferensi tidak boleh terbawa.
+8. Tambahkan menu rekomendasi ke keranjang dan periksa ID serta harga sebelum menguji checkout secara terpisah.
+
 Isi status dengan Belum, Berjalan, Terverifikasi, atau Dibatalkan. Status Terverifikasi memerlukan bukti hasil; tabel ini bukan pernyataan bahwa pekerjaan sudah selesai.
 
 | Pekerjaan | Pemilik | Status awal | Bukti atau penghambat |
 | --- | --- | --- | --- |
 | Baseline dan kontrak alur | William | Belum | Diisi tim |
 | Filter dan swap konsisten | Firman | Belum | Diisi tim |
-| Memori mengubah rekomendasi | Yizreel | Belum | Diisi tim |
-| Validasi hasil AI | Yizreel | Belum | Diisi tim |
+| Memori mengubah rekomendasi | Yizreel | Berjalan | Backend teruji untuk preferensi eksplisit; menunggu uji browser dan akun nyata |
+| Validasi hasil AI | Yizreel | Berjalan | ID kandidat dan harga teruji pada jalur baru; menunggu panggilan model nyata |
 | Checkout akurat | Prans dan Firman | Belum | Diisi tim |
 | Label simulasi dan API URL | Prans | Belum | Diisi tim |
 | Evaluasi A1 sampai A10 | William | Belum | Diisi tim |
