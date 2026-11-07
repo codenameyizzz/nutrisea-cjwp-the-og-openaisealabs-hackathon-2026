@@ -4,25 +4,19 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import {
   ShieldCheck,
-  Building2,
-  Store,
-  TrendingUp,
-  AlertCircle,
   CheckCircle2,
   XCircle,
   RefreshCw,
   Search,
   MapPin,
-  Utensils,
   Award,
-  Wallet,
   Activity,
-  Layers,
-  ArrowRight,
-  Sparkles,
-  Check
+  Layers
 } from "lucide-react";
 import IngredientGuard from "@/components/ingredients/IngredientGuard";
+import IngredientDialog from "@/components/ingredients/IngredientDialog";
+import { responseJson } from "@/lib/api";
+import styles from "./admin.module.css";
 import { useIngredientApi } from "@/services/ingredient-api";
 import { useApp } from "@/context/AppContext";
 
@@ -73,6 +67,17 @@ interface DemandHeatmapItem {
   estimated_order_boost_pct: number;
 }
 
+interface SystemStatus {
+  database?: { status?: string };
+  nutrition_api?: { status?: string };
+  ai_planner?: { status?: string };
+}
+
+function systemLabel(status?: string): string {
+  const labels: Record<string, string> = { healthy: "Available", unreachable: "Unreachable", online: "Configured", reference_dataset_fallback: "Reference data fallback", ready: "Reported ready" };
+  return status ? labels[status] || status : "Status not available";
+}
+
 export default function ShopeeAdminPage() {
   return <IngredientGuard mode="admin"><AdminContent /></IngredientGuard>;
 }
@@ -84,11 +89,13 @@ function AdminContent() {
   const [stats, setStats] = useState<PlatformStats | null>(null);
   const [restaurants, setRestaurants] = useState<RestaurantAdminRow[]>([]);
   const [heatmap, setHeatmap] = useState<DemandHeatmapItem[]>([]);
-  const [systemStatus, setSystemStatus] = useState<any>(null);
+  const [systemStatus, setSystemStatus] = useState<SystemStatus | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [togglingId, setTogglingId] = useState<string | null>(null);
   const [searchFilter, setSearchFilter] = useState("");
+  const [loadError, setLoadError] = useState("");
+  const [flagReview, setFlagReview] = useState<RestaurantAdminRow | null>(null);
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -97,6 +104,7 @@ function AdminContent() {
 
   const loadAdminData = async () => {
     setIsLoading(true);
+    setLoadError("");
     try {
       const [statsRes, restsRes, heatRes, sysRes] = await Promise.all([
         authenticatedFetch(`/api/admin/overview`),
@@ -105,24 +113,16 @@ function AdminContent() {
         authenticatedFetch(`/api/admin/system-status`)
       ]);
 
-      if (statsRes.ok) {
-        const json = await statsRes.json();
-        setStats(json.data);
-      }
-      if (restsRes.ok) {
-        const json = await restsRes.json();
-        setRestaurants(json.data || []);
-      }
-      if (heatRes.ok) {
-        const json = await heatRes.json();
-        setHeatmap(json.data || []);
-      }
-      if (sysRes.ok) {
-        const json = await sysRes.json();
-        setSystemStatus(json.components);
-      }
+      const [overview, outlets, demand, systems] = await Promise.all([
+        responseJson<{ data: PlatformStats }>(statsRes),
+        responseJson<{ data: RestaurantAdminRow[] }>(restsRes),
+        responseJson<{ data: DemandHeatmapItem[] }>(heatRes),
+        responseJson<{ components: SystemStatus }>(sysRes),
+      ]);
+      setStats(overview.data); setRestaurants(outlets.data || []);
+      setHeatmap(demand.data || []); setSystemStatus(systems.components);
     } catch (err) {
-      console.warn("Failed to load admin data:", err);
+      setLoadError(err instanceof Error ? err.message : "Admin data could not be loaded. Try refreshing.");
     } finally {
       setIsLoading(false);
     }
@@ -143,21 +143,21 @@ function AdminContent() {
         body: JSON.stringify({
           is_verified: nextStatus,
           audit_notes: nextStatus
-            ? "Lolos sertifikasi uji minyak baru & sanitasi dapur NutriSea"
-            : "Sertifikasi ditangguhkan untuk audit ulang minyak jelantah"
+            ? "Administrator enabled the catalog hygiene flag; this is not independent certification."
+            : "Administrator disabled the catalog hygiene flag pending review."
         })
       });
 
       if (res.ok) {
-        const json = await res.json();
         setRestaurants((prev) =>
           prev.map((r) => (r.id === restaurantId ? { ...r, is_verified_hygiene: nextStatus } : r))
         );
-        showToast(json.message);
-      }
+        showToast("The catalog hygiene flag was updated.");
+        setFlagReview(null);
+      } else throw new Error("Hygiene flag update failed");
     } catch (err) {
       console.error("Error toggling hygiene badge:", err);
-      showToast("Gagal memperbarui status sertifikasi higienis");
+      showToast("The catalog hygiene flag could not be updated.");
     } finally {
       setTogglingId(null);
     }
@@ -174,12 +174,16 @@ function AdminContent() {
   });
 
   return (
-    <div style={{ padding: "20px 0 60px", color: "#1E293B" }}>
-      <Link href="/admin/ingredients" className="btn-shopee-primary" style={{ display: "inline-block", marginBottom: 16 }}>Kelola bahan makanan</Link>
-      <Link href="/admin/merchant-applications" className="btn-shopee-primary" style={{ display: "inline-block", marginBottom: 16, marginLeft: 8 }}>Verifikasi Pengajuan Merchant</Link>
+    <div className={styles.page} style={{ padding: "20px 0 60px", color: "#1E293B" }}>
+      <nav className={styles.operations} aria-label="Administration">
+        <Link href="/admin/merchant-applications" className="btn-shopee-primary">Review merchant applications</Link>
+        <Link href="/admin/ingredients">Manage ingredients</Link>
+        <Link href="/">Browse food</Link>
+      </nav>
+      {loadError && <p role="alert">{loadError} Previously loaded data may be out of date.</p>}
       {/* Toast Alert */}
       {toastMessage && (
-        <div style={{
+        <div role="status" style={{
           position: "fixed",
           top: "24px",
           right: "24px",
@@ -222,7 +226,7 @@ function AdminContent() {
                 <ShieldCheck size={22} color="#FFFFFF" />
               </div>
               <h1 style={{ margin: 0, fontSize: "22px", fontWeight: 700, letterSpacing: "-0.01em" }}>
-                ShopeeFood & NutriSea SuperAdmin Portal
+                NutriSea administration
               </h1>
               <span style={{
                 backgroundColor: "rgba(59,130,246,0.2)",
@@ -234,11 +238,11 @@ function AdminContent() {
                 borderRadius: "12px",
                 textTransform: "uppercase"
               }}>
-                Otoritas Platform
+                Platform administration
               </span>
             </div>
             <p style={{ margin: 0, fontSize: "13px", color: "#94A3B8", maxWidth: "680px" }}>
-              Panel kendali khusus pengelola ShopeeFood untuk audit sertifikasi higienis warteg (*Minyak Baru*), pemantauan defisit gizi per distrik, serta tata kelola reward ekosistem SeaBank.
+              Review merchant applications, manage ingredients and inspect outlet records. Catalog flags are not independent hygiene certification.
             </p>
           </div>
 
@@ -262,7 +266,7 @@ function AdminContent() {
               }}
             >
               <RefreshCw size={13} className={isLoading ? "animate-spin" : ""} />
-              Segarkan Data
+              Refresh data
             </button>
           </div>
         </div>
@@ -279,15 +283,15 @@ function AdminContent() {
         }}>
           <span style={{ display: "flex", alignItems: "center", gap: "5px", color: "#4ADE80" }}>
             <span style={{ width: "7px", height: "7px", borderRadius: "50%", backgroundColor: "#4ADE80" }} />
-            PostgreSQL (Aiven Cloud): Terhubung (SSL Active)
+            PostgreSQL: {systemLabel(systemStatus?.database?.status)}
           </span>
           <span style={{ display: "flex", alignItems: "center", gap: "5px", color: "#60A5FA" }}>
             <span style={{ width: "7px", height: "7px", borderRadius: "50%", backgroundColor: "#60A5FA" }} />
-            FatSecret Platform API: OAuth 1.0a Live
+            FatSecret API: {systemLabel(systemStatus?.nutrition_api?.status)}
           </span>
           <span style={{ display: "flex", alignItems: "center", gap: "5px", color: "#FBBF24" }}>
             <span style={{ width: "7px", height: "7px", borderRadius: "50%", backgroundColor: "#FBBF24" }} />
-            Google DeepMind Co-Pilot: Siap Rekomendasi
+            Recommendation service: {systemLabel(systemStatus?.ai_planner?.status)}
           </span>
         </div>
       </div>
@@ -298,6 +302,7 @@ function AdminContent() {
         gap: "6px",
         marginBottom: "20px",
         borderBottom: "1px solid #E2E8F0",
+        flexWrap: "wrap",
         paddingBottom: "8px"
       }}>
         <button
@@ -318,7 +323,7 @@ function AdminContent() {
           }}
         >
           <Activity size={15} />
-          Ringkasan Platform & KPIs
+          Catalog overview
         </button>
 
         <button
@@ -339,7 +344,7 @@ function AdminContent() {
           }}
         >
           <Award size={15} />
-          Audit & Verifikasi Higienis Restoran ({restaurants.length})
+          Restaurant hygiene flags ({restaurants.length})
         </button>
 
         <button
@@ -360,7 +365,7 @@ function AdminContent() {
           }}
         >
           <MapPin size={15} />
-          Heatmap Defisit Gizi Distrik ({heatmap.length})
+          Demand examples
         </button>
 
         <button
@@ -381,7 +386,7 @@ function AdminContent() {
           }}
         >
           <Layers size={15} />
-          Status Integrasi Sistem
+          System integration status
         </button>
       </div>
 
@@ -403,13 +408,13 @@ function AdminContent() {
               border: "1px solid #E2E8F0"
             }}>
               <span style={{ fontSize: "11px", fontWeight: 700, color: "#64748B", textTransform: "uppercase" }}>
-                Total Mitra Merchant
+                Total merchants
               </span>
               <div style={{ fontSize: "28px", fontWeight: 800, color: "#0F172A", marginTop: "4px" }}>
-                {stats?.total_merchants ?? 5}
+                {stats?.total_merchants ?? "Not available"}
               </div>
               <span style={{ fontSize: "12px", color: "#10B981", fontWeight: 600 }}>
-                Mengelola {stats?.total_restaurants ?? 6} Gerai Restoran
+                Managing {stats?.total_restaurants ?? "an unknown number of"} restaurant outlets
               </span>
             </div>
 
@@ -421,13 +426,13 @@ function AdminContent() {
               border: "1px solid #E2E8F0"
             }}>
               <span style={{ fontSize: "11px", fontWeight: 700, color: "#64748B", textTransform: "uppercase" }}>
-                Kepatuhan Higienis
+                Catalog hygiene flags
               </span>
               <div style={{ fontSize: "28px", fontWeight: 800, color: "#10B981", marginTop: "4px" }}>
-                {stats?.hygiene_compliance_pct ?? 100}%
+                {stats?.hygiene_compliance_pct != null ? `${stats.hygiene_compliance_pct}%` : "Not available"}
               </div>
               <span style={{ fontSize: "12px", color: "#475569" }}>
-                {stats?.verified_restaurants ?? 6} dari {stats?.total_restaurants ?? 6} Lolos Audit Minyak Baru
+                {stats?.verified_restaurants ?? "Unknown"} of {stats?.total_restaurants ?? "unknown"} outlets have a catalog flag
               </span>
             </div>
 
@@ -439,82 +444,19 @@ function AdminContent() {
               border: "1px solid #E2E8F0"
             }}>
               <span style={{ fontSize: "11px", fontWeight: 700, color: "#64748B", textTransform: "uppercase" }}>
-                Menu Terverifikasi FatSecret
+                Catalog meals
               </span>
               <div style={{ fontSize: "28px", fontWeight: 800, color: "#0F172A", marginTop: "4px" }}>
-                {stats?.total_dishes ?? 18}
+                {stats?.total_dishes ?? "Not available"}
               </div>
               <span style={{ fontSize: "12px", color: "#64748B" }}>
-                Nutri-Grade A/B/C Tersertifikasi
+                Nutrition sources vary by meal
               </span>
             </div>
 
-            <div style={{
-              backgroundColor: "#FFFFFF",
-              borderRadius: "10px",
-              padding: "18px",
-              boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
-              border: "1px solid #E2E8F0"
-            }}>
-              <span style={{ fontSize: "11px", fontWeight: 700, color: "#64748B", textTransform: "uppercase" }}>
-                Penghematan Komisi Mitra (5% Tier)
-              </span>
-              <div style={{ fontSize: "28px", fontWeight: 800, color: "#EE4D2D", marginTop: "4px" }}>
-                Rp2.450.000
-              </div>
-              <span style={{ fontSize: "12px", color: "#10B981", fontWeight: 600 }}>
-                15% Lebih Hemat vs Komisi Reguler (20%)
-              </span>
-            </div>
           </div>
 
-          {/* SeaBank Gamification Integration Banner */}
-          <div style={{
-            backgroundColor: "#F0FDF4",
-            border: "1px solid #BBF7D0",
-            borderRadius: "10px",
-            padding: "18px 22px",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            flexWrap: "wrap",
-            gap: "12px",
-            marginBottom: "24px"
-          }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-              <div style={{
-                backgroundColor: "#16A34A",
-                color: "#FFFFFF",
-                borderRadius: "50%",
-                padding: "8px",
-                display: "flex"
-              }}>
-                <Wallet size={20} />
-              </div>
-              <div>
-                <h4 style={{ margin: "0 0 2px 0", fontSize: "15px", fontWeight: 700, color: "#166534" }}>
-                  Ekosistem Cashback NutriSea & SeaBank Berjalan Normal
-                </h4>
-                <p style={{ margin: 0, fontSize: "12px", color: "#15803D" }}>
-                  Konsumen menerima Rp5.000 saldo SeaBank otomatis tiap memesan menu dengan verifikasi *Minyak Baru*.
-                </p>
-              </div>
-            </div>
-            <Link
-              href="/"
-              style={{
-                backgroundColor: "#16A34A",
-                color: "#FFFFFF",
-                padding: "7px 14px",
-                borderRadius: "6px",
-                fontSize: "12px",
-                fontWeight: 600,
-                textDecoration: "none"
-              }}
-            >
-              Lihat Tampilan Konsumen $\rightarrow$
-            </Link>
-          </div>
+
         </div>
       )}
 
@@ -537,10 +479,10 @@ function AdminContent() {
           }}>
             <div>
               <h3 style={{ margin: "0 0 4px 0", fontSize: "16px", fontWeight: 700 }}>
-                Daftar Gerai Restoran & Otoritas Sertifikasi Higienis
+              Restaurant outlets and catalog hygiene flags
               </h3>
               <p style={{ margin: 0, fontSize: "12px", color: "#64748B" }}>
-                Admin ShopeeFood memiliki hak verifikasi penuh untuk memberikan atau mencabut badge *Minyak Baru* dan tarif komisi 5%.
+              Administrators can enable or remove the catalog hygiene flag. This action does not certify food safety or independent inspection.
               </p>
             </div>
 
@@ -554,8 +496,9 @@ function AdminContent() {
             }}>
               <Search size={14} color="#94A3B8" />
               <input
-                type="text"
-                placeholder="Cari gerai, brand, wilayah..."
+                type="search"
+                aria-label="Search outlets, brands, or areas"
+                placeholder="Search outlets, brands, or areas..."
                 value={searchFilter}
                 onChange={(e) => setSearchFilter(e.target.value)}
                 style={{
@@ -573,14 +516,14 @@ function AdminContent() {
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "12px" }}>
               <thead>
                 <tr style={{ backgroundColor: "#F8FAFC", textAlign: "left", color: "#475569" }}>
-                  <th style={{ padding: "10px 12px", borderBottom: "1px solid #E2E8F0" }}>ID Gerai</th>
-                  <th style={{ padding: "10px 12px", borderBottom: "1px solid #E2E8F0" }}>Nama Gerai & Brand</th>
-                  <th style={{ padding: "10px 12px", borderBottom: "1px solid #E2E8F0" }}>Mitra Pemilik (Merchant)</th>
-                  <th style={{ padding: "10px 12px", borderBottom: "1px solid #E2E8F0" }}>Wilayah</th>
-                  <th style={{ padding: "10px 12px", borderBottom: "1px solid #E2E8F0" }}>Menu Aktif</th>
-                  <th style={{ padding: "10px 12px", borderBottom: "1px solid #E2E8F0" }}>Komisi Mitra</th>
-                  <th style={{ padding: "10px 12px", borderBottom: "1px solid #E2E8F0" }}>Status Higienis</th>
-                  <th style={{ padding: "10px 12px", borderBottom: "1px solid #E2E8F0", textAlign: "center" }}>Aksi Admin</th>
+                  <th style={{ padding: "10px 12px", borderBottom: "1px solid #E2E8F0" }}>Outlet ID</th>
+                  <th style={{ padding: "10px 12px", borderBottom: "1px solid #E2E8F0" }}>Outlet and brand</th>
+                  <th style={{ padding: "10px 12px", borderBottom: "1px solid #E2E8F0" }}>Merchant owner</th>
+                  <th style={{ padding: "10px 12px", borderBottom: "1px solid #E2E8F0" }}>Area</th>
+                  <th style={{ padding: "10px 12px", borderBottom: "1px solid #E2E8F0" }}>Active meals</th>
+                  <th style={{ padding: "10px 12px", borderBottom: "1px solid #E2E8F0" }}>Merchant commission</th>
+                  <th style={{ padding: "10px 12px", borderBottom: "1px solid #E2E8F0" }}>Hygiene flag</th>
+                  <th style={{ padding: "10px 12px", borderBottom: "1px solid #E2E8F0", textAlign: "center" }}>Admin action</th>
                 </tr>
               </thead>
               <tbody>
@@ -595,7 +538,7 @@ function AdminContent() {
                     </td>
                     <td style={{ padding: "12px" }}>
                       <div style={{ fontWeight: 600 }}>{r.merchant.name}</div>
-                      <div style={{ fontSize: "11px", color: "#64748B" }}>Rek SeaBank: {r.merchant.seabank_account_no}</div>
+                      <div style={{ fontSize: "11px", color: "#64748B" }}>SeaBank account: {r.merchant.seabank_account_no}</div>
                     </td>
                     <td style={{ padding: "12px" }}>
                       <span style={{
@@ -610,14 +553,14 @@ function AdminContent() {
                       </span>
                     </td>
                     <td style={{ padding: "12px", fontWeight: 700 }}>
-                      {r.dish_count} menu
+                      {r.dish_count} meals
                     </td>
                     <td style={{ padding: "12px" }}>
                       <span style={{
                         color: r.is_verified_hygiene ? "#10B981" : "#EF4444",
                         fontWeight: 700
                       }}>
-                        {r.is_verified_hygiene ? "5% (Tier Sehat)" : "20% (Reguler)"}
+                        {Number.isFinite(r.merchant.commission_rate) ? `${(r.merchant.commission_rate * 100).toLocaleString("en-US", { maximumFractionDigits: 2 })}% (recorded)` : "Not available"}
                       </span>
                     </td>
                     <td style={{ padding: "12px" }}>
@@ -633,7 +576,7 @@ function AdminContent() {
                           fontSize: "11px",
                           fontWeight: 700
                         }}>
-                          <CheckCircle2 size={12} /> Terverifikasi
+                          <CheckCircle2 size={12} /> Flag enabled
                         </span>
                       ) : (
                         <span style={{
@@ -647,14 +590,14 @@ function AdminContent() {
                           fontSize: "11px",
                           fontWeight: 700
                         }}>
-                          <XCircle size={12} /> Belum Lolos
+                          <XCircle size={12} /> Flag not enabled
                         </span>
                       )}
                     </td>
                     <td style={{ padding: "12px", textAlign: "center" }}>
                       <button
                         type="button"
-                        onClick={() => handleToggleHygiene(r.id, r.is_verified_hygiene)}
+                        onClick={() => setFlagReview(r)}
                         disabled={togglingId === r.id}
                         style={{
                           backgroundColor: r.is_verified_hygiene ? "#FEE2E2" : "#DCFCE7",
@@ -668,8 +611,8 @@ function AdminContent() {
                           transition: "all 0.2s"
                         }}
                       >
-                        {togglingId === r.id ? "Memproses..." : (
-                          r.is_verified_hygiene ? "Cabut Badge" : "Setujui Higienis"
+                        {togglingId === r.id ? "Processing..." : (
+                          r.is_verified_hygiene ? "Remove flag" : "Enable flag"
                         )}
                       </button>
                     </td>
@@ -686,16 +629,16 @@ function AdminContent() {
         <div>
           <div style={{ marginBottom: "16px" }}>
             <h3 style={{ margin: "0 0 4px 0", fontSize: "16px", fontWeight: 700 }}>
-              Heatmap Kebutuhan Gizi & Defisit Pasokan Menu per Distrik
+              Optional demand examples
             </h3>
             <p style={{ margin: 0, fontSize: "12px", color: "#64748B" }}>
-              Analisis cerdas pencarian konsumen ShopeeFood yang belum terpenuhi untuk merekrut mitra warteg di titik yang tepat.
+              This endpoint mixes stored records with fixed demonstration examples. Treat this content as inspiration, not verified customer demand or a sales forecast.
             </p>
           </div>
 
           <div style={{
             display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
+            gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 320px), 1fr))",
             gap: "18px"
           }}>
             {heatmap.map((item, idx) => (
@@ -719,18 +662,13 @@ function AdminContent() {
                       padding: "2px 8px",
                       borderRadius: "10px"
                     }}>
-                      Distrik: {item.district}
+                      District: {item.district}
                     </span>
                     <h4 style={{ margin: "6px 0 0 0", fontSize: "15px", fontWeight: 700, color: "#0F172A" }}>
                       {item.opportunity_detected.replace(/_/g, " ")}
                     </h4>
                   </div>
-                  <div style={{ textAlign: "right" }}>
-                    <div style={{ fontSize: "20px", fontWeight: 800, color: "#EE4D2D" }}>
-                      {item.unmet_demand_count}
-                    </div>
-                    <div style={{ fontSize: "10px", color: "#64748B" }}>Pencari/Hari</div>
-                  </div>
+
                 </div>
 
                 <p style={{ fontSize: "12px", color: "#475569", lineHeight: "1.5", margin: "10px 0" }}>
@@ -739,7 +677,7 @@ function AdminContent() {
 
                 <div style={{ marginTop: "12px", paddingTop: "12px", borderTop: "1px solid #F1F5F9" }}>
                   <span style={{ fontSize: "11px", fontWeight: 600, color: "#64748B" }}>
-                    Tag Menu yang Dibutuhkan:
+                    Requested menu tags:
                   </span>
                   <div style={{ display: "flex", gap: "6px", flexWrap: "wrap", marginTop: "6px" }}>
                     {item.suggested_healthy_tags.map((tag, tIdx) => (
@@ -761,18 +699,7 @@ function AdminContent() {
                   </div>
                 </div>
 
-                <div style={{
-                  marginTop: "14px",
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  fontSize: "11px",
-                  color: "#10B981",
-                  fontWeight: 600
-                }}>
-                  <span>Potensi Peningkatan Order:</span>
-                  <span style={{ fontSize: "14px", fontWeight: 800 }}>+{item.estimated_order_boost_pct}%</span>
-                </div>
+
               </div>
             ))}
           </div>
@@ -789,10 +716,10 @@ function AdminContent() {
           border: "1px solid #E2E8F0"
         }}>
           <h3 style={{ margin: "0 0 4px 0", fontSize: "16px", fontWeight: 700 }}>
-            Status Komponen & Integrasi Eksternal
+            Components and external integrations
           </h3>
           <p style={{ margin: "0 0 20px 0", fontSize: "12px", color: "#64748B" }}>
-            Audit koneksi basis data cloud, library FatSecret, dan layanan orkestrasi model AI.
+            Backend-reported database, nutrition API, and recommendation service status. Configuration does not confirm a successful live request.
           </p>
 
           <div style={{ display: "grid", gap: "14px" }}>
@@ -807,7 +734,7 @@ function AdminContent() {
             }}>
               <div>
                 <div style={{ fontWeight: 700, color: "#0F172A" }}>PostgreSQL Aiven Cloud</div>
-                <div style={{ fontSize: "11px", color: "#64748B" }}>Host: defaultdb (pg-2072f052-cjwp.d.aivencloud.com) | SSL Require</div>
+                <div style={{ fontSize: "11px", color: "#64748B" }}>Database connectivity reported by the backend</div>
               </div>
               <span style={{
                 backgroundColor: "#DCFCE7",
@@ -817,7 +744,7 @@ function AdminContent() {
                 fontSize: "11px",
                 fontWeight: 700
               }}>
-                ● ONLINE (Seeded 18 dishes, 6 outlets)
+                {systemLabel(systemStatus?.database?.status)}
               </span>
             </div>
 
@@ -832,7 +759,7 @@ function AdminContent() {
             }}>
               <div>
                 <div style={{ fontWeight: 700, color: "#0F172A" }}>FatSecret Platform API (OAuth 1.0a HMAC-SHA1)</div>
-                <div style={{ fontSize: "11px", color: "#64748B" }}>Consumer Key & Secret Verified | Single-serving calibration active</div>
+                <div style={{ fontSize: "11px", color: "#64748B" }}>Provider configuration status, not confirmation of a live API request</div>
               </div>
               <span style={{
                 backgroundColor: "#DCFCE7",
@@ -842,7 +769,7 @@ function AdminContent() {
                 fontSize: "11px",
                 fontWeight: 700
               }}>
-                ● TERKONEKSI (Status 200 OK)
+                {systemLabel(systemStatus?.nutrition_api?.status)}
               </span>
             </div>
 
@@ -856,8 +783,8 @@ function AdminContent() {
               border: "1px solid #E2E8F0"
             }}>
               <div>
-                <div style={{ fontWeight: 700, color: "#0F172A" }}>AI Lunch Planner (Google DeepMind Gemini API)</div>
-                <div style={{ fontSize: "11px", color: "#64748B" }}>Adaptive meal planning with hard calorie & macro constraints</div>
+                <div style={{ fontWeight: 700, color: "#0F172A" }}>AI meal planner</div>
+                <div style={{ fontSize: "11px", color: "#64748B" }}>Recommendation service status reported by the backend</div>
               </div>
               <span style={{
                 backgroundColor: "#DBEAFE",
@@ -867,12 +794,19 @@ function AdminContent() {
                 fontSize: "11px",
                 fontWeight: 700
               }}>
-                ● SIAP REKOMENDASI
+                {systemLabel(systemStatus?.ai_planner?.status)}
               </span>
             </div>
           </div>
         </div>
       )}
+      {flagReview && <IngredientDialog title={`${flagReview.is_verified_hygiene ? "Remove" : "Enable"} catalog hygiene flag?`} busy={!!togglingId} onClose={() => setFlagReview(null)}>
+        <p>{flagReview.name}: this changes an application catalog flag. It does not certify food safety or confirm an independent inspection.</p>
+        <div className={styles.operations}>
+          <button disabled={!!togglingId} onClick={() => setFlagReview(null)}>Cancel</button>
+          <button disabled={!!togglingId} onClick={() => void handleToggleHygiene(flagReview.id, flagReview.is_verified_hygiene)}>{togglingId ? "Saving..." : "Confirm flag change"}</button>
+        </div>
+      </IngredientDialog>}
     </div>
   );
 }

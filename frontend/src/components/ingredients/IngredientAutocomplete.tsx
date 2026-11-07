@@ -39,7 +39,7 @@ export default function IngredientAutocomplete({ value, onChange, search, disabl
         if (current === generation.current) { setResults(data.items); setLoading(false); }
       } catch (err) {
         if (!controller.signal.aborted && current === generation.current) {
-          setError(err instanceof Error ? err.message : "Pencarian bahan gagal."); setLoading(false);
+          setError(err instanceof Error ? err.message : "Ingredient search failed."); setLoading(false);
         }
       }
     }, 275);
@@ -68,10 +68,10 @@ export default function IngredientAutocomplete({ value, onChange, search, disabl
   return <div className={styles.editor} ref={root} onBlur={e => {
     if (!e.currentTarget.contains(e.relatedTarget as Node)) close();
   }}>
-    <label htmlFor={`${id}-input`}>Bahan menu</label>
-    <p className={styles.muted} id={`${id}-hint`}>Cari nama atau alias, lalu pilih bahan. Maksimum 100 bahan; takaran hingga 3 desimal.</p>
+    <label htmlFor={`${id}-input`}>Meal ingredients</label>
+    <p className={styles.muted} id={`${id}-hint`}>Search by name or alias, then select an ingredient. Maximum 100 ingredients; quantities support up to 3 decimal places.</p>
     <div className={styles.search}>
-      <input id={`${id}-input`} ref={input} role="combobox" autoComplete="off" placeholder="Cari bahan, misalnya bawang"
+      <input id={`${id}-input`} ref={input} role="combobox" autoComplete="off" placeholder="Search ingredients, e.g. bawang"
         aria-autocomplete="list" aria-expanded={open} aria-controls={`${id}-list`} aria-describedby={`${id}-hint`}
         aria-activedescendant={open && active >= 0 && suggestions[active] ? `${id}-option-${active}` : undefined}
         value={query} maxLength={80} disabled={disabled || value.length >= 100}
@@ -86,11 +86,11 @@ export default function IngredientAutocomplete({ value, onChange, search, disabl
           }
           if (e.key === "Enter" && query.trim()) { e.preventDefault(); if (open && active >= 0) choose(active); }
         }} />
-      {query && <button type="button" aria-label="Bersihkan pencarian bahan" onClick={() => { clear(); input.current?.focus(); }}>×</button>}
+      {query && <button type="button" aria-label="Clear ingredient search" onClick={() => { clear(); input.current?.focus(); }}>×</button>}
       {open && <div className={styles.dropdown}>
-        <div role="status" aria-live="polite">{loading ? "Mencari bahan…" : !error && !suggestions.length ? "Tidak ada bahan yang cocok atau semua sudah dipilih." : ""}</div>
+        <div role="status" aria-live="polite">{loading ? "Searching ingredients..." : !error && !suggestions.length ? "No matching ingredients, or all matches are already selected." : ""}</div>
         {error && <p role="alert">{error}</p>}
-        <ul role="listbox" id={`${id}-list`} aria-label="Saran bahan" aria-busy={loading}>
+        <ul role="listbox" id={`${id}-list`} aria-label="Ingredient suggestions" aria-busy={loading}>
           {suggestions.map((item, index) => <li role="option" aria-selected={active === index} id={`${id}-option-${index}`} key={item.id}
             className={active === index ? styles.highlight : ""} onPointerDown={e => e.preventDefault()}
             onMouseMove={() => setActive(index)} onClick={() => choose(index)}>
@@ -99,20 +99,20 @@ export default function IngredientAutocomplete({ value, onChange, search, disabl
         </ul>
       </div>}
     </div>
-    <div className={styles.selected} aria-label="Bahan terpilih">
-      {!value.length && <p className={styles.muted}>Belum ada bahan dipilih. Data ini belum menyatakan resep lengkap atau bebas alergen.</p>}
+    <div className={styles.selected} aria-label="Selected ingredients">
+      {!value.length && <p className={styles.muted}>No ingredients selected. This information does not establish a complete recipe or confirm that a meal is allergen-free.</p>}
       {value.map((item, index) => <div className={styles.selectedRow} key={item.ingredient_id}>
-        <strong>{item.name}{!item.is_active && <small> (nonaktif)</small>} <button type="button" disabled={disabled}
-          aria-label={`Nutrisi ${item.name}`} onClick={() => setNutrition(item)}>Nutrisi</button></strong>
-        <label>Takaran {item.name}<input type="number" min="0.001" max="999999.999" step="0.001" required
+        <strong>{item.name}{!item.is_active && <small> (inactive)</small>} <button type="button" disabled={disabled}
+          aria-label={`Nutrition for ${item.name}`} onClick={() => setNutrition(item)}>Nutrition</button></strong>
+        <label>Quantity for {item.name}<input type="number" min="0.001" max="999999.999" step="0.001" required
           value={item.quantity} disabled={disabled || !item.is_active} aria-invalid={!quantityIsValid(item.quantity)}
           onChange={e => update(index, "quantity", e.target.value)} /></label>
-        <label>Satuan {item.name}<select value={item.unit} disabled={disabled || !item.is_active}
+        <label>Unit for {item.name}<select value={item.unit} disabled={disabled || !item.is_active}
           onChange={e => update(index, "unit", e.target.value as IngredientUnit)}>
           {INGREDIENT_UNITS.map(unit => <option value={unit} key={unit}>{unit}</option>)}
         </select></label>
-        <button type="button" disabled={disabled} aria-label={`Hapus ${item.name}`} onClick={() => onChange(value.filter((_, i) => i !== index))}>Hapus</button>
-        {!quantityIsValid(item.quantity) && <p className={styles.error} role="alert">Takaran harus positif, maksimum 999999.999 dan 3 desimal.</p>}
+        <button type="button" disabled={disabled} aria-label={`Remove ${item.name}`} onClick={() => onChange(value.filter((_, i) => i !== index))}>Remove</button>
+        {!quantityIsValid(item.quantity) && <p className={styles.error} role="alert">Quantity must be positive, no greater than 999999.999, with up to 3 decimal places.</p>}
       </div>)}
     </div>
     {nutrition && <IngredientNutrition key={nutrition.ingredient_id} ingredientId={nutrition.ingredient_id} name={nutrition.name} onClose={() => setNutrition(null)} />}

@@ -41,7 +41,7 @@ test("renders accessible combobox and debounces one-character search", async () 
   await mount(async q => { calls.push(q); return page([onion]); });
   assert.equal(input().getAttribute("aria-expanded"), "false");
   await type("b");
-  assert.match(host.textContent!, /Mencari bahan/);
+  assert.match(host.textContent!, /Searching ingredients/);
   assert.equal(calls.length, 0);
   await waitForSearch();
   assert.deepEqual(calls, ["b"]);
@@ -84,18 +84,18 @@ test("quantity editing, validation, unit editing and removal", async () => {
     quantity.dispatchEvent(new window.Event("input", { bubbles: true }));
   });
   assert.equal(quantity.getAttribute("aria-invalid"), "true");
-  assert.match(host.querySelector('[role="alert"]')!.textContent!, /positif/);
+  assert.match(host.querySelector('[role="alert"]')!.textContent!, /positive/);
   const unit = host.querySelector("select")!;
   await act(async () => { unit.value = "gram"; unit.dispatchEvent(new window.Event("change", { bubbles: true })); });
   assert.equal(selected[0].unit, "gram");
-  await click(host.querySelector(`[aria-label="Hapus ${onion.name}"]`)!);
+  await click(host.querySelector(`[aria-label="Remove ${onion.name}"]`)!);
   assert.equal(selected.length, 0);
 });
 
 test("empty and API errors are shown without fabricated suggestions", async () => {
-  await mount(async q => { if (q === "error") throw new Error("API tidak tersedia"); return page([]); });
-  await type("unknown"); await waitForSearch(); assert.match(host.textContent!, /Tidak ada bahan/);
-  await type("error"); await waitForSearch(); assert.equal(host.querySelector('[role="alert"]')?.textContent, "API tidak tersedia");
+  await mount(async q => { if (q === "error") throw new Error("API unavailable"); return page([]); });
+  await type("unknown"); await waitForSearch(); assert.match(host.textContent!, /No matching ingredients/);
+  await type("error"); await waitForSearch(); assert.equal(host.querySelector('[role="alert"]')?.textContent, "API unavailable");
   assert.equal(host.querySelectorAll("[role=option]").length, 0);
 });
 
@@ -114,7 +114,7 @@ test("escape and click outside close popup; clear cancels pending suggestions", 
   await type("baw"); await waitForSearch();
   await act(async () => { document.body.dispatchEvent(new window.Event("pointerdown", { bubbles: true })); });
   assert.equal(input().getAttribute("aria-expanded"), "false");
-  await click(host.querySelector('[aria-label="Bersihkan pencarian bahan"]')!);
+  await click(host.querySelector('[aria-label="Clear ingredient search"]')!);
   assert.equal(input().value, "");
   assert.equal(host.querySelectorAll("[role=option]").length, 0);
 });

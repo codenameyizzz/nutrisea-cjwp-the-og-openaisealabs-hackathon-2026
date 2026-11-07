@@ -15,7 +15,7 @@ export default function RoleTabsBar() {
     setActiveRole(role);
 
     if (role === "CONSUMER") {
-      if (pathname === "/merchant" || pathname === "/admin") {
+      if (pathname?.startsWith("/merchant") || pathname?.startsWith("/admin")) {
         router.push("/");
       }
     } else if (role === "MERCHANT") {
@@ -54,24 +54,25 @@ export default function RoleTabsBar() {
             fontWeight: 700,
             color: "#94A3B8"
           }}>
-            Tampilan:
+            View:
           </span>
           <span style={{
-            color: activeRole === "CONSUMER" ? "#EE4D2D" : activeRole === "MERCHANT" ? "#10B981" : "#3B82F6",
+            color: "#FFFFFF",
             fontWeight: 700
           }}>
-            {activeRole === "CONSUMER" && "👤 Customer (Konsumen)"}
-            {activeRole === "MERCHANT" && "🏪 Merchant (Mitra Warteg)"}
-            {activeRole === "SHOPEE_ADMIN" && "🛡️ Admin (SuperAdmin)"}
+            {activeRole === "CONSUMER" && "Customer"}
+            {activeRole === "MERCHANT" && "Merchant"}
+            {activeRole === "SHOPEE_ADMIN" && "Administrator"}
           </span>
         </div>
 
         {/* Right: The 3 Role Tabs */}
-        <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+        <div className="role-tabs-actions" role="group" aria-label="Choose a role">
           {/* Tab 1: Customer */}
           <button
             type="button"
             onClick={() => handleRoleSelect("CONSUMER")}
+            aria-pressed={activeRole === "CONSUMER"}
             style={{
               display: "flex",
               alignItems: "center",
@@ -95,8 +96,9 @@ export default function RoleTabsBar() {
           <button
             type="button"
             onClick={() => availableRoles.includes("MERCHANT") ? handleRoleSelect("MERCHANT") : router.push("/merchant/register")}
+            aria-pressed={activeRole === "MERCHANT"}
             disabled={!roleAccessLoaded}
-            title={availableRoles.includes("MERCHANT") ? "Buka tampilan" : "Daftarkan usaha atau periksa status pengajuan"}
+            title={availableRoles.includes("MERCHANT") ? "Open merchant view" : "Register your business or check your application"}
             style={{
               opacity: roleAccessLoaded ? 1 : 0.45,
               display: "flex",
@@ -113,7 +115,7 @@ export default function RoleTabsBar() {
             }}
           >
             <Store size={13} />
-            <span>{availableRoles.includes("MERCHANT") ? "Merchant" : "Daftar Merchant"}</span>
+            <span>{availableRoles.includes("MERCHANT") ? "Merchant" : "Become a merchant"}</span>
             {activeRole === "MERCHANT" && <CheckCircle2 size={12} />}
           </button>
 
@@ -121,8 +123,9 @@ export default function RoleTabsBar() {
           <button
             type="button"
             onClick={() => handleRoleSelect("SHOPEE_ADMIN")}
+            aria-pressed={activeRole === "SHOPEE_ADMIN"}
             disabled={!roleAccessLoaded || !availableRoles.includes("SHOPEE_ADMIN")}
-            title={availableRoles.includes("SHOPEE_ADMIN") ? "Buka tampilan" : "Akses perlu ditetapkan oleh pengelola"}
+            title={availableRoles.includes("SHOPEE_ADMIN") ? "Open admin view" : "An administrator must grant access"}
             style={{
               opacity: availableRoles.includes("SHOPEE_ADMIN") ? 1 : 0.45,
               display: "flex",
@@ -147,7 +150,7 @@ export default function RoleTabsBar() {
           <button
             type="button"
             onClick={() => router.push("/onboarding?change=true")}
-            title="Buka Wizard Pilihan Peran"
+            title="Change your role selection"
             style={{
               display: "flex",
               alignItems: "center",
@@ -162,7 +165,7 @@ export default function RoleTabsBar() {
               transition: "all 0.2s ease"
             }}
           >
-            <span>Panduan Peran</span>
+            <span>Role guide</span>
           </button>
         </div>
       </div>

@@ -11,8 +11,8 @@ test("quantity validation matches backend numeric precision and range", () => {
 test("recipe payload persists IDs, validates duplicates and strips display-only fields", () => {
   const item: IngredientSelection = { ingredient_id: "test-id", name: "Bawang", quantity: "1", unit: "pcs", is_active: true };
   assert.deepEqual(recipePayload([item], EMPTY_RECIPE_VERSION).items, [{ ingredient_id: "test-id", quantity: "1", unit: "pcs" }]);
-  assert.throws(() => recipePayload([item, item], EMPTY_RECIPE_VERSION), /duplikat/);
-  assert.throws(() => recipePayload([{ ...item, quantity: "0" }], EMPTY_RECIPE_VERSION), /takaran/);
+  assert.throws(() => recipePayload([item, item], EMPTY_RECIPE_VERSION), /Duplicate/);
+  assert.throws(() => recipePayload([{ ...item, quantity: "0" }], EMPTY_RECIPE_VERSION), /quantity/);
   assert.deepEqual(recipePayload([], EMPTY_RECIPE_VERSION).items, []);
 });
 test("API errors preserve backend validation and migration messages", async () => {

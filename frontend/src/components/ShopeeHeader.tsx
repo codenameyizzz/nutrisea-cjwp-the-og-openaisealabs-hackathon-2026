@@ -2,13 +2,11 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useClerk, useUser } from "@clerk/nextjs";
 import {
-  MapPin,
   Utensils,
   ShoppingBag,
-  Wallet,
   Search,
   Scale,
   Camera,
@@ -23,7 +21,9 @@ import { AUTH_ROUTES } from "@/domains/auth/config/auth-routes";
 
 export default function ShopeeHeader() {
   const pathname = usePathname();
-  const { cartCount, setIsSeaBankOpen, searchQuery, setSearchQuery, logUserAction, availableRoles } = useApp();
+  const isOperationsPage = pathname?.startsWith("/admin") || (pathname?.startsWith("/merchant") && pathname !== "/merchant/register");
+  const router = useRouter();
+  const { cartCount, searchQuery, setSearchQuery, logUserAction, availableRoles } = useApp();
   const { signOut } = useClerk();
   const { user } = useUser();
   const [isSigningOut, setIsSigningOut] = useState(false);
@@ -61,7 +61,7 @@ export default function ShopeeHeader() {
       await signOut({ redirectUrl: "/" });
     } catch (error) {
       console.error("Clerk sign-out failed:", error);
-      setSignOutError("Keluar gagal. Silakan coba lagi.");
+      setSignOutError("Could not sign out. Please try again.");
       setIsSigningOut(false);
     }
   };
@@ -73,10 +73,10 @@ export default function ShopeeHeader() {
         <div className="navbar-top-row">
           {/* Logo: NutriSea by Shopeefood with white stroke */}
           <div className="navbar-brand-group">
-            <Link href="/" className="navbar-brand-logo" aria-label="NutriSea by ShopeeFood Home">
+            <Link href="/" className="navbar-brand-logo" aria-label="NutriSea home">
               <img
                 src="/assets/NutriSea%20by%20Shopeefood.png"
-                alt="NutriSea by ShopeeFood"
+                alt="NutriSea"
                 className="navbar-brand-img"
               />
             </Link>
@@ -86,21 +86,24 @@ export default function ShopeeHeader() {
           <div className="navbar-search-bar">
             <input
               type="text"
-              placeholder="Cari menu sehat, warteg terdekat..."
+              aria-label="Search food or restaurants"
+              placeholder="Search food or restaurants..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === "Enter" && searchQuery.trim().length >= 2) {
                   logUserAction("SEARCH_QUERY", { query: searchQuery.trim() });
+                  if (pathname !== "/") router.push("/#all-dishes-catalog");
                 }
               }}
             />
             <button
               className="search-submit-btn"
-              aria-label="Cari"
+              aria-label="Search"
               onClick={() => {
                 if (searchQuery.trim().length >= 2) {
                   logUserAction("SEARCH_QUERY", { query: searchQuery.trim() });
+                  if (pathname !== "/") router.push("/#all-dishes-catalog");
                 }
               }}
             >
@@ -109,37 +112,37 @@ export default function ShopeeHeader() {
           </div>
 
           {/* Clean Desktop Navigation Links */}
-          <nav className="desktop-nav-links">
+          <nav className="desktop-nav-links" aria-label="Main navigation">
             <Link
               href="/"
               className={`desktop-nav-link ${pathname === "/" ? "active" : ""}`}
             >
-              <Utensils size={14} /> Menu Sehat
+              <Utensils size={14} /> Food menu
             </Link>
 
-            <Link
+            {!isOperationsPage && <><Link
               href="/bmi"
               className={`desktop-nav-link ${pathname === "/bmi" ? "active" : ""}`}
             >
-              <Scale size={14} /> Gizi & BMI
+              <Scale size={14} /> Nutrition & BMI
             </Link>
 
             <Link
               href="/scanner"
               className={`desktop-nav-link ${pathname === "/scanner" ? "active" : ""}`}
             >
-              <Camera size={14} /> Scan Camilan
+              <Camera size={14} /> Food scanner
             </Link>
 
             <Link
               href="/cart"
               className={`desktop-nav-link ${pathname === "/cart" ? "active" : ""}`}
             >
-              <ShoppingBag size={14} /> Keranjang
+              <ShoppingBag size={14} /> Cart
               {cartCount > 0 && <span className="desktop-cart-badge">{cartCount}</span>}
-            </Link>
+            </Link></>}
 
-            <Link
+            {availableRoles.includes("MERCHANT") && <Link
               href={availableRoles.includes("MERCHANT") ? "/merchant" : "/merchant/register"}
               className={`desktop-nav-link ${pathname === "/merchant" ? "active" : ""}`}
               style={{
@@ -150,10 +153,14 @@ export default function ShopeeHeader() {
                 fontWeight: 600
               }}
             >
-              <Store size={14} /> {availableRoles.includes("MERCHANT") ? "Portal Mitra" : "Daftar sebagai Merchant"}
-            </Link>
+              <Store size={14} /> {availableRoles.includes("MERCHANT") ? "Merchant portal" : "Become a merchant"}
+            </Link>}
+            {pathname?.startsWith("/admin") && availableRoles.includes("SHOPEE_ADMIN") && <>
+              <Link href="/admin/merchant-applications" className="desktop-nav-link">Applications</Link>
+              <Link href="/admin/ingredients" className="desktop-nav-link">Ingredients</Link>
+            </>}
 
-            <Link
+            {availableRoles.includes("SHOPEE_ADMIN") && <Link
               href="/admin"
               className={`desktop-nav-link ${pathname === "/admin" ? "active" : ""}`}
               style={{
@@ -165,8 +172,8 @@ export default function ShopeeHeader() {
                 border: "1px solid rgba(255,255,255,0.2)"
               }}
             >
-              <ShieldCheck size={14} /> Shopee Admin
-            </Link>
+              <ShieldCheck size={14} /> Admin
+            </Link>}
           </nav>
 
           {user ? <div className="desktop-nav-profile" ref={profileRef}>
@@ -174,8 +181,8 @@ export default function ShopeeHeader() {
               type="button"
               className="desktop-nav-profile-trigger"
               aria-expanded={isProfileOpen}
-              aria-haspopup="dialog"
-              aria-label="Profil"
+              aria-controls="profile-menu"
+              aria-label="Profile"
               onClick={() => setIsProfileOpen((isOpen) => !isOpen)}
             >
               {user?.imageUrl ? (
@@ -187,14 +194,15 @@ export default function ShopeeHeader() {
               ) : (
                 <UserRound size={15} />
               )}
-              <span className="desktop-nav-profile-label">Profil</span>
+              <span className="desktop-nav-profile-label">Profile</span>
               <ChevronDown className="desktop-nav-profile-chevron" size={13} />
             </button>
 
             {isProfileOpen && (
               <section
+                id="profile-menu"
                 className="desktop-nav-profile-menu"
-                aria-label="Menu profil"
+                aria-label="Profile menu"
               >
                 <Link
                   href={AUTH_ROUTES.PROFILE}
@@ -202,7 +210,7 @@ export default function ShopeeHeader() {
                   onClick={() => setIsProfileOpen(false)}
                 >
                   <UserRound size={14} />
-                  Lihat detail profil
+                  View profile
                 </Link>
 
                 {signOutError && (
@@ -218,39 +226,14 @@ export default function ShopeeHeader() {
                   disabled={isSigningOut}
                 >
                   <LogOut size={14} />
-                  {isSigningOut ? "Keluar..." : "Keluar"}
+                  {isSigningOut ? "Signing out..." : "Sign out"}
                 </button>
               </section>
             )}
-          </div> : <Link href={AUTH_ROUTES.SIGN_IN} className="desktop-nav-profile-trigger">Masuk</Link>}
+          </div> : <Link href={`${AUTH_ROUTES.SIGN_IN}?redirect_url=${encodeURIComponent(pathname || "/")}`} className="desktop-nav-profile-trigger">Sign in</Link>}
         </div>
       </div>
 
-      {/* Sub-bar Location & Wallet */}
-      <div className="navbar-sub-bar">
-        <div className="site-container sub-bar-inner">
-          <div className="sub-bar-location">
-            <MapPin size={11} color="#FFFFFF" />
-            <span className="sub-bar-location-text">Kirim ke: SCBD / Kuningan, Jakarta Selatan</span>
-            <ChevronDown size={10} color="#FFFFFF" />
-          </div>
-
-          <div className="sub-bar-wallet-items">
-            <div className="sub-bar-wallet-item">
-              <Wallet size={11} />
-              <span>ShopeePay: <strong>Rp 124.500</strong></span>
-            </div>
-            <div
-              className="sub-bar-wallet-item"
-              style={{ color: "#FFEAE4", cursor: "pointer" }}
-              onClick={() => setIsSeaBankOpen(true)}
-              title="Klik untuk membuka Tabungan & Reward SeaBank Wellness"
-            >
-              <span>SeaBank Sehat: <strong>+Rp 45.000</strong></span>
-            </div>
-          </div>
-        </div>
-      </div>
     </header>
   );
 }

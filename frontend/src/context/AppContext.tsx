@@ -74,7 +74,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const refreshAccountAccess = useCallback(() => {
     if (!isSignedIn || !sessionId) return;
     void getToken({ skipCache: true }).then(() => setRefreshError(null)).catch(() => {
-      setRefreshError({ sessionId, message: "Pembaruan sesi Clerk gagal. Silakan coba kembali." });
+      setRefreshError({ sessionId, message: "Your Clerk session could not be refreshed. Please try again." });
     });
   }, [getToken, isSignedIn, sessionId]);
   useEffect(() => {
@@ -84,7 +84,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const sessionAccessResult = useMemo(() => {
     if (!isSignedIn) return {};
     try { return { access: sessionAccess(sessionClaims) }; }
-    catch (error) { return { error: error instanceof Error ? error.message : "Pemeriksaan sesi gagal." }; }
+    catch (error) { return { error: error instanceof Error ? error.message : "The session check failed." }; }
   }, [isSignedIn, sessionClaims]);
   const access = sessionAccessResult.access;
   const availableRoles = useMemo<UserAppRole[]>(() => [
@@ -152,22 +152,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const logUserAction = async (actionType: string, payload: Record<string, any>) => {
     if (!activeUserId) return;
     try {
-      const actionRecord = {
-        action_type: actionType,
-        payload,
-        created_at: new Date().toISOString()
-      };
-      if (typeof window !== "undefined") {
-        try {
-          const stored = JSON.parse(localStorage.getItem("nutrisea_short_term_memory") || "[]");
-          stored.unshift(actionRecord);
-          localStorage.setItem("nutrisea_short_term_memory", JSON.stringify(stored.slice(0, 20)));
-        } catch {}
-      }
-
+      const token = await getToken();
+      if (!token) return;
       await fetch("http://127.0.0.1:8000/api/actions/log", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({
           user_id: activeUserId,
           action_type: actionType,
@@ -182,23 +171,23 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const bmiStats = useMemo(() => {
     const hMeter = heightCm / 100;
     const score = Number((weightKg / (hMeter * hMeter)).toFixed(1));
-    let category = "Ideal (Normal)";
+    let category = "Normal range";
     let badgeClass = "ideal";
     let targetCalories = 1750;
     let targetProtein = 75;
 
     if (score < 18.5) {
-      category = "Kurang (Underweight)";
+      category = "Underweight";
       badgeClass = "warning";
       targetCalories = 2000;
       targetProtein = 65;
     } else if (score >= 23 && score < 25) {
-      category = "Berisiko (Overweight)";
+      category = "Overweight";
       badgeClass = "warning";
       targetCalories = 1600;
       targetProtein = 80;
     } else if (score >= 25) {
-      category = "Obesitas";
+      category = "Obesity range";
       badgeClass = "warning";
       targetCalories = 1450;
       targetProtein = 85;
@@ -226,9 +215,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setCartItems((prev) => {
       const idx = prev.findIndex((i) => i.dish.id === dish.id);
       if (idx >= 0) {
-        const updated = [...prev];
-        updated[idx].qty += qty;
-        return updated;
+        return prev.map((item, index) => index === idx ? { ...item, qty: item.qty + qty } : item);
       }
       return [...prev, { dish, qty }];
     });

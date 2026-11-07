@@ -1,320 +1,117 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import {
-  Wallet,
-  X,
-  TrendingUp,
-  Award,
-  CheckCircle2,
-  Calendar,
-  Sparkles,
-  ShieldCheck,
-  ArrowRight,
-  Flame
-} from "lucide-react";
+import React, { useEffect, useRef, useState } from "react";
+import { Wallet, X, RefreshCw } from "lucide-react";
 import { useApp } from "@/context/AppContext";
 import { useUser, useAuth } from "@clerk/nextjs";
 import { API_BASE_URL, responseJson } from "@/lib/api";
 
 export default function SeaBankModal() {
+  const { isSeaBankOpen } = useApp();
+  const { user } = useUser();
+  return isSeaBankOpen ? <SeaBankContent key={user?.id || "signed-out"} /> : null;
+}
+
+function SeaBankContent() {
   const { isSeaBankOpen, setIsSeaBankOpen } = useApp();
   const { user } = useUser();
   const { getToken } = useAuth();
-  const [cashbackAmount, setCashbackAmount] = useState<number>(0);
-  const [orderCount, setOrderCount] = useState<number>(0);
+  const [rewards, setRewards] = useState<{ amount: number; count: number } | null>(null);
+  const [isLoading, setIsLoading] = useState(Boolean(user));
+  const [error, setError] = useState<string | null>(null);
+  const [attempt, setAttempt] = useState(0);
+  const dialogRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!isSeaBankOpen) return;
-    setCashbackAmount(0); setOrderCount(0);
-    if (!user) return;
     const controller = new AbortController();
+    if (!user) return;
     const load = async () => {
       try {
         const token = await getToken();
-        if (!token || controller.signal.aborted) return;
+        if (controller.signal.aborted) return;
+        if (!token) throw new Error("No session");
         const data = await responseJson<{ total_reward_idr: number; history: unknown[] }>(await fetch(
-          `${API_BASE_URL}/api/users/${user.id}/rewards`, { headers: { Authorization: `Bearer ${token}` }, signal: controller.signal }));
-        if (!controller.signal.aborted) { setCashbackAmount(data.total_reward_idr); setOrderCount(data.history?.length || 0); }
-      } catch { /* Keep an unavailable balance empty. */ }
+          `${API_BASE_URL}/api/users/${user.id}/rewards`,
+          { headers: { Authorization: `Bearer ${token}` }, signal: controller.signal }
+        ));
+        if (!Number.isFinite(data.total_reward_idr) || data.total_reward_idr < 0 || !Array.isArray(data.history)) {
+          throw new Error("Invalid rewards response");
+        }
+        if (!controller.signal.aborted) setRewards({ amount: data.total_reward_idr, count: data.history.length });
+      } catch {
+        if (!controller.signal.aborted) setError("Rewards could not be loaded. No transaction was made. Please try again.");
+      } finally {
+        if (!controller.signal.aborted) setIsLoading(false);
+      }
     };
     void load();
     return () => controller.abort();
-  }, [isSeaBankOpen, user, getToken]);
+  }, [isSeaBankOpen, user, getToken, attempt]);
+
+  useEffect(() => {
+    if (!isSeaBankOpen) return;
+    const previousFocus = document.activeElement as HTMLElement | null;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    dialogRef.current?.focus();
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setIsSeaBankOpen(false);
+      if (event.key !== "Tab") return;
+      const controls = dialogRef.current?.querySelectorAll<HTMLElement>('button:not(:disabled), a[href], [tabindex="0"]');
+      if (!controls?.length) return;
+      const first = controls[0];
+      const last = controls[controls.length - 1];
+      if (event.shiftKey && (document.activeElement === first || document.activeElement === dialogRef.current)) {
+        event.preventDefault(); last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault(); first.focus();
+      }
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => { document.removeEventListener("keydown", onKeyDown); document.body.style.overflow = previousOverflow; previousFocus?.focus(); };
+  }, [isSeaBankOpen, setIsSeaBankOpen]);
 
   if (!isSeaBankOpen) return null;
 
   return (
     <div
-      style={{
-        position: "fixed",
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        backgroundColor: "rgba(0, 0, 0, 0.55)",
-        zIndex: 9999,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        padding: "16px",
-        backdropFilter: "blur(4px)",
-        animation: "fadeIn 0.2s ease"
-      }}
+      style={{ position: "fixed", inset: 0, zIndex: 9999, backgroundColor: "rgba(0,0,0,0.55)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}
       onClick={() => setIsSeaBankOpen(false)}
     >
       <div
-        style={{
-          width: "100%",
-          maxWidth: "520px",
-          maxHeight: "90vh",
-          backgroundColor: "#FFFFFF",
-          borderRadius: "12px",
-          overflowY: "auto",
-          boxShadow: "0 12px 36px rgba(0, 0, 0, 0.25)",
-          display: "flex",
-          flexDirection: "column"
-        }}
-        onClick={(e) => e.stopPropagation()}
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="seabank-title"
+        tabIndex={-1}
+        className="seabank-dialog"
+        style={{ width: "100%", maxWidth: 440, backgroundColor: "#FFFFFF", borderRadius: 8, overflowY: "auto", boxShadow: "0 8px 24px rgba(0,0,0,0.2)" }}
+        onClick={event => event.stopPropagation()}
       >
-        {/* Header SeaBank Navy Gradient */}
-        <div
-          style={{
-            background: "linear-gradient(135deg, #003B7A 0%, #0056B3 100%)",
-            color: "#FFFFFF",
-            padding: "18px 20px",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between"
-          }}
-        >
+        <div style={{ backgroundColor: "#003B7A", color: "#FFFFFF", padding: "16px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <div
-              style={{
-                backgroundColor: "rgba(255, 255, 255, 0.2)",
-                padding: "8px",
-                borderRadius: "8px",
-                display: "flex"
-              }}
-            >
-              <Wallet size={20} color="#FFFFFF" />
-            </div>
+            <Wallet size={24} aria-hidden="true" />
             <div>
-              <div style={{ fontSize: "15px", fontWeight: 700, letterSpacing: "0.5px" }}>
-                SeaBank Wellness Saver
-              </div>
-              <div style={{ fontSize: "11.5px", color: "rgba(255, 255, 255, 0.85)" }}>
-                Tabungan Mikro Sehat & Reward Mitra Higienis
-              </div>
+              <h2 id="seabank-title" style={{ fontSize: 18 }}>SeaBank rewards simulation</h2>
             </div>
           </div>
-
-          <button
-            onClick={() => setIsSeaBankOpen(false)}
-            style={{
-              background: "transparent",
-              border: "none",
-              color: "#FFFFFF",
-              cursor: "pointer",
-              padding: 4
-            }}
-            aria-label="Tutup"
-          >
-            <X size={20} />
-          </button>
+          <button type="button" aria-label="Close rewards simulation" onClick={() => setIsSeaBankOpen(false)} style={{ background: "transparent", border: 0, color: "inherit", cursor: "pointer" }}><X size={22} /></button>
         </div>
-
-        {/* Modal Body */}
-        <div style={{ padding: "18px 20px", display: "flex", flexDirection: "column", gap: 16 }}>
-          {/* Card 1: Balance & Tier Stats */}
-          <div
-            style={{
-              backgroundColor: "#F0F5FA",
-              border: "1px solid #CCE0F5",
-              borderRadius: "10px",
-              padding: "16px",
-              display: "flex",
-              flexDirection: "column",
-              gap: 12
-            }}
-          >
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-              <div>
-                <span style={{ fontSize: "11px", color: "#666", textTransform: "uppercase", letterSpacing: 0.5 }}>
-                  Saldo Tabungan SeaBank Sehat:
-                </span>
-                <div style={{ fontSize: "22px", fontWeight: 700, color: "#003B7A", marginTop: 2 }}>
-                  Rp 2.495.000
-                </div>
-              </div>
-
-              <span
-                style={{
-                  backgroundColor: "#EAF9EE",
-                  color: "#00B14F",
-                  fontSize: "11px",
-                  fontWeight: 600,
-                  padding: "3px 8px",
-                  borderRadius: "12px",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 4
-                }}
-              >
-                <ShieldCheck size={13} /> Tier Gold Sehat
-              </span>
+        <div style={{ padding: 20, display: "flex", flexDirection: "column", gap: 18, fontSize: 14, lineHeight: 1.6 }}>
+          <p>Demo records only. NutriSea has no official SeaBank integration, bank balance, or payout.</p>
+          {!user && <p role="status">Sign in to view your simulated reward records.</p>}
+          {isLoading && <p role="status"><RefreshCw size={16} className="spin-slow" /> Loading reward records...</p>}
+          {error && <div><p role="alert">{error}</p><button type="button" className="btn-shopee-primary" onClick={() => { setError(null); setIsLoading(true); setAttempt(value => value + 1); }}>Try again</button></div>}
+          {rewards && (
+            <div style={{ backgroundColor: "#F0F5FA", border: "1px solid #CCE0F5", borderRadius: 10, padding: 16 }}>
+              <p>Total simulated rewards recorded</p>
+              <p style={{ fontSize: 28, fontWeight: 700, color: "#003B7A" }}>Rp {rewards.amount.toLocaleString("id-ID")}</p>
+              <p>{rewards.count} reward records</p>
+              {rewards.count === 0 && <p>No rewards have been recorded for this account.</p>}
             </div>
-
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, paddingTop: 10, borderTop: "1px dashed #B8D4EF" }}>
-              <div>
-                <div style={{ fontSize: "10.5px", color: "#666" }}>Suku Bunga Tabungan:</div>
-                <div style={{ fontSize: "13.5px", fontWeight: 700, color: "#003B7A" }}>
-                  4.5% p.a. <span style={{ fontSize: "10.5px", color: "#00B14F", fontWeight: 600 }}>(+0.5% Bonus Gizi)</span>
-                </div>
-              </div>
-
-              <div>
-                <div style={{ fontSize: "10.5px", color: "#666" }}>Akumulasi Cashback:</div>
-                <div style={{ fontSize: "13.5px", fontWeight: 700, color: "#EE4D2D" }}>
-                  Rp {cashbackAmount.toLocaleString("id-ID")}{" "}
-                  <span style={{ fontSize: "10.5px", color: "#888", fontWeight: 400 }}>
-                    ({orderCount}x Pesan)
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Card 2: Habit Streak Tracker (Gamification) */}
-          <div
-            style={{
-              backgroundColor: "#FFF9F6",
-              border: "1px solid #FFE4DB",
-              borderRadius: "10px",
-              padding: "16px"
-            }}
-          >
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                <Flame size={18} color="#EE4D2D" />
-                <span style={{ fontSize: "13.5px", fontWeight: 700, color: "#222" }}>
-                  Streak Konsistensi Gizi: 5 Hari
-                </span>
-              </div>
-              <span style={{ fontSize: "11px", color: "#EE4D2D", fontWeight: 600 }}>
-                Senin - Jumat
-              </span>
-            </div>
-
-            {/* Days row */}
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 6, textAlign: "center" }}>
-              {[
-                { day: "Sen", ok: true },
-                { day: "Sel", ok: true },
-                { day: "Rab", ok: true },
-                { day: "Kam", ok: true },
-                { day: "Jum", ok: true }
-              ].map((d, i) => (
-                <div
-                  key={i}
-                  style={{
-                    backgroundColor: "#FFFFFF",
-                    border: "1px solid #00B14F",
-                    borderRadius: "6px",
-                    padding: "6px 2px",
-                    display: "flex",
-                    flexDirection: "column",
-                    alignItems: "center",
-                    gap: 3
-                  }}
-                >
-                  <span style={{ fontSize: "10px", color: "#666" }}>{d.day}</span>
-                  <CheckCircle2 size={15} color="#00B14F" />
-                </div>
-              ))}
-            </div>
-
-            <div style={{ fontSize: "11.5px", color: "#666", marginTop: 10, lineHeight: 1.4 }}>
-              Konsisten 2 hari lagi untuk membuka <strong>Bonus Spesial Rp 25.000</strong> ke saldo SeaBank Anda!
-            </div>
-          </div>
-
-          {/* Card 3: The 3-Step FinTech Flywheel */}
-          <div>
-            <div style={{ fontSize: "12.5px", fontWeight: 600, color: "#222", marginBottom: 8 }}>
-              Bagaimana NutriSea & SeaBank Menguntungkan Anda?
-            </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 8, fontSize: "11.5px" }}>
-              <div style={{ display: "flex", gap: 10, alignItems: "center", backgroundColor: "#FAFAFA", padding: "8px 12px", borderRadius: 6, border: "1px solid #EEEEEE" }}>
-                <div style={{ width: 22, height: 22, borderRadius: "50%", backgroundColor: "#EE4D2D", color: "#FFF", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "11px", fontWeight: 700 }}>
-                  1
-                </div>
-                <div style={{ flex: 1, color: "#333" }}>
-                  <strong>Pesan Menu Sehat NutriSea di ShopeeFood:</strong> Menu terverifikasi rendah santan & minyak baru.
-                </div>
-              </div>
-
-              <div style={{ display: "flex", gap: 10, alignItems: "center", backgroundColor: "#FAFAFA", padding: "8px 12px", borderRadius: 6, border: "1px solid #EEEEEE" }}>
-                <div style={{ width: 22, height: 22, borderRadius: "50%", backgroundColor: "#003B7A", color: "#FFF", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "11px", fontWeight: 700 }}>
-                  2
-                </div>
-                <div style={{ flex: 1, color: "#333" }}>
-                  <strong>Cashback Rp 5.000 Masuk Otomatis ke SeaBank:</strong> Setiap kali pesanan sukses diantar.
-                </div>
-              </div>
-
-              <div style={{ display: "flex", gap: 10, alignItems: "center", backgroundColor: "#FAFAFA", padding: "8px 12px", borderRadius: 6, border: "1px solid #EEEEEE" }}>
-                <div style={{ width: 22, height: 22, borderRadius: "50%", backgroundColor: "#00B14F", color: "#FFF", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "11px", fontWeight: 700 }}>
-                  3
-                </div>
-                <div style={{ flex: 1, color: "#333" }}>
-                  <strong>Bunga Tabungan Bertingkat Naik +0.5% p.a.:</strong> Mengubah kebiasaan makan menjadi tabungan masa depan.
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Card 4: Recent Healthy Transactions */}
-          <div>
-            <div style={{ fontSize: "12.5px", fontWeight: 600, color: "#222", marginBottom: 8 }}>
-              Riwayat Cashback Gizi Terbaru:
-            </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 6, fontSize: "11.5px" }}>
-              {[
-                { date: "24 Okt", place: "Warteg Berkah Mandiri", dish: "Paket Ayam Bakar Dada", reward: "+Rp 5.000" },
-                { date: "23 Okt", place: "Dapur Sehat SCBD", dish: "Gado-Gado Quinoa", reward: "+Rp 5.000" },
-                { date: "22 Okt", place: "Soto Kudus Higienis", dish: "Soto Ayam Bening Kuah Kaldu", reward: "+Rp 5.000" }
-              ].map((tx, idx) => (
-                <div
-                  key={idx}
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    padding: "8px 10px",
-                    borderBottom: idx < 2 ? "1px solid #F0F0F0" : "none"
-                  }}
-                >
-                  <div>
-                    <div style={{ fontWeight: 600, color: "#222" }}>{tx.place}</div>
-                    <div style={{ fontSize: "10.5px", color: "#777" }}>{tx.dish} &bull; {tx.date}</div>
-                  </div>
-                  <span style={{ fontWeight: 700, color: "#00B14F", fontSize: "12px" }}>
-                    {tx.reward}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Close / Action Button */}
-          <button
-            onClick={() => setIsSeaBankOpen(false)}
-            className="btn-shopee-primary"
-            style={{ width: "100%", height: 42, fontSize: "13px", fontWeight: 600 }}
-          >
-            Lanjut Pesan Menu Sehat NutriSea
-          </button>
+          )}
+          <button type="button" className="btn-shopee-primary" onClick={() => setIsSeaBankOpen(false)}>Close and continue</button>
         </div>
       </div>
     </div>

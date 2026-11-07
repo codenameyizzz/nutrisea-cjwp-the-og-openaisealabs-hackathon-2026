@@ -62,7 +62,7 @@ html, body {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
-  padding-top: 94px;
+  padding-top: 0;
 }
 
 .main-content {
@@ -77,11 +77,11 @@ html, body {
 .shopee-navbar {
   background-color: var(--shopee-orange);
   color: #FFFFFF;
-  position: fixed;
+  position: relative;
   top: 0;
   left: 0;
   right: 0;
-  height: 94px;
+  height: auto;
   z-index: 50;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
 }
@@ -141,6 +141,7 @@ html, body {
 
 .navbar-search-bar input {
   flex: 1;
+  min-width: 0;
   border: none;
   outline: none;
   font-size: 12.5px;
@@ -702,8 +703,8 @@ html, body {
 
 .food-card-tags {
   display: flex;
+  flex-wrap: wrap;
   gap: 3px;
-  overflow: hidden;
   margin-bottom: 6px;
 }
 
@@ -715,7 +716,9 @@ html, body {
   background-color: var(--health-green-light);
   color: var(--health-green);
   border: 1px solid var(--health-green-border);
-  white-space: nowrap;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  max-width: 100%;
 }
 
 .food-card-footer {
@@ -3066,4 +3069,102 @@ html, body {
   align-items: center;
   gap: 2px;
   white-space: nowrap;
+}
+/* Shared navigation stays in document flow so zoom and the mobile keyboard do not hide content. */
+.navbar-top-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 10px 20px;
+}
+.navbar-top-row > * { min-width: 0; }
+.navbar-search-bar { width: 100%; max-width: none; height: 46px; }
+.navbar-search-bar input { font-size: 14px; }
+.navbar-search-bar:focus-within { outline: 3px solid #263238; outline-offset: 2px; }
+.search-submit-btn { min-width: 44px; height: 44px; }
+.desktop-nav-links {
+  grid-column: 1 / -1;
+  grid-row: 2;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+}
+.desktop-nav-link { min-height: 44px; }
+.desktop-nav-profile, .navbar-top-row > .desktop-nav-profile-trigger { grid-column: 3; grid-row: 1; }
+.desktop-nav-profile-trigger { min-width: 44px; min-height: 44px; }
+.sub-bar-inner, .sub-bar-wallet-items { flex-wrap: wrap; }
+.sub-bar-wallet-items { min-width: 0; }
+.sub-bar-reward-button {
+  border: 0;
+  background: transparent;
+  font: inherit;
+  color: inherit;
+  min-height: 44px;
+  text-align: left;
+}
+.role-tabs-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.role-tabs-actions > button { min-height: 44px; }
+.role-tabs-container .site-container { min-width: 0; }
+:where(button, a, input, select, textarea, summary):focus-visible {
+  outline: 3px solid #263238;
+  outline-offset: 3px;
+}
+:where(.role-tabs-container, .shopee-navbar, .demo-bar-menu-card) :where(button, a):focus-visible {
+  outline-color: #FFFFFF;
+  box-shadow: 0 0 0 5px #263238;
+}
+.btn-shopee-primary { min-height: 44px; }
+.app-toast { max-width: calc(100vw - 32px); white-space: normal; }
+.demo-bar-floating-wrap {
+  position: relative;
+  inset: auto;
+  width: fit-content;
+  max-width: calc(100% - 32px);
+  margin: 16px auto;
+}
+.demo-bar-floating-wrap button { min-height: 44px; }
+.demo-bar-menu-card { width: min(360px, calc(100vw - 32px)); }
+.demo-bar-menu-card button { min-width: 0; }
+.detail-grid > * { min-width: 0; }
+.menu-detail :where(button, input, select) { min-height: 44px; min-width: 44px; }
+.menu-detail button { white-space: normal; }
+.detail-macros-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+.detail-macro-box { min-width: 0; }
+.detail-macro-val { overflow-wrap: anywhere; }
+.detail-macro-lbl { font-size: 12px; }
+.menu-detail-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-top: 4px; }
+.menu-detail-actions > button { min-height: 48px; height: auto !important; }
+.menu-detail-notice { font-size: 13px; color: #555; line-height: 1.6; }
+.seabank-dialog { max-height: calc(100dvh - 32px) !important; }
+.seabank-dialog button { min-height: 44px; min-width: 44px; }
+
+@media (max-width: 768px) {
+  .navbar-top-row { grid-template-columns: minmax(0, 1fr) auto; gap: 8px; }
+  .navbar-brand-img { max-width: 170px; height: 42px; }
+  .navbar-search-bar { grid-column: 1 / -1; grid-row: 2; height: 48px; }
+  .navbar-search-bar input { font-size: 16px; }
+  .search-submit-btn { min-width: 44px; height: 44px; }
+  .desktop-nav-profile, .navbar-top-row > .desktop-nav-profile-trigger { grid-column: 2; }
+  .desktop-nav-profile-trigger { width: auto; padding: 0 10px; border-radius: 8px; }
+  .sub-bar-inner { gap: 4px; }
+  .sub-bar-location { min-width: 0; }
+  .sub-bar-location-text { white-space: normal; }
+  .sub-bar-wallet-items { font-size: 12px; gap: 4px 12px; }
+  .role-tabs-container { padding: 8px 10px !important; }
+  .role-tabs-container .site-container { padding: 0; }
+  .role-tabs-actions { width: 100%; }
+  .role-tabs-actions > button { flex: 1 1 auto; justify-content: center; }
+  .app-bottom-nav { height: calc(64px + env(safe-area-inset-bottom, 0px)); align-items: stretch; }
+  .nav-item-btn { flex: 1 1 0; min-width: 0; min-height: 56px; justify-content: center; font-size: 11px; padding: 5px 2px; text-align: center; }
+  .nav-item-btn.active { color: #B83216; font-weight: 700; }
+  .shopee-app-footer { padding-bottom: 20px; }
+  .app-wrapper:has(.app-bottom-nav) { padding-bottom: calc(76px + env(safe-area-inset-bottom, 0px)); }
+  .main-content { padding-bottom: 80px; }
+  .ai-floating-btn { bottom: calc(76px + env(safe-area-inset-bottom, 0px)) !important; width: 48px; height: 48px; min-height: 48px; padding: 0 !important; justify-content: center; }
+  .ai-floating-btn > span { display: none; }
+  .app-wrapper:has(input:focus, textarea:focus) .ai-floating-btn { display: none !important; }
+  .detail-macros-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .menu-detail-actions > button { flex-basis: 100% !important; }
+  .menu-detail input, .menu-detail textarea { font-size: 16px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
 }

@@ -7,10 +7,11 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "node --import ./tests/register-css.mjs --import tsx --test src/services/*.test.ts src/components/auth/*.test.tsx src/components/ingredients/*.test.tsx src/components/merchant/*.test.tsx",
+    "test": "node --import ./tests/register-css.mjs --import tsx --test src/services/*.test.ts src/components/auth/*.test.tsx src/components/ingredients/*.test.tsx src/components/merchant/*.test.tsx src/components/FoodImage.test.tsx src/app/profile/*.test.ts src/app/scanner/*.test.ts src/app/cart/*.test.ts src/app/bmi/*.test.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@clerk/localizations": "^4.24.6",
     "@clerk/nextjs": "^7.9.22",
     "lucide-react": "^1.63.0",
     "next": "16.4.2",

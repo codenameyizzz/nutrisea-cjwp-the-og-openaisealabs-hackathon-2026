@@ -16,7 +16,7 @@ export default function IngredientDialog({ title, children, onClose, busy = fals
   }, []);
   return <dialog ref={ref} className={styles.dialog} aria-labelledby={id} aria-busy={busy}
     onCancel={event => { event.preventDefault(); if (!busy) onClose(); }}>
-    <div className={styles.heading}><h2 id={id}>{title}</h2><button type="button" disabled={busy} onClick={onClose} aria-label="Tutup dialog">×</button></div>
+    <div className={styles.heading}><h2 id={id}>{title}</h2><button type="button" disabled={busy} onClick={onClose} aria-label="Close dialog">×</button></div>
     {children}
   </dialog>;
 }

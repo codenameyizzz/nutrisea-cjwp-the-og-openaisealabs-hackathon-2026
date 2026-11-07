@@ -1,0 +1,121 @@
+.commerce { color: #262626; font-size: 14px; line-height: 1.5; }
+.commerce a { color: #aa321b; }
+.commerce button, .commerce a, .commerce summary { cursor: pointer; }
+.commerce button:disabled { cursor: not-allowed; opacity: .6; }
+.commerce :is(button, a, summary):focus-visible { outline: 3px solid #252525; outline-offset: 3px; }
+.pageHeading, .catalogHeading { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.pageHeading { margin-bottom: 10px; }
+.pageHeading h1 { font-size: 23px; line-height: 1.25; font-weight: 700; }
+.pageHeading > a { min-height: 44px; display: inline-flex; align-items: center; flex-shrink: 0; }
+.guestContext { margin: 0 0 14px; color: #555; }
+.contextStrip { border: 1px solid #ead7d1; border-radius: 8px; background: #fff8f5; padding: 4px 12px; margin-bottom: 14px; }
+.contextLine { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.contextLine p { min-width: 0; }
+.contextLine a { font-weight: 600; }
+.contextLine .textButton { flex-shrink: 0; }
+.suggestionDetails > summary { padding: 10px 0; min-height: 44px; font-weight: 600; }
+.suggestionDetails > div { border-top: 1px solid #ead7d1; padding: 12px 0; }
+.suggestionDetails p { margin-bottom: 8px; }
+.suggestionDetails h2 { font-size: 15px; margin: 16px 0 6px; }
+.suggestionDetails ul { padding-left: 20px; }
+.suggestionDetails li { padding: 4px 0; }
+.demoNotice { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 12px; border: 1px solid #ddd; border-radius: 6px; margin: 12px 0; }
+.catalog { scroll-margin-top: 16px; }
+.catalogHeading { margin-bottom: 8px; }
+.catalogHeading h2 { font-size: 17px; font-weight: 650; }
+.catalogHeading > span { font-size: 13px; color: #555; white-space: nowrap; }
+.filters { display: flex; gap: 8px; overflow-x: auto; padding: 4px 3px 10px; margin: 0 -3px 8px; scrollbar-width: thin; }
+.filterButton { flex-shrink: 0; min-height: 44px; padding: 8px 12px; background: #fff; color: #454545; border: 1px solid #888; border-radius: 6px; font: inherit; font-size: 13px; }
+.filterButton:hover { background: #f4f4f4; }
+.filterButton[aria-pressed="true"] { background: #fff0eb; border-color: #aa321b; color: #922b17; font-weight: 650; }
+.searchSummary { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; overflow-wrap: anywhere; margin-bottom: 8px; }
+.foodGrid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
+.foodCard { min-width: 0; display: flex; flex-direction: column; background: #fff; border: 1px solid #dedede; border-radius: 8px; }
+.commerce .cardLink { color: inherit; text-decoration: none; flex: 1; display: block; border-radius: 8px 8px 0 0; }
+.cardLink:hover h3 { color: #aa321b; text-decoration: underline; }
+.cardImage { width: 100% !important; height: auto !important; aspect-ratio: 3 / 2; object-fit: cover; border-radius: 7px 7px 0 0; }
+.cardBody { padding: 12px 12px 0; }
+.cardBody h3 { font-size: 15px; font-weight: 650; line-height: 1.35; margin-bottom: 5px; overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.merchant { color: #555; font-size: 13px; margin: 0 0 6px; overflow-wrap: anywhere; }
+.nutrientHint { color: #555; font-size: 12px; }
+.cardFooter { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px; padding: 10px 12px 12px; }
+.cardPrice { font-size: 16px; white-space: nowrap; }
+.addButton, .primaryButton, .secondaryButton { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 44px; border-radius: 6px; font: inherit; font-weight: 600; padding: 9px 13px; text-decoration: none; }
+.addButton, .primaryButton { background: #b9371c; border: 1px solid #b9371c; color: #fff; }
+.addButton:hover:not(:disabled), .primaryButton:hover:not(:disabled) { background: #932b16; }
+.secondaryButton { background: #fff; color: #333; border: 1px solid #888; }
+.secondaryButton:hover { background: #f3f3f3; }
+.textButton { min-height: 44px; padding: 8px 4px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; color: #aa321b; background: transparent; border: 0; font: inherit; text-decoration: underline; }
+.state { min-height: 210px; padding: 30px 20px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 12px; background: #fff; border: 1px solid #dedede; border-radius: 8px; }
+.state h1, .state h3 { font-size: 20px; }
+.state p { max-width: 480px; color: #555; }
+.catalogNote { color: #555; font-size: 12px; margin-top: 16px; max-width: 750px; }
+.loadingText { color: #555; margin: 0 0 12px; }
+.placeholderCard { border: 1px solid #dedede; border-radius: 8px; overflow: hidden; background: #fff; }
+.placeholderPhoto { aspect-ratio: 3 / 2; background: #e9e9e9; }
+.placeholderLines { padding: 14px 12px 20px; display: grid; gap: 10px; }
+.placeholderLines span { display: block; height: 14px; background: #ececec; border-radius: 3px; }
+.placeholderLines span:last-child { width: 55%; }
+.backLink { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; margin-bottom: 10px; }
+.itemLayout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 28px; padding: 20px; background: #fff; border: 1px solid #dedede; border-radius: 8px; align-items: start; }
+.itemPhoto { width: 100% !important; height: auto !important; aspect-ratio: 4 / 3; object-fit: cover; border-radius: 6px; }
+.itemInfo { min-width: 0; }
+.itemInfo h1 { font-size: 25px; line-height: 1.3; margin-bottom: 12px; overflow-wrap: anywhere; }
+.itemPrice { font-size: 25px; font-weight: 700; margin: 12px 0 6px; color: #a6311a; }
+.availability { color: #555; font-size: 13px; margin-bottom: 18px; }
+.orderControls { display: flex; flex-wrap: wrap; gap: 12px; margin: 12px 0; }
+.orderControls > .primaryButton { flex: 1; }
+.quantity { display: inline-flex; align-items: center; border: 1px solid #888; border-radius: 6px; background: #fff; }
+.quantity button { width: 44px; height: 46px; display: flex; align-items: center; justify-content: center; border: 0; background: transparent; color: #333; }
+.quantity button:hover:not(:disabled) { background: #f4f4f4; }
+.quantity output { min-width: 32px; text-align: center; font-weight: 650; }
+.orderNote { color: #555; font-size: 13px; }
+.disclosures { margin-top: 18px; background: #fff; border: 1px solid #dedede; border-radius: 8px; }
+.disclosure + .disclosure { border-top: 1px solid #dedede; }
+.disclosure > summary { min-height: 52px; padding: 14px 18px; font-size: 15px; font-weight: 650; }
+.disclosureBody { padding: 0 18px 18px; }
+.disclosureBody > p { margin: 0 0 12px; }
+.nutritionGrid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; margin: 16px 0; }
+.nutritionGrid div { border: 1px solid #ddd; border-radius: 6px; padding: 12px; }
+.nutritionGrid dt { color: #555; font-size: 13px; }
+.nutritionGrid dd { font-weight: 650; margin-top: 5px; }
+.labels { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; }
+.labels span { padding: 4px 8px; border: 1px solid #ddd; border-radius: 4px; color: #555; font-size: 12px; }
+.rulePaths { padding-left: 20px; margin: 12px 0; overflow-wrap: anywhere; }
+.rulePaths li { margin-bottom: 6px; }
+.questionActions { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 12px; }
+.answer { white-space: pre-wrap; padding: 14px; background: #f7f7f7; border-radius: 6px; }
+.answer > p { margin-bottom: 8px; font-weight: 600; }
+.error { color: #9c2424; padding: 10px 0; }
+
+@media (max-width: 1000px) {
+  .foodGrid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .itemLayout { gap: 20px; }
+  .itemInfo h1 { font-size: 22px; }
+}
+@media (max-width: 700px) {
+  .foodGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .pageHeading h1 { font-size: 21px; }
+  .pageHeading > a { font-size: 13px; }
+  .guestContext { font-size: 13px; margin-bottom: 12px; }
+  .contextLine { align-items: flex-start; gap: 8px; }
+  .contextLine p { padding-top: 8px; }
+  .contextLine .textButton > span { display: none; }
+  .contextLine .textButton { min-width: 44px; }
+  .cardBody { padding: 10px 10px 0; }
+  .cardBody h3 { font-size: 14px; }
+  .merchant { font-size: 12px; }
+  .cardFooter { padding: 10px; }
+  .cardPrice { font-size: 15px; }
+  .addButton { width: 100%; padding: 8px; }
+  .itemLayout { grid-template-columns: 1fr; gap: 16px; padding: 14px; }
+  .itemPhoto { aspect-ratio: 16 / 9; max-height: 260px; }
+  .itemInfo h1 { font-size: 22px; margin-bottom: 8px; }
+  .itemPrice { font-size: 23px; margin: 8px 0 4px; }
+  .availability { margin-bottom: 12px; }
+  .orderControls { gap: 8px; }
+  .orderControls > .primaryButton { font-size: 13px; padding: 8px 10px; }
+  .nutritionGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .disclosure > summary { padding: 14px; }
+  .disclosureBody { padding: 0 14px 14px; }
+}

@@ -68,11 +68,12 @@ export default function DemoBar() {
       {!isExpanded ? (
         <button
           onClick={() => setIsExpanded(true)}
+          aria-expanded={false}
           style={{
             backgroundColor: "#111827",
             color: "#FFFFFF",
-            border: "1px solid rgba(255, 255, 255, 0.2)",
-            borderRadius: "20px",
+            border: "1px solid rgba(255,255,255,0.2)",
+            borderRadius: "6px",
             padding: "8px 14px",
             fontSize: "11.5px",
             fontWeight: 600,
@@ -80,12 +81,10 @@ export default function DemoBar() {
             display: "flex",
             alignItems: "center",
             gap: 6,
-            boxShadow: "0 4px 14px rgba(0, 0, 0, 0.35)",
-            backdropFilter: "blur(6px)"
+            boxShadow: "none"
           }}
         >
-          <Sparkles size={13} color="#FFA439" />
-          <span>Demo Controller (3-Menit)</span>
+          <span>Demo guide</span>
           <ChevronUp size={13} />
         </button>
       ) : (
@@ -106,16 +105,19 @@ export default function DemoBar() {
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid rgba(255,255,255,0.1)", paddingBottom: 6 }}>
             <div style={{ fontSize: "11.5px", fontWeight: 700, color: "#FFA439", display: "flex", alignItems: "center", gap: 5 }}>
               <Clock size={13} />
-              <span>Skenario Demo Penjurian</span>
+              <span>Presenter scenarios · demo only</span>
             </div>
             <button
               onClick={() => setIsExpanded(false)}
+              aria-label="Close demo guide"
+              aria-expanded={true}
               style={{ background: "none", border: "none", color: "#888", cursor: "pointer", padding: 2 }}
             >
               <ChevronDown size={14} />
             </button>
           </div>
 
+          <p style={{fontSize:12,color:"#E5E7EB",lineHeight:1.5}}>Use a test account. Scenarios change local demo state or open a page; saving and ordering still require confirmation.</p>
           <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
             <button
               onClick={runScenario1}
@@ -134,7 +136,7 @@ export default function DemoBar() {
               }}
             >
               <Utensils size={12} color="#EE4D2D" />
-              <span><strong>11:30 WIB:</strong> Smart Lunch (1-Klik Order)</span>
+              <span><strong>11:30 WIB:</strong> Lunch choices</span>
             </button>
 
             <button
@@ -154,7 +156,7 @@ export default function DemoBar() {
               }}
             >
               <Camera size={12} color="#00B14F" />
-              <span><strong>16:00 WIB:</strong> Scan Camilan (Bakwan)</span>
+              <span><strong>16:00 WIB:</strong> Bakwan photo analysis</span>
             </button>
 
             <button
@@ -174,7 +176,7 @@ export default function DemoBar() {
               }}
             >
               <CheckCircle2 size={12} color="#00B14F" />
-              <span><strong>18:30 WIB:</strong> Rekalibrasi Malam Sehat</span>
+              <span><strong>18:30 WIB:</strong> Dinner adjustment example</span>
             </button>
 
             <button
@@ -194,7 +196,7 @@ export default function DemoBar() {
               }}
             >
               <Wallet size={12} color="#60A5FA" />
-              <span><strong>FinTech:</strong> Tabungan SeaBank Wellness</span>
+              <span><strong>FinTech:</strong> SeaBank rewards simulation</span>
             </button>
 
             <button
@@ -214,7 +216,7 @@ export default function DemoBar() {
               }}
             >
               <Store size={12} color="#FBBF24" />
-              <span><strong>2-Sided:</strong> Portal Mitra Warteg Berkah</span>
+              <span><strong>2-Sided:</strong> Warteg Berkah merchant portal</span>
             </button>
 
             <button
@@ -234,7 +236,7 @@ export default function DemoBar() {
               }}
             >
               <Sparkles size={12} color="#FFA439" />
-              <span><strong>AI Warteg:</strong> Auto-Hitung Gizi (1-Klik)</span>
+              <span><strong>AI Warteg:</strong> Menu nutrition estimates</span>
             </button>
 
             <button
@@ -254,7 +256,7 @@ export default function DemoBar() {
               }}
             >
               <ShieldCheck size={12} color="#60A5FA" />
-              <span><strong>SuperAdmin:</strong> Audit Higienis & Platform KPIs</span>
+              <span><strong>SuperAdmin:</strong> Hygiene review & platform KPIs</span>
             </button>
 
             <button
@@ -274,7 +276,7 @@ export default function DemoBar() {
               }}
             >
               <ShieldCheck size={12} color="#00B14F" />
-              <span><strong>NutriGraph:</strong> Verifikasi Multi-Hop & Subgraf</span>
+              <span><strong>NutriGraph:</strong> Graph relationship explanations</span>
             </button>
           </div>
         </div>

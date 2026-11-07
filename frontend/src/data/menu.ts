@@ -1,5 +1,7 @@
 export interface DishItem {
   id: string;
+  merchantId?: string;
+  nutritionSource?: "TKPI" | "ESTIMATE" | null;
   name: string;
   category: "hemat" | "protein" | "rendah-kalori" | "bebas-santan" | "lambung";
   restaurantId?: string;

@@ -6,13 +6,13 @@ import type { MerchantApplication, MerchantApplicationInput } from "../../servic
 import styles from "../ingredients/ingredients.module.css";
 
 const fields: { key: keyof MerchantApplicationInput; label: string; max: number; min: number; type?: string; placeholder: string }[] = [
-  { key: "business_name", label: "Nama usaha", min: 2, max: 100, placeholder: "Warteg Sehat Bersama" },
-  { key: "owner_name", label: "Nama pemilik / penanggung jawab", min: 2, max: 100, placeholder: "Nama lengkap" },
-  { key: "contact_email", label: "Email usaha", min: 3, max: 150, type: "email", placeholder: "usaha@contoh.com" },
-  { key: "contact_phone", label: "Nomor telepon usaha", min: 8, max: 30, type: "tel", placeholder: "081234567890" },
-  { key: "area", label: "Wilayah / kecamatan", min: 2, max: 80, placeholder: "Kuningan, Jakarta Selatan" },
-  { key: "address", label: "Alamat lengkap outlet", min: 8, max: 255, placeholder: "Jalan, nomor, kelurahan, kota" },
-  { key: "cuisine_type", label: "Jenis masakan", min: 2, max: 80, placeholder: "Warteg & masakan rumahan" },
+  { key: "business_name", label: "Business name", min: 2, max: 100, placeholder: "Example Food Stall" },
+  { key: "owner_name", label: "Owner / responsible person", min: 2, max: 100, placeholder: "Full name" },
+  { key: "contact_email", label: "Business email", min: 3, max: 150, type: "email", placeholder: "business@example.com" },
+  { key: "contact_phone", label: "Business phone number", min: 8, max: 30, type: "tel", placeholder: "081234567890" },
+  { key: "area", label: "Area / district", min: 2, max: 80, placeholder: "Kuningan, South Jakarta" },
+  { key: "address", label: "Full outlet address", min: 8, max: 255, placeholder: "Street, building number, neighborhood, city" },
+  { key: "cuisine_type", label: "Cuisine type", min: 2, max: 80, placeholder: "Food stall and home-style cooking" },
 ];
 const empty: MerchantApplicationInput = { business_name: "", owner_name: "", contact_email: "", contact_phone: "", area: "", address: "", cuisine_type: "" };
 
@@ -28,29 +28,29 @@ export default function MerchantRegistrationPanel({ application, hasAccess, busy
       area: application.area, address: application.address, cuisine_type: application.cuisine_type });
   }, [application]);
   return <section className={styles.page} style={{ maxWidth: 700 }}>
-    <div className={styles.heading}><h1>Daftar sebagai Merchant</h1><Link href="/profile">Kembali ke profil</Link></div>
-    <p className={styles.muted}>Satu akun untuk berbelanja dan mengelola usaha. Tim NutriSea memeriksa pengajuan sebelum akses Merchant diaktifkan.</p>
-    {error && <div role="alert" className={styles.notice}>{error} <button onClick={onReload}>Coba muat status lagi</button></div>}
+    <div className={styles.heading}><h1>Register as a merchant</h1><Link href="/profile">Back to profile</Link></div>
+    <p className={styles.muted}>Use one account to shop and manage your business. NutriSea reviews applications before enabling merchant access.</p>
+    {error && <div role="alert" className={styles.notice}>{error} <button onClick={onReload}>Try loading the status again</button></div>}
     {(hasAccess || application?.status === "APPROVED") ? <div className={styles.notice}>
-      <h2>Pendaftaran disetujui</h2>
-      {hasAccess ? <><p>Akses Merchant sudah aktif. Anda tetap dapat berbelanja sebagai Customer.</p>
-        <Link href="/merchant" className="btn-shopee-primary">Buka Dashboard Merchant</Link></> : <>
-        <p>Akses Merchant belum tersedia pada sesi ini. Perbarui sesi; jika tetap belum aktif, hubungi admin.</p>
-        <button onClick={onReload}>Perbarui sesi dan akses</button></>}
+      <h2>Application approved</h2>
+      {hasAccess ? <><p>Merchant access is active. You can still shop as a customer.</p>
+        <Link href="/merchant" className="btn-shopee-primary">Open merchant dashboard</Link></> : <>
+        <p>Merchant access is not available in this session yet. Refresh your session; if access is still unavailable, contact an administrator.</p>
+        <button onClick={onReload}>Refresh session and access</button></>}
     </div> : application?.status === "PENDING" ? <div className={styles.notice} role="status">
-      <h2>Menunggu verifikasi</h2><p>Pengajuan <strong>{application.business_name}</strong> sudah diterima. Anda tetap bisa berbelanja selama pengajuan diperiksa.</p>
-      <p>Status diperbarui otomatis. Akses Merchant aktif setelah disetujui admin.</p>
-      <button onClick={onReload}>Periksa status</button> <Link href="/">Lanjut berbelanja</Link>
+      <h2>Awaiting review</h2><p>Your application for <strong>{application.business_name}</strong> has been received. You can keep shopping while it is reviewed.</p>
+      <p>Status updates automatically. Merchant access becomes available after administrator approval.</p>
+      <button onClick={onReload}>Check status</button> <Link href="/">Continue shopping</Link>
     </div> : <>
-      {application?.status === "REJECTED" && <div className={styles.notice} role="status"><h2>Pengajuan perlu diperbaiki</h2><p>{application.review_reason}</p><p>Perbaiki data di bawah dan kirim kembali.</p></div>}
+      {application?.status === "REJECTED" && <div className={styles.notice} role="status"><h2>Application needs changes</h2><p>{application.review_reason}</p><p>Update the details below and resubmit.</p></div>}
       <form onSubmit={event => { event.preventDefault(); if (!busy) void onSubmit(form); }} className={styles.form}>
         {fields.map(field => <label key={field.key} htmlFor={`merchant-${field.key}`}>{field.label}
           <input id={`merchant-${field.key}`} name={field.key} required type={field.type || "text"} minLength={field.min} maxLength={field.max}
             placeholder={field.placeholder} value={form[field.key]} disabled={busy}
             onChange={event => setForm(current => ({ ...current, [field.key]: event.target.value }))} />
         </label>)}
-        <label style={{ display: "flex", alignItems: "start" }}><input type="checkbox" required disabled={busy} style={{ width: "auto", marginTop: 4 }} />Saya pemilik atau penanggung jawab usaha dan menyatakan data yang diberikan benar.</label>
-        <button type="submit" className={styles.primary} disabled={busy}>{busy ? "Mengirim pengajuan..." : application ? "Kirim Ulang Pengajuan" : "Kirim Pengajuan Merchant"}</button>
+        <label style={{ display: "flex", alignItems: "start" }}><input type="checkbox" required disabled={busy} style={{ width: "auto", marginTop: 4 }} />I own or am responsible for this business and confirm that the information provided is accurate.</label>
+        <button type="submit" className={styles.primary} disabled={busy}>{busy ? "Submitting application..." : application ? "Resubmit application" : "Submit merchant application"}</button>
       </form>
     </>}
   </section>;

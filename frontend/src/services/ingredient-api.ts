@@ -9,7 +9,7 @@ export function useIngredientApi() {
   const { getToken, isLoaded, isSignedIn, userId } = useAuth();
   const authenticatedFetch = useCallback(async (path: string, init: RequestInit = {}) => {
     const token = await getToken();
-    if (!token) throw new ApiError(401, "Silakan masuk untuk mengelola bahan.");
+    if (!token) throw new ApiError(401, "Sign in to manage ingredients.");
     const headers = new Headers(init.headers);
     headers.set("Authorization", `Bearer ${token}`);
     if (init.body) headers.set("Content-Type", "application/json");

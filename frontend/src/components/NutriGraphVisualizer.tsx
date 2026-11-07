@@ -1,5 +1,6 @@
 "use client";
 
+import { useAuth } from "@clerk/nextjs";
 import React, { useState, useEffect, useRef, useMemo } from "react";
 import {
   Network,
@@ -56,6 +57,7 @@ export default function NutriGraphVisualizer({
   onClose,
   isEmbedded = false
 }: NutriGraphVisualizerProps) {
+  const { getToken } = useAuth();
   const [nodes, setNodes] = useState<GraphNodeData[]>([]);
   const [edges, setEdges] = useState<GraphEdgeData[]>([]);
   const [resolvedPersonaId, setResolvedPersonaId] = useState<string>(personaId);
@@ -90,7 +92,10 @@ export default function NutriGraphVisualizer({
       queryUrl.searchParams.set("focus_dish_id", focusDishId);
     }
 
-    fetch(queryUrl.toString())
+    getToken().then(token => {
+      if (!token) throw new Error("Please sign in to view your graph.");
+      return fetch(queryUrl.toString(), { headers: { Authorization: `Bearer ${token}` } });
+    })
       .then((res) => {
         if (!res.ok) throw new Error(`HTTP error ${res.status}`);
         return res.json();
@@ -177,7 +182,7 @@ export default function NutriGraphVisualizer({
       })
       .catch((err) => {
         if (!isMounted) return;
-        setError("Gagal memuat visualisasi subgraf NutriGraph. Silakan periksa koneksi backend.");
+        setError("The NutriGraph subgraph could not be loaded. Please check the backend connection.");
       })
       .finally(() => {
         if (isMounted) setIsLoading(false);
@@ -310,7 +315,7 @@ export default function NutriGraphVisualizer({
           <div>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               <h3 style={{ fontSize: "14.5px", fontWeight: 700, color: "#222", margin: 0 }}>
-                Visualisasi Subgraf Klinis NutriGraph
+                NutriGraph recommendation relationships
               </h3>
               <span
                 style={{
@@ -322,11 +327,11 @@ export default function NutriGraphVisualizer({
                   borderRadius: 4
                 }}
               >
-                Multi-Hop Proof Chain
+                App rules
               </span>
             </div>
             <p style={{ fontSize: "11px", color: "#666", margin: "2px 0 0 0" }}>
-              Memetakan interaksi biologis: Profil Persona ➔ Kondisi Medis ➔ Kontraindikasi Bahan ➔ Verifikasi Menu
+              Template, ingredient, and menu relationships reflect app configuration; they are not medical validation or a food safety guarantee.
             </p>
           </div>
         </div>
@@ -334,10 +339,10 @@ export default function NutriGraphVisualizer({
         {/* Filter Pills & Controls */}
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
           {[
-            { id: "ALL", label: "Semua Simpul" },
-            { id: "CONDITIONS", label: "Kondisi Medis" },
-            { id: "INGREDIENTS", label: "Bahan Sensitif" },
-            { id: "DISHES", label: "Rekomendasi Menu" }
+            { id: "ALL", label: "All nodes" },
+            { id: "CONDITIONS", label: "Medical conditions" },
+            { id: "INGREDIENTS", label: "Ingredients flagged by rules" },
+            { id: "DISHES", label: "Menu recommendations" }
           ].map((f) => (
             <button
               key={f.id}
@@ -371,7 +376,7 @@ export default function NutriGraphVisualizer({
                 color: "#666",
                 marginLeft: 8
               }}
-              aria-label="Tutup visualisasi"
+              aria-label="Close visualization"
             >
               <X size={18} />
             </button>
@@ -397,7 +402,7 @@ export default function NutriGraphVisualizer({
           >
             <RefreshCw size={26} className="spin-slow" color="#EE4D2D" />
             <span style={{ fontSize: "12.5px", fontWeight: 600, color: "#333" }}>
-              Membangun Topologi Jaringan Pengetahuan Medis...
+              Building the knowledge graph view...
             </span>
           </div>
         )}
@@ -611,7 +616,7 @@ export default function NutriGraphVisualizer({
             type="button"
             onClick={() => handleZoom(0.15)}
             style={{ background: "transparent", border: "none", cursor: "pointer", padding: "4px", color: "#444" }}
-            title="Perbesar"
+            title="Zoom in"
           >
             <ZoomIn size={15} />
           </button>
@@ -619,7 +624,7 @@ export default function NutriGraphVisualizer({
             type="button"
             onClick={() => handleZoom(-0.15)}
             style={{ background: "transparent", border: "none", cursor: "pointer", padding: "4px", color: "#444" }}
-            title="Perkecil"
+            title="Zoom out"
           >
             <ZoomOut size={15} />
           </button>
@@ -627,7 +632,7 @@ export default function NutriGraphVisualizer({
             type="button"
             onClick={handleReset}
             style={{ background: "transparent", border: "none", cursor: "pointer", padding: "4px", color: "#444" }}
-            title="Reset Posisi"
+            title="Reset position"
           >
             <RotateCcw size={14} />
           </button>
@@ -651,31 +656,31 @@ export default function NutriGraphVisualizer({
             backdropFilter: "blur(4px)"
           }}
         >
-          <div style={{ fontWeight: 600, color: "#333", marginBottom: 4 }}>Legenda Graf:</div>
+          <div style={{ fontWeight: 600, color: "#333", marginBottom: 4 }}>Graph legend:</div>
           <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
               <span style={{ width: 9, height: 9, borderRadius: "50%", backgroundColor: "#EE4D2D" }}></span>
-              <span>Persona Pengguna</span>
+              <span>Recommendation persona</span>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
               <span style={{ width: 9, height: 9, borderRadius: "50%", backgroundColor: "#E91E63" }}></span>
-              <span>Kondisi Medis (GERD, Hipertensi, dll)</span>
+              <span>Medical conditions in templates (GERD, hypertension, etc.)</span>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
               <span style={{ width: 9, height: 9, borderRadius: "50%", backgroundColor: "#27AE60" }}></span>
-              <span>Bahan Makanan</span>
+              <span>Food ingredients</span>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
               <span style={{ width: 9, height: 9, borderRadius: "50%", backgroundColor: "#0052CC" }}></span>
-              <span>Menu Makanan</span>
+              <span>Menu items</span>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
               <span style={{ width: 14, height: 2, backgroundColor: "#E02424", borderTop: "2px dashed #E02424" }}></span>
-              <span>Garis Merah: Kontraindikasi Fisiologis</span>
+              <span>Red: contraindications in app rules</span>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
               <span style={{ width: 14, height: 2, backgroundColor: "#00B14F" }}></span>
-              <span>Garis Hijau: Rekomendasi Klinis Aman</span>
+              <span>Green: match according to recommendation rules</span>
             </div>
           </div>
         </div>
@@ -731,20 +736,20 @@ export default function NutriGraphVisualizer({
               {selectedNode.type === "PERSONA" && (
                 <>
                   <div>
-                    <span style={{ color: "#777", fontSize: "11px" }}>Arketipe:</span>
-                    <div style={{ fontWeight: 600 }}>{selectedNode.data?.archetype || "Pekerja Urban"}</div>
+                    <span style={{ color: "#777", fontSize: "11px" }}>Archetype:</span>
+                    <div style={{ fontWeight: 600 }}>{selectedNode.data?.archetype || "Not available"}</div>
                   </div>
                   <div>
-                    <span style={{ color: "#777", fontSize: "11px" }}>Target Kalori Siang:</span>
-                    <div style={{ fontWeight: 600, color: "#EE4D2D" }}>{selectedNode.data?.target_kcal || 600} kcal</div>
+                    <span style={{ color: "#777", fontSize: "11px" }}>Template calorie target:</span>
+                    <div style={{ fontWeight: 600, color: "#EE4D2D" }}>{selectedNode.data?.target_kcal != null ? `${selectedNode.data.target_kcal} kcal` : "Not available"}</div>
                   </div>
                   <div>
-                    <span style={{ color: "#777", fontSize: "11px" }}>Plafon Budget:</span>
-                    <div style={{ fontWeight: 600 }}>Rp {(selectedNode.data?.budget_idr || 35000).toLocaleString("id-ID")}</div>
+                    <span style={{ color: "#777", fontSize: "11px" }}>Budget limit:</span>
+                    <div style={{ fontWeight: 600 }}>{selectedNode.data?.budget_idr != null ? `Rp ${selectedNode.data.budget_idr.toLocaleString("en-US")}` : "Not available"}</div>
                   </div>
                   <div>
-                    <span style={{ color: "#777", fontSize: "11px" }}>Riwayat Medis:</span>
-                    <div style={{ fontWeight: 500, color: "#C53030" }}>{selectedNode.data?.medical_conditions || "Tidak ada"}</div>
+                    <span style={{ color: "#777", fontSize: "11px" }}>Template conditions (not your medical history):</span>
+                    <div style={{ fontWeight: 500, color: "#C53030" }}>{selectedNode.data?.medical_conditions || "Not available"}</div>
                   </div>
                 </>
               )}
@@ -752,15 +757,15 @@ export default function NutriGraphVisualizer({
               {selectedNode.type === "CONDITION" && (
                 <>
                   <div>
-                    <span style={{ color: "#777", fontSize: "11px" }}>Pedoman Medis Resmi:</span>
+                    <span style={{ color: "#777", fontSize: "11px" }}>Sources listed in the rules:</span>
                     <div style={{ fontWeight: 600, color: "#0052CC", display: "flex", alignItems: "center", gap: 4, marginTop: 2 }}>
-                      <BookOpen size={12} /> {selectedNode.data?.guideline || "Konsensus Klinis Nasional"}
+                      <BookOpen size={12} /> {selectedNode.data?.guideline || "Source not provided"}
                     </div>
                   </div>
                   <div>
-                    <span style={{ color: "#777", fontSize: "11px" }}>Rasional Klinis:</span>
+                    <span style={{ color: "#777", fontSize: "11px" }}>Rule explanation (not clinically validated):</span>
                     <div style={{ fontSize: "11.5px", color: "#444", lineHeight: 1.4, marginTop: 2 }}>
-                      {selectedNode.data?.rationale || "Mencegah eksaserbasi gejala akut dan komplikasi metabolik jangka panjang."}
+                      {selectedNode.data?.rationale || "Explanation not available."}
                     </div>
                   </div>
                 </>
@@ -769,14 +774,14 @@ export default function NutriGraphVisualizer({
               {selectedNode.type === "INGREDIENT" && (
                 <>
                   <div>
-                    <span style={{ color: "#777", fontSize: "11px" }}>Mekanisme Fisiologis:</span>
+                    <span style={{ color: "#777", fontSize: "11px" }}>Ingredient notes in app rules:</span>
                     <div style={{ fontSize: "11.5px", color: "#444", lineHeight: 1.4, marginTop: 2 }}>
-                      {selectedNode.data?.impact || "Dapat berinteraksi secara spesifik dengan reseptor gastrointestinal."}
+                      {selectedNode.data?.impact || "Ingredient notes not available."}
                     </div>
                   </div>
                   {selectedNode.data?.alternative && (
                     <div>
-                      <span style={{ color: "#777", fontSize: "11px" }}>Alternatif Pengganti Sehat:</span>
+                      <span style={{ color: "#777", fontSize: "11px" }}>Alternatives in app rules:</span>
                       <div style={{ fontWeight: 600, color: "#00B14F", marginTop: 2 }}>
                         {selectedNode.data.alternative}
                       </div>
@@ -789,25 +794,25 @@ export default function NutriGraphVisualizer({
                 <>
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, backgroundColor: "#F9F9F9", padding: "6px 8px", borderRadius: 4 }}>
                     <div>
-                      <span style={{ color: "#777", fontSize: "10.5px" }}>Kalori:</span>
-                      <div style={{ fontWeight: 700, color: "#EE4D2D" }}>{selectedNode.data?.calories || 0} kcal</div>
+                      <span style={{ color: "#777", fontSize: "10.5px" }}>Calories:</span>
+                      <div style={{ fontWeight: 700, color: "#EE4D2D" }}>{selectedNode.data?.calories != null ? `${selectedNode.data.calories} kcal` : "Not available"}</div>
                     </div>
                     <div>
                       <span style={{ color: "#777", fontSize: "10.5px" }}>Protein:</span>
-                      <div style={{ fontWeight: 700, color: "#00B14F" }}>{selectedNode.data?.protein_g || 0}g</div>
+                      <div style={{ fontWeight: 700, color: "#00B14F" }}>{selectedNode.data?.protein_g != null ? `${selectedNode.data.protein_g} g` : "Not available"}</div>
                     </div>
                     <div>
-                      <span style={{ color: "#777", fontSize: "10.5px" }}>Natrium:</span>
-                      <div style={{ fontWeight: 700 }}>{selectedNode.data?.sodium_mg || 0} mg</div>
+                      <span style={{ color: "#777", fontSize: "10.5px" }}>Sodium:</span>
+                      <div style={{ fontWeight: 700 }}>{selectedNode.data?.sodium_mg != null ? `${selectedNode.data.sodium_mg} mg` : "Not available"}</div>
                     </div>
                     <div>
-                      <span style={{ color: "#777", fontSize: "10.5px" }}>Harga:</span>
-                      <div style={{ fontWeight: 700 }}>Rp {(selectedNode.data?.price_idr || 0).toLocaleString("id-ID")}</div>
+                      <span style={{ color: "#777", fontSize: "10.5px" }}>Price:</span>
+                      <div style={{ fontWeight: 700 }}>{selectedNode.data?.price_idr != null ? `Rp ${selectedNode.data.price_idr.toLocaleString("en-US")}` : "Not available"}</div>
                     </div>
                   </div>
                   {selectedNode.data?.clinical_rationale && (
                     <div>
-                      <span style={{ color: "#777", fontSize: "11px" }}>Catatan Gizi Klinis:</span>
+                      <span style={{ color: "#777", fontSize: "11px" }}>Notes from app rules:</span>
                       <div style={{ fontSize: "11.5px", color: "#444", lineHeight: 1.4, marginTop: 2 }}>
                         {selectedNode.data.clinical_rationale}
                       </div>

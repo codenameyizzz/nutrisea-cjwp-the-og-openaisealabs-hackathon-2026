@@ -10,8 +10,8 @@ import styles from "@/components/ingredients/ingredients.module.css";
 
 export default function MerchantRegistrationPage() {
   const { isLoaded, isSignedIn, userId } = useAuth();
-  if (!isLoaded) return <p role="status">Memuat sesi...</p>;
-  if (!isSignedIn) return <section className={styles.page}><h1>Daftar sebagai Merchant</h1><p>Masuk dengan akun Customer untuk mendaftarkan usaha. Akun yang sama tetap dapat digunakan untuk berbelanja.</p><Link href="/sign-in?redirect_url=%2Fmerchant%2Fregister">Masuk untuk mendaftar</Link></section>;
+  if (!isLoaded) return <p role="status">Loading session...</p>;
+  if (!isSignedIn) return <section className={styles.page}><h1>Register as a merchant</h1><p>Sign in with your customer account to register a business. You can continue shopping with the same account.</p><Link href="/sign-in?redirect_url=%2Fmerchant%2Fregister">Sign in to register</Link></section>;
   return <RegistrationContent key={userId} />;
 }
 
@@ -30,7 +30,7 @@ function RegistrationContent() {
       setError("");
       if (result.application?.status === "APPROVED") refreshAccountAccess();
     } catch (err) {
-      if (!signal?.aborted) setError(err instanceof Error ? err.message : "Status pengajuan gagal dimuat.");
+      if (!signal?.aborted) setError(err instanceof Error ? err.message : "Application status could not be loaded.");
     } finally {
       if (!signal?.aborted) setLoading(false);
     }
@@ -55,12 +55,12 @@ function RegistrationContent() {
       const result = await api.submit(form);
       setApplication(result.application);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Pengajuan gagal dikirim.");
+      setError(err instanceof Error ? err.message : "Application could not be submitted.");
     } finally { setBusy(false); }
   };
-  if (!api.isLoaded) return <p role="status">Memuat sesi...</p>;
-  if (!api.isSignedIn) return <section className={styles.page}><h1>Daftar sebagai Merchant</h1><p>Masuk dengan akun Customer untuk mendaftarkan usaha. Akun yang sama tetap dapat digunakan untuk berbelanja.</p><Link href="/sign-in?redirect_url=%2Fmerchant%2Fregister">Masuk untuk mendaftar</Link></section>;
-  if (loading) return <p role="status">Memuat status pendaftaran...</p>;
+  if (!api.isLoaded) return <p role="status">Loading session...</p>;
+  if (!api.isSignedIn) return <section className={styles.page}><h1>Register as a merchant</h1><p>Sign in with your customer account to register a business. You can continue shopping with the same account.</p><Link href="/sign-in?redirect_url=%2Fmerchant%2Fregister">Sign in to register</Link></section>;
+  if (loading) return <p role="status">Loading application status...</p>;
   const hasAccess = availableRoles.includes("MERCHANT");
   return <MerchantRegistrationPanel application={application} hasAccess={hasAccess} busy={busy} error={error}
     onSubmit={submit} onReload={() => void load()} />;

@@ -47,8 +47,8 @@ test("portion selection changes nutrition and preserves missing values versus ze
   await render();
   assert.match(host.textContent!, /175 kcal/);
   const rows = [...host.querySelectorAll("tbody tr")];
-  assert.equal(rows.find(row => row.textContent?.startsWith("Gula"))?.querySelector("td")?.textContent, "Belum tersedia");
-  assert.equal(rows.find(row => row.textContent?.startsWith("Natrium"))?.querySelector("td")?.textContent, "0 mg");
+  assert.equal(rows.find(row => row.textContent?.startsWith("Sugars"))?.querySelector("td")?.textContent, "Not available");
+  assert.equal(rows.find(row => row.textContent?.startsWith("Sodium"))?.querySelector("td")?.textContent, "0 mg");
   const select = host.querySelector("select")!;
   await act(async () => {
     select.value = "fatsecret:10/fatsecret:101";
@@ -56,18 +56,18 @@ test("portion selection changes nutrition and preserves missing values versus ze
   });
   assert.match(host.textContent!, /50 kcal/);
   assert.doesNotMatch(host.textContent!, /175 kcal/);
-  assert.match(host.textContent!, /tanpa satuan terverifikasi/);
+  assert.match(host.textContent!, /without verified units/);
   assert.equal(host.querySelector("a")?.getAttribute("rel"), "noopener noreferrer");
 });
 
 test("missing source and API error remain explicit without nutrition fallback", async () => {
   mock.method(globalThis, "fetch", async (url: string) => url.includes("missing")
     ? response({ ...data, sources: [], status: "no_source" })
-    : response({ detail: "Referensi belum tersedia" }, 503));
+    : response({ detail: "Nutrition references are not available yet." }, 503));
   await render("missing");
-  assert.match(host.textContent!, /Belum ada referensi nutrisi/);
+  assert.match(host.textContent!, /No nutrition reference is available/);
   await render("error");
-  assert.equal(host.querySelector('[role="alert"]')?.textContent, "Referensi belum tersedia");
+  assert.equal(host.querySelector('[role="alert"]')?.textContent, "Nutrition references are not available yet.");
   assert.equal(host.querySelector("table"), null);
 });
 
@@ -80,6 +80,6 @@ test("late response for another ingredient cannot replace the current nutrition"
   await render("new");
   await act(async () => { pending.get("new")!(response({ ...data, sources: [] })); });
   await act(async () => { pending.get("old")!(response(data)); });
-  assert.match(host.textContent!, /Belum ada referensi nutrisi/);
+  assert.match(host.textContent!, /No nutrition reference is available/);
   assert.equal(host.querySelector("table"), null);
 });

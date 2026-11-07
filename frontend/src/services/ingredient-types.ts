@@ -26,10 +26,10 @@ export function quantityIsValid(value: string): boolean {
 }
 
 export function recipePayload(items: IngredientSelection[], version: string) {
-  if (items.length > 100) throw new Error("Maksimum 100 bahan per menu.");
-  if (new Set(items.map(i => i.ingredient_id)).size !== items.length) throw new Error("Bahan tidak boleh duplikat.");
+  if (items.length > 100) throw new Error("A meal can contain at most 100 ingredients.");
+  if (new Set(items.map(i => i.ingredient_id)).size !== items.length) throw new Error("Duplicate ingredients are not allowed.");
   if (items.some(i => !quantityIsValid(i.quantity) || !INGREDIENT_UNITS.includes(i.unit))) {
-    throw new Error("Isi takaran positif hingga 999999.999 (maksimum 3 desimal) dan satuan yang valid.");
+    throw new Error("Enter a positive quantity up to 999999.999 (maximum 3 decimal places) and a valid unit.");
   }
   return { items: items.map(({ ingredient_id, quantity, unit }) => ({ ingredient_id, quantity, unit })), version };
 }

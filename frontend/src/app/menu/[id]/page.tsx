@@ -1,734 +1,230 @@
 "use client";
 
-import React, { useState, useEffect, Suspense } from "react";
+import { useAuth } from "@clerk/nextjs";
+import { useState, useEffect, useRef, Suspense } from "react";
+import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import {
-  ArrowLeft,
-  Store,
-  ShieldCheck,
-  ShieldAlert,
-  AlertTriangle,
-  Check,
-  Plus,
-  Minus,
-  ShoppingBag,
-  Sparkles,
-  ChefHat,
-  RefreshCw,
-  MessageCircleQuestion,
-  Star,
-  CheckCircle2,
-  Tag,
-  Utensils,
-  Network,
-  BookOpen,
-  Activity
-} from "lucide-react";
+import { ArrowLeft, Minus, Plus } from "lucide-react";
+import FoodImage from "@/components/FoodImage";
 import NutriGraphVisualizer from "@/components/NutriGraphVisualizer";
-// Hardcoded import commented out - now pulling single dish from Aiven Cloud PostgreSQL:
-// import { getDishById } from "@/data/menu";
-import { DishItem, fetchDishById } from "@/data/menu";
-import { scoreMenuItem, UserRecommendationProfile, RecommendationScoreBreakdown } from "@/services/recommendationScorer";
+import type { DishItem } from "@/data/menu";
+import { API_BASE_URL, responseJson } from "@/lib/api";
 import { useApp } from "@/context/AppContext";
 import { useAccountSession } from "@/context/AccountSessionContext";
+import { catalogLabelEnglish } from "@/services/catalog-labels";
+import styles from "../../commerce.module.css";
+
+function displayNutrient(value: unknown, unit: string) {
+  return typeof value === "number" && Number.isFinite(value) && value >= 0
+    ? `${value.toLocaleString("en-US")} ${unit}` : "Not available";
+}
+
+interface GraphExplanation {
+  is_safe: boolean;
+  severity: string;
+  clinical_citations?: string[];
+  path_evidence?: string[][];
+}
 
 function MenuDetailContent() {
   const { account } = useAccountSession();
   const params = useParams();
   const router = useRouter();
   const { addToCart, bmiStats, activeUserId, logUserAction } = useApp();
-
+  const { getToken } = useAuth();
   const id = typeof params?.id === "string" ? params.id : "";
   const [dish, setDish] = useState<DishItem | null>(null);
-  const [isLoadingDish, setIsLoadingDish] = useState<boolean>(true);
-
+  const [isLoadingDish, setIsLoadingDish] = useState(true);
+  const [dishError, setDishError] = useState("");
+  const [loadAttempt, setLoadAttempt] = useState(0);
   const [quantity, setQuantity] = useState(1);
-  const [selectedNote, setSelectedNote] = useState<string>("Standar NutriSea (Minyak Baru)");
-  const [customNote, setCustomNote] = useState<string>("");
+  const [isAdding, setIsAdding] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
-  const [recommendationScore, setRecommendationScore] = useState<number | null>(null);
-  const [scoreBreakdown, setScoreBreakdown] = useState<RecommendationScoreBreakdown | null>(null);
-
-  // Log Short-Term Memory VIEW_DETAILS
-  useEffect(() => {
-    if (dish) {
-      logUserAction("VIEW_DETAILS", {
-        item_id: dish.id,
-        item_name: dish.name,
-        merchant_name: dish.merchantName,
-        price: dish.discountedPrice,
-        personas: dish.personas || dish.matchedPersonas || [],
-        category: dish.category,
-        macros: dish.macros
-      });
-    }
-  }, [dish]);
-
-  // Personalization always belongs to the current signed-in account.
-  useEffect(() => {
-    if (!dish || !account?.main_persona_id) { setRecommendationScore(null); setScoreBreakdown(null); return; }
-    const breakdown = scoreMenuItem(dish, {
-      primaryPersonaId: account.main_persona_id, secondaryPersonaIds: account.side_persona_ids,
-      targetLunchKcal: Math.round((bmiStats?.targetCalories || 0) * 0.4),
-    });
-    setRecommendationScore(breakdown.finalScore); setScoreBreakdown(breakdown);
-  }, [dish, account, bmiStats]);
-
-  // AI Consultation State
-  const [aiQuestion, setAiQuestion] = useState("");
+  const cartTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const logAction = useRef(logUserAction);
   const [aiAnswer, setAiAnswer] = useState<string | null>(null);
   const [isLoadingAi, setIsLoadingAi] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
+  const [aiSource, setAiSource] = useState("Response source not provided");
+  const [graphVerification, setGraphVerification] = useState<GraphExplanation | null>(null);
+  const [isLoadingGraph, setIsLoadingGraph] = useState(false);
+  const [isGraphModalOpen, setIsGraphModalOpen] = useState(false);
 
-  // NutriGraph Clinical Verification State
-  const [graphVerification, setGraphVerification] = useState<any | null>(null);
-  const [isLoadingGraph, setIsLoadingGraph] = useState<boolean>(false);
-  const [isGraphModalOpen, setIsGraphModalOpen] = useState<boolean>(false);
-
+  useEffect(() => { logAction.current = logUserAction; }, [logUserAction]);
   useEffect(() => {
     if (!dish) return;
-    const effectivePersona = account?.main_persona_id;
-    if (!effectivePersona) { setGraphVerification(null); return; }
-    setIsLoadingGraph(true);
-    fetch(`http://127.0.0.1:8000/api/graph/explain/${encodeURIComponent(effectivePersona)}/${encodeURIComponent(dish.id)}`)
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data) => {
-        if (data) setGraphVerification(data);
-      })
-      .catch((err) => console.warn("Could not fetch NutriGraph verification:", err))
-      .finally(() => setIsLoadingGraph(false));
-  }, [dish, account]);
+    void logAction.current("VIEW_DETAILS", {
+      item_id: dish.id, item_name: dish.name, merchant_name: dish.merchantName, price: dish.discountedPrice,
+      personas: dish.personas || dish.matchedPersonas || [], category: dish.category, macros: dish.macros,
+    });
+  }, [dish]);
+  useEffect(() => () => { if (cartTimer.current) clearTimeout(cartTimer.current); }, []);
 
   useEffect(() => {
-    if (!id) return;
-    setIsLoadingDish(true);
-    fetchDishById(id)
-      .then((data) => setDish(data))
-      .catch((err) => console.warn("Failed to fetch dish from PostgreSQL:", err))
-      .finally(() => setIsLoadingDish(false));
-  }, [id]);
+    const controller = new AbortController();
+    let cancelled = false;
+    const timeout = setTimeout(() => controller.abort(), 15000);
+    const load = async () => {
+      await Promise.resolve();
+      if (cancelled) return;
+      setIsLoadingDish(true);
+      setDishError("");
+      setQuantity(1);
+      setAiAnswer(null);
+      setAiError(null);
+      try {
+        if (!id) { setDish(null); return; }
+        const response = await fetch(`${API_BASE_URL}/api/dishes/${encodeURIComponent(id)}`, { cache: "no-store", signal: controller.signal });
+        if (response.status === 404) { if (!cancelled) setDish(null); return; }
+        const result = await responseJson<{ data: DishItem }>(response);
+        if (!result?.data || typeof result.data.id !== "string") throw new Error("Invalid menu response");
+        if (!cancelled) setDish(result.data);
+      } catch {
+        if (!cancelled) { setDish(null); setDishError("This meal could not be loaded. Check your connection and try again."); }
+      } finally {
+        clearTimeout(timeout);
+        if (!cancelled) setIsLoadingDish(false);
+      }
+    };
+    void load();
+    return () => { cancelled = true; clearTimeout(timeout); controller.abort(); };
+  }, [id, loadAttempt]);
 
-  if (isLoadingDish) {
-    return (
-      <div style={{ backgroundColor: "#FFFFFF", padding: 60, borderRadius: 8, textAlign: "center", border: "1px solid #E5E5E5" }}>
-        <RefreshCw size={28} className="spin-slow" color="#EE4D2D" style={{ margin: "0 auto 12px" }} />
-        <h2 style={{ fontSize: "15px", fontWeight: 600, color: "#333" }}>Memuat Detail Menu Sehat...</h2>
-        <p style={{ fontSize: "12px", color: "#888", marginTop: 4 }}>Mengambil informasi nutrisi & standar higienis dari database...</p>
-      </div>
-    );
-  }
+  useEffect(() => {
+    const controller = new AbortController();
+    const effectivePersona = account?.main_persona_id;
+    const load = async () => {
+      await Promise.resolve();
+      if (controller.signal.aborted) return;
+      setGraphVerification(null);
+      if (!dish || !effectivePersona) { setIsLoadingGraph(false); return; }
+      setIsLoadingGraph(true);
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/graph/explain/${encodeURIComponent(effectivePersona)}/${encodeURIComponent(dish.id)}`, { signal: controller.signal });
+        const data = response.ok ? await response.json() : null;
+        if (!controller.signal.aborted) setGraphVerification(data);
+      } catch {
+        if (!controller.signal.aborted) setGraphVerification(null);
+      } finally {
+        if (!controller.signal.aborted) setIsLoadingGraph(false);
+      }
+    };
+    void load();
+    return () => controller.abort();
+  }, [dish, account]);
 
-  if (!dish) {
-    return (
-      <div style={{ backgroundColor: "#FFFFFF", padding: 40, borderRadius: 8, textAlign: "center", border: "1px solid #E5E5E5" }}>
-        <h2 style={{ fontSize: "16px", fontWeight: 600 }}>Menu Tidak Ditemukan</h2>
-        <p style={{ fontSize: "12.5px", color: "#666", marginTop: 4 }}>
-          Menu yang Anda cari mungkin sudah tidak tersedia di katalog saat ini.
-        </p>
-        <button
-          className="btn-shopee-primary"
-          style={{ marginTop: 16 }}
-          onClick={() => router.push("/")}
-        >
-          Kembali ke Menu Utama
-        </button>
-      </div>
-    );
-  }
+  const retry = () => { setIsLoadingDish(true); setDishError(""); setLoadAttempt(attempt => attempt + 1); };
+  if (isLoadingDish) return <div className={styles.commerce}><div className={styles.state} role="status"><h1>Loading meal...</h1><p>Getting the latest catalog details.</p></div></div>;
+  if (!dish) return <div className={styles.commerce}><div className={styles.state} role={dishError ? "alert" : "status"}><h1>{dishError ? "Meal could not be loaded" : "Meal not found"}</h1><p>{dishError || "This item may no longer be in the catalog."}</p>{dishError && <button type="button" className={styles.primaryButton} onClick={retry}>Try again</button>}<Link href="/" className={styles.backLink}>Back to meals</Link></div></div>;
 
-  const handleConsultAi = async (customPrompt?: string) => {
-    const q = customPrompt || aiQuestion;
-    if (!q) return;
-
+  const handleConsultAi = async (question: string) => {
     setIsLoadingAi(true);
     setAiAnswer(null);
-
+    setAiError(null);
     try {
-      const res = await fetch("http://127.0.0.1:8000/api/ai/chat", {
+      const token = await getToken();
+      if (!token) { setAiError("Sign in to ask a question about this meal."); return; }
+      const response = await fetch(`${API_BASE_URL}/api/ai/chat`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({
-          message: q,
-          user_id: activeUserId,
-          dish_context: `${dish.name} di ${dish.merchantName} (${dish.macros.kcal} kcal, ${dish.macros.proteinG}g protein)`,
-          user_bmi_stats: bmiStats
-        })
+          message: question, user_id: activeUserId,
+          dish_context: `${dish.name} at ${dish.merchantName} (${displayNutrient(dish.macros.kcal, "kcal")}, ${displayNutrient(dish.macros.proteinG, "g")} protein)`,
+          user_bmi_stats: bmiStats,
+        }),
       });
-
-      if (res.ok) {
-        const data = await res.json();
-        setAiAnswer(data.reply);
-      } else {
-        throw new Error("Chat API error");
-      }
-    } catch (err) {
-      setAiAnswer(
-        `Untuk menu ${dish.name}, saran modifikasi sehat dari NutriSea: mintalah sambal dipisah dan minta porsi nasi setengah. Kandungan ${dish.macros.proteinG}g protein di menu ini sangat baik untuk pemenuhan gizi Anda hari ini.`
-      );
+      if (!response.ok) throw new Error("Chat API error");
+      const data = await response.json();
+      if (typeof data.reply !== "string" || !data.reply.trim()) throw new Error("Empty reply");
+      setAiAnswer(data.reply);
+      setAiSource(data.model === "dynamic-context-synthesis" ? "Fallback response based on app rules" : data.model ? "AI model response" : "Response source not provided");
+    } catch {
+      setAiError("An answer is not available because the service did not respond. Try again; your meal choices remain on this page.");
     } finally {
       setIsLoadingAi(false);
     }
   };
-
   const handleAdd = () => {
-    const fullNotes = customNote ? `${selectedNote} - ${customNote}` : selectedNote;
-    const modifiedDish = {
-      ...dish,
-      cookingNotes: fullNotes
-    };
-    addToCart(modifiedDish, quantity);
-    setToastMessage(`Berhasil menambahkan ${quantity}x ${dish.name} ke keranjang!`);
-    setTimeout(() => {
-      setToastMessage(null);
-      router.push("/cart");
-    }, 800);
+    if (dish.isAvailable === false || isAdding) return;
+    setIsAdding(true);
+    addToCart(dish, quantity);
+    setToastMessage(`Added ${quantity} × ${dish.name} to your cart.`);
+    cartTimer.current = setTimeout(() => { setToastMessage(null); router.push("/cart"); }, 800);
   };
 
   return (
-    <>
-      {toastMessage && (
-        <div className="app-toast">
-          {toastMessage}
+    <div className={styles.commerce}>
+      {toastMessage && <p className="app-toast" role="status">{toastMessage}</p>}
+      <Link href="/" className={styles.backLink}><ArrowLeft size={16} aria-hidden="true" />Back to meals</Link>
+      <section className={styles.itemLayout} aria-labelledby="meal-title">
+        <FoodImage src={dish.imageUrl} alt={dish.name} className={styles.itemPhoto} loading="eager" fetchPriority="high" width={640} height={480} />
+        <div className={styles.itemInfo}>
+          <p className={styles.merchant}>{dish.merchantName}</p>
+          <h1 id="meal-title">{dish.name}</h1>
+          <p className={styles.itemPrice}>Rp {dish.discountedPrice.toLocaleString("en-US")}</p>
+          <p className={styles.availability}>{dish.isAvailable === false ? "Currently unavailable" : dish.isAvailable === true ? "Available in the catalog" : "Availability is not provided by the seller."}</p>
+          <div className={styles.orderControls}>
+            <div className={styles.quantity} role="group" aria-label="Meal quantity">
+              <button type="button" disabled={quantity <= 1 || isAdding} aria-label="Decrease quantity" onClick={() => setQuantity(value => Math.max(1, value - 1))}><Minus size={17} aria-hidden="true" /></button>
+              <output aria-live="polite" aria-label="Quantity">{quantity}</output>
+              <button type="button" disabled={isAdding} aria-label="Increase quantity" onClick={() => setQuantity(value => value + 1)}><Plus size={17} aria-hidden="true" /></button>
+            </div>
+            <button type="button" className={styles.primaryButton} disabled={dish.isAvailable === false || isAdding} onClick={handleAdd}>{dish.isAvailable === false ? "Unavailable" : isAdding ? "Added to cart" : `Add to cart · Rp ${(dish.discountedPrice * quantity).toLocaleString("en-US")}`}</button>
+          </div>
+          <p className={styles.orderNote}>Confirm ingredients, allergens, and portions with the seller. Preparation changes cannot be requested here.</p>
         </div>
-      )}
+      </section>
 
-      {/* Back button */}
-      <div style={{ marginBottom: 14 }}>
-        <button
-          onClick={() => router.back()}
-          style={{
-            background: "transparent",
-            border: "none",
-            display: "inline-flex",
-            alignItems: "center",
-            gap: 6,
-            cursor: "pointer",
-            fontSize: "12.5px",
-            color: "#666",
-            padding: 0
-          }}
-        >
-          <ArrowLeft size={14} /> Kembali ke Menu
-        </button>
-      </div>
-
-      {/* Responsive Detail Grid */}
-      <div className="detail-grid">
-        {/* Left Column: Image */}
-        <div className="detail-img-wrap">
-          {dish.imageUrl ? (
-            <img
-              src={dish.imageUrl}
-              alt={dish.name}
-              style={{ width: "100%", height: "100%", objectFit: "cover" }}
-            />
-          ) : (
-            <div
-              style={{
-                width: "100%",
-                height: "100%",
-                minHeight: 280,
-                background: "linear-gradient(135deg, #F8F9FA 0%, #E9ECEF 100%)",
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: 8,
-                color: "#6C757D"
-              }}
-            >
-              <Utensils size={44} color="#EE4D2D" style={{ opacity: 0.8 }} />
-              <div style={{ fontSize: "14px", fontWeight: 600, color: "#333", padding: "0 16px", textAlign: "center" }}>
-                {dish.name}
-              </div>
-              <span
-                style={{
-                  fontSize: "11px",
-                  fontWeight: 600,
-                  textTransform: "uppercase",
-                  letterSpacing: "0.5px",
-                  color: "#888",
-                  backgroundColor: "#FFF",
-                  padding: "3px 10px",
-                  borderRadius: 12
-                }}
-              >
-                Pilihan Sehat ({dish.category})
-              </span>
-            </div>
-          )}
-
-          <span
-            style={{
-              position: "absolute",
-              bottom: 10,
-              left: 10,
-              backgroundColor: "rgba(0,0,0,0.72)",
-              color: "#FFF",
-              fontSize: "11px",
-              padding: "3px 8px",
-              borderRadius: 4,
-              backdropFilter: "blur(4px)"
-            }}
-          >
-            {dish.district} | {dish.distanceKm} km
-          </span>
-
-          <span
-            style={{
-              position: "absolute",
-              top: 10,
-              left: 10,
-              backgroundColor: "#EE4D2D",
-              color: "#FFFFFF",
-              fontSize: "11px",
-              fontWeight: 600,
-              padding: "3px 8px",
-              borderRadius: 4,
-              boxShadow: "0 2px 6px rgba(0,0,0,0.2)"
-            }}
-          >
-            Mitra Higienis NutriSea
-          </span>
-        </div>
-
-        {/* Right Column: Information */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-          <div>
-            {/* Merchant info */}
-            <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: "12px", color: "#666" }}>
-              <Store size={13} color="#EE4D2D" />
-              <span style={{ fontWeight: 600, color: "#333" }}>{dish.merchantName}</span>
-              <span>|</span>
-              <span style={{ display: "inline-flex", alignItems: "center", gap: 3, color: "#FFA439", fontWeight: 600 }}>
-                <Star size={12} fill="#FFA439" /> {dish.rating}
-              </span>
-              <span>({dish.soldCount} terjual)</span>
-            </div>
-
-            {/* Title */}
-            <h1 style={{ fontSize: "20px", fontWeight: 600, color: "#222", marginTop: 6, lineHeight: 1.3 }}>
-              {dish.name}
-            </h1>
-
-            {/* Tags row */}
-            <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 8 }}>
-              {(dish.healthyTags || []).map((t: string, idx: number) => (
-                <span
-                  key={idx}
-                  style={{
-                    backgroundColor: "#F4F4F4",
-                    color: "#555",
-                    fontSize: "10.5px",
-                    fontWeight: 500,
-                    padding: "2px 7px",
-                    borderRadius: 3
-                  }}
-                >
-                  #{t}
-                </span>
-              ))}
-            </div>
-
-            {/* Price */}
-            <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginTop: 10 }}>
-              <span style={{ fontSize: "22px", fontWeight: 700, color: "#EE4D2D" }}>
-                Rp {dish.discountedPrice.toLocaleString("id-ID")}
-              </span>
-              <span style={{ fontSize: "13px", color: "#9E9E9E", textDecoration: "line-through" }}>
-                Rp {dish.basePrice.toLocaleString("id-ID")}
-              </span>
-              <span style={{ fontSize: "11px", fontWeight: 600, color: "#EE4D2D", backgroundColor: "#FFF0EB", padding: "2px 8px", borderRadius: 4 }}>
-                Hemat {Math.round(((dish.basePrice - dish.discountedPrice) / dish.basePrice) * 100)}%
-              </span>
-            </div>
-
-            {/* Recommendation Score Info Banner */}
-            {recommendationScore !== null && (
-              <div
-                style={{
-                  backgroundColor: "#FFF9F5",
-                  border: "1px solid #FFE4DB",
-                  borderRadius: 6,
-                  padding: "9px 12px",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  gap: 10,
-                  marginTop: 10
-                }}
-              >
-                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  <span
-                    style={{
-                      backgroundColor: "#EE4D2D",
-                      color: "#FFFFFF",
-                      fontSize: "12px",
-                      fontWeight: 700,
-                      padding: "2.5px 8px",
-                      borderRadius: 4
-                    }}
-                  >
-                    🎯 {Math.round(recommendationScore * 100)}% Cocok
-                  </span>
-                  <span style={{ fontSize: "11.5px", color: "#666" }}>
-                    Skor kesesuaian klinis untuk profil persona Anda (R: {recommendationScore.toFixed(3)})
-                  </span>
-                </div>
-              </div>
-            )}
+      <section className={styles.disclosures} aria-label="More about this meal">
+        <details className={styles.disclosure}>
+          <summary>Nutrition and source</summary>
+          <div className={styles.disclosureBody}>
+            <p><strong>{dish.nutritionSource === "TKPI" ? "TKPI reference (catalog label; not a measurement of the restaurant serving)" : dish.nutritionSource === "ESTIMATE" ? "Catalog estimate" : "Nutrition source not available"}.</strong> Serving weights and measurement methods are not provided. Your ordered portion may differ.</p>
+            <dl className={styles.nutritionGrid}>
+              {[["Energy", dish.macros.kcal, "kcal"], ["Protein", dish.macros.proteinG, "g"], ["Carbohydrates", dish.macros.carbsG, "g"], ["Fat", dish.macros.fatG, "g"], ["Sodium", dish.macros.sodiumMg, "mg"]].map(([name, value, unit]) => <div key={String(name)}><dt>{name}</dt><dd>{displayNutrient(value, String(unit))}</dd></div>)}
+            </dl>
+            <p>Missing values are shown as unavailable. A recorded zero is kept as zero.</p>
           </div>
-
-          {/* Complete 5-Nutrient Macros Bar */}
-          <div className="detail-macros-grid" style={{ gridTemplateColumns: "repeat(5, 1fr)" }}>
-            <div className="detail-macro-box">
-              <span className="detail-macro-val" style={{ color: "#EE4D2D" }}>{dish.macros.kcal}</span>
-              <span className="detail-macro-lbl">Kalori</span>
-            </div>
-            <div className="detail-macro-box">
-              <span className="detail-macro-val" style={{ color: "#00B14F" }}>{dish.macros.proteinG}g</span>
-              <span className="detail-macro-lbl">Protein</span>
-            </div>
-            <div className="detail-macro-box">
-              <span className="detail-macro-val">{dish.macros.carbsG}g</span>
-              <span className="detail-macro-lbl">Karbo</span>
-            </div>
-            <div className="detail-macro-box">
-              <span className="detail-macro-val">{dish.macros.fatG}g</span>
-              <span className="detail-macro-lbl">Lemak</span>
-            </div>
-            <div className="detail-macro-box">
-              <span className="detail-macro-val" style={{ color: "#0048A0" }}>{dish.macros.sodiumMg}mg</span>
-              <span className="detail-macro-lbl">Garam</span>
-            </div>
+        </details>
+        <details className={styles.disclosure}>
+          <summary>Ingredients and preparation</summary>
+          <div className={styles.disclosureBody}>
+            <p><strong>Listed allergens:</strong> {dish.allergens?.length ? dish.allergens.join(", ") : "Not provided. This does not mean allergen-free."}</p>
+            <p><strong>Catalog preparation notes:</strong> {dish.cookingNotes || "Not provided."}</p>
+            {(dish.healthyTags || []).length > 0 && <><p>Catalog labels, not independent certification:</p><div className={styles.labels}>{dish.healthyTags.map((tag, index) => <span key={`${tag}-${index}`}>{catalogLabelEnglish(tag)}</span>)}</div></>}
           </div>
-
-          {/* NutriGraph Multi-Hop Clinical Verification Card */}
-          <div
-            style={{
-              backgroundColor: graphVerification?.is_safe === false ? "#FFF5F5" : "#F6FCF7",
-              border: graphVerification?.is_safe === false ? "1px solid #FED7D7" : "1px solid #C6F6D5",
-              borderRadius: "8px",
-              padding: "12px 14px",
-              display: "flex",
-              flexDirection: "column",
-              gap: 8,
-              transition: "all 0.2s ease"
-            }}
-          >
-            {/* Header & Status Badge */}
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 6 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
-                {graphVerification?.is_safe === false ? (
-                  <ShieldAlert size={17} color="#E02424" />
-                ) : (
-                  <ShieldCheck size={17} color="#00B14F" />
-                )}
-                <div>
-                  <span style={{ fontSize: "13px", fontWeight: 700, color: "#222" }}>
-                    Verifikasi Klinis NutriGraph
-                  </span>
-                  <span style={{ fontSize: "10.5px", color: "#666", marginLeft: 6 }}>
-                    (Multi-Hop Medical Guardrails)
-                  </span>
-                </div>
-              </div>
-
-              {isLoadingGraph ? (
-                <span style={{ fontSize: "11px", color: "#777", display: "flex", alignItems: "center", gap: 4 }}>
-                  <RefreshCw size={11} className="spin-slow" /> Menganalisis graf klinis...
-                </span>
-              ) : graphVerification ? (
-                <span
-                  style={{
-                    backgroundColor: graphVerification.is_safe === false ? "#E02424" : "#00B14F",
-                    color: "#FFFFFF",
-                    fontSize: "11px",
-                    fontWeight: 700,
-                    padding: "2.5px 8px",
-                    borderRadius: 4,
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: 4
-                  }}
-                >
-                  {graphVerification.is_safe === false ? (
-                    <>
-                      <AlertTriangle size={11} /> KONTRAINDIKASI ({graphVerification.severity})
-                    </>
-                  ) : (
-                    <>
-                      <CheckCircle2 size={11} /> AMAN DIKONSUMSI (SAFE)
-                    </>
-                  )}
-                </span>
-              ) : null}
-            </div>
-
-            {/* Proof-Chain Narrative */}
-            {graphVerification && (
-              <>
-                <p style={{ fontSize: "11.5px", color: "#333", margin: "2px 0 0 0", lineHeight: 1.45 }}>
-                  {graphVerification.explanation_narrative}
-                </p>
-
-                {/* Traversal Path Evidence Pills */}
-                {graphVerification.path_evidence && graphVerification.path_evidence.length > 0 && (
-                  <div style={{ backgroundColor: "rgba(255,255,255,0.7)", padding: "6px 8px", borderRadius: 5, border: "1px dashed rgba(0,0,0,0.1)" }}>
-                    <div style={{ fontSize: "10px", fontWeight: 600, color: "#555", marginBottom: 4 }}>
-                      Jalur Traversal Graf Medis:
-                    </div>
-                    <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 4, fontSize: "10.5px" }}>
-                      {graphVerification.path_evidence[0].map((hop: string, hIdx: number) => (
-                        <React.Fragment key={hIdx}>
-                          {hIdx > 0 && <span style={{ color: "#999", fontWeight: 700 }}>➔</span>}
-                          <span
-                            style={{
-                              backgroundColor: hIdx % 2 === 0 ? "#EDF2F7" : "#FFF",
-                              color: hop.includes("CONTRA") ? "#E02424" : "#333",
-                              padding: "1.5px 6px",
-                              borderRadius: 3,
-                              fontWeight: hop.includes("CONTRA") ? 700 : 500,
-                              border: "1px solid #E2E8F0"
-                            }}
-                          >
-                            {hop.replace(/^(PERSONA|COND|ING|METHOD|ALLERGEN|DISH):/, "")}
-                          </span>
-                        </React.Fragment>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Clinical Citations & Subgraph Trigger */}
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 8, marginTop: 2 }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 4, fontSize: "10.5px", color: "#4A5568" }}>
-                    <BookOpen size={12} color="#0052CC" />
-                    <span>
-                      <strong>Rujukan Klinis:</strong> {graphVerification.clinical_citations?.join(", ") || "Pedoman Gizi Seimbang Kemenkes RI"}
-                    </span>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => setIsGraphModalOpen(true)}
-                    style={{
-                      background: "linear-gradient(135deg, #0052CC 0%, #0747A6 100%)",
-                      color: "#FFFFFF",
-                      border: "none",
-                      borderRadius: "4px",
-                      padding: "4px 10px",
-                      fontSize: "11px",
-                      fontWeight: 600,
-                      cursor: "pointer",
-                      display: "inline-flex",
-                      alignItems: "center",
-                      gap: 5,
-                      boxShadow: "0 1px 3px rgba(0,82,204,0.3)"
-                    }}
-                  >
-                    <Network size={12} /> Buka Visualisasi Subgraf Jaringan
-                  </button>
-                </div>
-              </>
-            )}
+        </details>
+        <details className={styles.disclosure}>
+          <summary>Recommendation context</summary>
+          <div className={styles.disclosureBody}>
+            <p>NutriGraph uses a recommendation template. Its rules are not a diagnosis or a food safety guarantee.</p>
+            {isLoadingGraph ? <p role="status">Loading recommendation context...</p> : !graphVerification ? <p>Recommendation context is not available for this meal.</p> : <>
+              <p>{graphVerification.is_safe === false ? "The application reported a rule conflict for this template. Review the meal information and your preferences." : graphVerification.severity === "SAFE" ? "The application reported no rule conflicts for this template. Ingredient and portion data may still be incomplete." : "The available template data is incomplete."}</p>
+              {!!graphVerification.path_evidence?.length && <ul className={styles.rulePaths}>{graphVerification.path_evidence.slice(0, 3).map((path, index) => <li key={index}>{path.map(hop => hop.replace(/^(PERSONA|COND|ING|METHOD|ALLERGEN|DISH):/, "")).join(" → ")}</li>)}</ul>}
+              <p><strong>Sources listed in the configuration:</strong> {graphVerification.clinical_citations?.join(", ") || "Not provided"}. Their presence does not validate the application rules.</p>
+              {account?.main_persona_id && <button type="button" className={styles.secondaryButton} onClick={() => setIsGraphModalOpen(true)}>View recommendation graph</button>}
+            </>}
           </div>
-
-          {/* Kitchen instructions & Hygiene note */}
-          <div
-            style={{
-              backgroundColor: "#FFF9F5",
-              border: "1px solid #FFE4DB",
-              borderRadius: "6px",
-              padding: "10px 12px",
-              fontSize: "12px",
-              color: "#C2410C",
-              display: "flex",
-              alignItems: "flex-start",
-              gap: 8
-            }}
-          >
-            <ChefHat size={16} style={{ flexShrink: 0, marginTop: 2 }} />
-            <div style={{ lineHeight: 1.45 }}>
-              <strong>Instruksi Dapur Standar NutriSea:</strong> {dish.cookingNotes}
+        </details>
+        <details className={styles.disclosure}>
+          <summary>Ask about this meal</summary>
+          <div className={styles.disclosureBody}>
+            <p>AI can help you prepare questions. Confirm any requested changes directly with the seller.</p>
+            <div className={styles.questionActions}>
+              <button type="button" className={styles.secondaryButton} disabled={isLoadingAi} onClick={() => void handleConsultAi("What should I ask the seller about this dish's ingredients and preparation?")}>What should I ask the seller?</button>
+              <button type="button" className={styles.secondaryButton} disabled={isLoadingAi} onClick={() => void handleConsultAi("How could the preparation be adjusted to use less oil and sodium?")}>Questions about oil and sodium</button>
             </div>
+            {isLoadingAi && <p role="status">Preparing an answer...</p>}
+            {aiError && <p role="alert" className={styles.error}>{aiError}</p>}
+            {aiAnswer && <div className={styles.answer}><p>{aiSource}</p>{aiAnswer}</div>}
           </div>
-
-          {/* Kitchen Customization Options */}
-          <div style={{ backgroundColor: "#FFFFFF", border: "1px solid #EAEAEA", borderRadius: 6, padding: "10px 12px" }}>
-            <div style={{ fontSize: "12px", fontWeight: 600, color: "#222", marginBottom: 6 }}>
-              Pilihan Khusus Dapur Mitra:
-            </div>
-            <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-              {[
-                "Standar NutriSea (Minyak Baru)",
-                "Nasi Porsi Setengah (Defisit Kalori)",
-                "Pisahkan Sambal / Kuah",
-                "Tanpa Kuah Santan Berlebih"
-              ].map((opt, i) => (
-                <button
-                  key={i}
-                  type="button"
-                  onClick={() => setSelectedNote(opt)}
-                  style={{
-                    backgroundColor: selectedNote === opt ? "#FFF5F1" : "#FAFAFA",
-                    border: selectedNote === opt ? "1px solid #EE4D2D" : "1px solid #E0E0E0",
-                    color: selectedNote === opt ? "#EE4D2D" : "#555",
-                    fontSize: "11px",
-                    fontWeight: selectedNote === opt ? 600 : 400,
-                    padding: "4px 8px",
-                    borderRadius: 4,
-                    cursor: "pointer"
-                  }}
-                >
-                  {opt}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Interactive AI Consultation Section */}
-          <div
-            style={{
-              backgroundColor: "#FFFFFF",
-              border: "1px solid #FFD0C0",
-              borderRadius: "8px",
-              padding: "12px 14px",
-              display: "flex",
-              flexDirection: "column",
-              gap: 10
-            }}
-          >
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: "12.5px", fontWeight: 600, color: "#222" }}>
-                <Sparkles size={14} color="#EE4D2D" />
-                <span>Konsultasikan Menu Ini dengan AI</span>
-              </div>
-              <span style={{ fontSize: "10px", color: "#EE4D2D", backgroundColor: "#FFF0EB", padding: "2px 6px", borderRadius: 4, fontWeight: 500 }}>
-                AI Nutritionist Co-Pilot
-              </span>
-            </div>
-
-            {/* Quick Consultation Chips */}
-            <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-              <button
-                type="button"
-                onClick={() => handleConsultAi("Apakah menu ini aman untuk penderita asam lambung / maag?")}
-                disabled={isLoadingAi}
-                style={{
-                  backgroundColor: "#FAFAFA",
-                  border: "1px solid #E0E0E0",
-                  borderRadius: "14px",
-                  padding: "4px 10px",
-                  fontSize: "11px",
-                  color: "#444",
-                  cursor: "pointer"
-                }}
-              >
-                Aman untuk asam lambung?
-              </button>
-
-              <button
-                type="button"
-                onClick={() => handleConsultAi("Bagaimana tips modifikasi masak agar lebih rendah minyak & sodium?")}
-                disabled={isLoadingAi}
-                style={{
-                  backgroundColor: "#FAFAFA",
-                  border: "1px solid #E0E0E0",
-                  borderRadius: "14px",
-                  padding: "4px 10px",
-                  fontSize: "11px",
-                  color: "#444",
-                  cursor: "pointer"
-                }}
-              >
-                Tips modifikasi lebih sehat?
-              </button>
-            </div>
-
-            {/* AI Answer Box */}
-            {isLoadingAi && (
-              <div style={{ padding: "8px 0", fontSize: "12px", color: "#666", display: "flex", alignItems: "center", gap: 6 }}>
-                <RefreshCw size={13} className="spin-icon" color="#EE4D2D" />
-                AI sedang menganalisis profil gizi menu ini...
-              </div>
-            )}
-
-            {aiAnswer && (
-              <div
-                style={{
-                  backgroundColor: "#F8FBF8",
-                  border: "1px solid #D2EED8",
-                  borderRadius: "6px",
-                  padding: "10px 12px",
-                  fontSize: "12px",
-                  color: "#222",
-                  lineHeight: 1.45,
-                  whiteSpace: "pre-line"
-                }}
-              >
-                <div style={{ fontWeight: 600, color: "#00B14F", marginBottom: 4, display: "flex", alignItems: "center", gap: 5 }}>
-                  <CheckCircle2 size={13} /> Saran Ahli Gizi AI:
-                </div>
-                {aiAnswer}
-              </div>
-            )}
-          </div>
-
-          {/* Action Row */}
-          <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 4 }}>
-            <div style={{ display: "inline-flex", alignItems: "center", border: "1px solid #D5D5D5", borderRadius: 4, height: 40, backgroundColor: "#FFF" }}>
-              <button
-                type="button"
-                onClick={() => setQuantity((q) => Math.max(1, q - 1))}
-                style={{ background: "transparent", border: "none", padding: "0 10px", cursor: "pointer", color: "#666" }}
-                aria-label="Kurangi"
-              >
-                <Minus size={13} />
-              </button>
-              <span style={{ minWidth: 30, textAlign: "center", fontSize: "13.5px", fontWeight: 600 }}>
-                {quantity}
-              </span>
-              <button
-                type="button"
-                onClick={() => setQuantity((q) => q + 1)}
-                style={{ background: "transparent", border: "none", padding: "0 10px", cursor: "pointer", color: "#666" }}
-                aria-label="Tambah"
-              >
-                <Plus size={13} />
-              </button>
-            </div>
-
-            <button
-              type="button"
-              onClick={handleAdd}
-              className="btn-shopee-primary"
-              style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 8, height: 40, fontSize: "13px" }}
-            >
-              <ShoppingBag size={15} />
-              <span>Masukkan ke Keranjang (Rp {(dish.discountedPrice * quantity).toLocaleString("id-ID")})</span>
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* NutriGraph Subgraph Interactive Visualizer Modal */}
-      {isGraphModalOpen && (
-        <NutriGraphVisualizer
-          personaId={activeUserId || "BUDG_FACHRI_MENTENG_115"}
-          focusDishId={dish.id}
-          focusDishName={dish.name}
-          isOpen={isGraphModalOpen}
-          onClose={() => setIsGraphModalOpen(false)}
-        />
-      )}
-    </>
+        </details>
+      </section>
+      {isGraphModalOpen && account?.main_persona_id && <NutriGraphVisualizer personaId={account.main_persona_id} focusDishId={dish.id} focusDishName={dish.name} isOpen={isGraphModalOpen} onClose={() => setIsGraphModalOpen(false)} />}
+    </div>
   );
 }
 
 export default function MenuDetailPage() {
-  return (
-    <Suspense fallback={<div style={{ padding: 24, textAlign: "center", color: "#666" }}>Memuat detail menu...</div>}>
-      <MenuDetailContent />
-    </Suspense>
-  );
+  return <Suspense fallback={<p role="status">Loading meal details...</p>}><MenuDetailContent /></Suspense>;
 }

@@ -1,28 +1,19 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import {
-  ArrowLeft,
-  Scale,
-  Sparkles,
-  CheckCircle2,
-  ChevronRight,
-  ShieldCheck,
-  TrendingDown,
-  Activity,
-  Award,
-  Wallet
-} from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { useApp } from "@/context/AppContext";
 import { useAuth } from "@clerk/nextjs";
 import { useAccountSession } from "@/context/AccountSessionContext";
-import { ACCOUNT_UPDATED } from "@/services/account-session";
+import { ACCOUNT_UPDATED, type AccountProfile } from "@/services/account-session";
 import { API_BASE_URL, responseJson } from "@/lib/api";
+import styles from "./bmi.module.css";
+import { bmiProfileUpdate } from "./profile";
 
 export default function BmiPage() {
   const router = useRouter();
-  const { heightCm, weightKg, activityGoal, updateBmi, bmiStats } = useApp();
+  const { heightCm, weightKg, activityGoal, updateBmi } = useApp();
   const { userId, getToken } = useAuth();
   const { account } = useAccountSession();
 
@@ -32,17 +23,23 @@ export default function BmiPage() {
   const [localGender, setLocalGender] = useState<"wanita" | "pria">("wanita");
   const [localActivity, setLocalActivity] = useState<"sedentary" | "light" | "active">("sedentary");
   const [localGoal, setLocalGoal] = useState<"turun" | "ideal" | "otot">(activityGoal);
+  const dirty = useRef(false);
+  const saving = useRef(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const baseline = useRef<AccountProfile | null>(null);
   const [toast, setToast] = useState<string | null>(null);
 
   // Quick preset loader for Lily
   const loadLilyPreset = () => {
+    dirty.current = true;
     setLocalHeight(160);
     setLocalWeight(52);
     setLocalAge(26);
     setLocalGender("wanita");
     setLocalActivity("sedentary");
     setLocalGoal("ideal");
-    showToast("Profil Persona Lily (SCBD Office Worker) dimuat!");
+    showToast("Demo data loaded. It has not been saved to your account.");
   };
 
   const showToast = (msg: string) => {
@@ -52,54 +49,66 @@ export default function BmiPage() {
 
   useEffect(() => {
     const data = account?.profile;
-    if (!data) return;
+    if (!data || dirty.current) return;
+    baseline.current = data;
     setLocalHeight(data.height_cm); setLocalWeight(data.weight_kg); setLocalAge(data.age);
+    setLocalActivity(data.activity_level === "SEDENTARY" ? "sedentary" : data.activity_level === "LIGHT" ? "light" : "active");
     setLocalGender(data.sex === "M" ? "pria" : "wanita");
     setLocalGoal(data.goal === "LOSE_WEIGHT" ? "turun" : data.goal === "GAIN_MUSCLE" ? "otot" : "ideal");
   }, [account]);
 
+  const isInputValid = Number.isInteger(localAge) && localAge >= 18 && localAge <= 100
+    && Number.isFinite(localHeight) && localHeight >= 120 && localHeight <= 230
+    && Number.isFinite(localWeight) && localWeight >= 30 && localWeight <= 250;
   const handleSave = async () => {
+    if (saving.current || !isInputValid) return;
     if (!userId) { router.push("/sign-in?redirect_url=%2Fbmi"); return; }
+    if (!account?.profile) { router.push("/onboarding/personas"); return; }
+    saving.current = true; setIsSaving(true); setSaveError(null);
     try {
       const token = await getToken();
-      if (!token) throw new Error("Silakan masuk kembali.");
-      await responseJson(await fetch(`${API_BASE_URL}/api/users/${userId}/health-profile`, {
-        method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ age: localAge, sex: localGender === "pria" ? "M" : "F", height_cm: localHeight,
-          weight_kg: localWeight, activity_level: localActivity.toUpperCase(),
-          goal: localGoal === "turun" ? "LOSE_WEIGHT" : localGoal === "otot" ? "GAIN_MUSCLE" : "MAINTAIN",
-          allergies: account?.profile?.allergies || [], meal_budget_idr: account?.profile?.meal_budget_idr || 35000,
-          has_medical_condition: account?.profile?.has_medical_condition || false, max_dinner_cut_pct: 25 })
+      if (!token) throw new Error("Please sign in again. Your changes have not been saved.");
+      const latest = await responseJson<AccountProfile>(await fetch(`${API_BASE_URL}/api/users/${userId}/health-profile`, {
+        headers: { Authorization: `Bearer ${token}` }, cache: "no-store",
       }));
+      const payload = bmiProfileUpdate({ age: localAge, gender: localGender, height: localHeight,
+        weight: localWeight, activity: localActivity, goal: localGoal }, latest, baseline.current);
+      const result = await responseJson<{ status: string }>(await fetch(`${API_BASE_URL}/api/users/${userId}/health-profile`, {
+        method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify(payload)
+      }));
+      if (result.status !== "saved") throw new Error("The server has not confirmed the save. Check your profile before trying again.");
+      dirty.current = false;
+      baseline.current = null;
       updateBmi(localHeight, localWeight, localGoal);
       window.dispatchEvent(new Event(ACCOUNT_UPDATED));
-      showToast("Target gizi dan kalori berhasil diperbarui!");
-      router.push("/");
-    } catch (error) { showToast(error instanceof Error ? error.message : "Profil gagal disimpan."); }
+      showToast("Profile saved. Calculations on this page remain estimates.");
+    } catch (error) { setSaveError(error instanceof Error ? error.message : "Your profile could not be saved. Your inputs are still available; please try again."); }
+    finally { saving.current = false; setIsSaving(false); }
   };
 
   // Calculate live preview metrics
   const hMeter = localHeight / 100;
   const liveScore = localHeight > 0 ? Number((localWeight / (hMeter * hMeter)).toFixed(1)) : 20.3;
   
-  let liveCategory = "Ideal (Normal)";
+  let liveCategory = "Normal range";
   let liveBadgeClass = "ideal";
   let spectrumPercent = 40; // Default center normal
 
   if (liveScore < 18.5) {
-    liveCategory = "Kurus (Underweight)";
+    liveCategory = "Underweight range";
     liveBadgeClass = "warning";
     spectrumPercent = Math.min(22, Math.max(5, (liveScore / 18.5) * 22));
   } else if (liveScore >= 18.5 && liveScore < 23) {
-    liveCategory = "Normal / Berat Ideal";
+    liveCategory = "Normal range";
     liveBadgeClass = "ideal";
     spectrumPercent = 25 + ((liveScore - 18.5) / 4.5) * 25;
   } else if (liveScore >= 23 && liveScore < 25) {
-    liveCategory = "Berisiko (Overweight)";
+    liveCategory = "Overweight range";
     liveBadgeClass = "warning";
     spectrumPercent = 53 + ((liveScore - 23) / 2) * 22;
   } else {
-    liveCategory = "Obesitas";
+    liveCategory = "Obesity range";
     liveBadgeClass = "warning";
     spectrumPercent = Math.min(95, 78 + ((liveScore - 25) / 10) * 17);
   }
@@ -117,92 +126,55 @@ export default function BmiPage() {
   if (localGoal === "otot") tdee += 300;
 
   return (
-    <div>
+    <div className={styles.page} onChangeCapture={() => { dirty.current = true; }} onClickCapture={(event) => { if ((event.target as HTMLElement).closest("button")) dirty.current = true; }}>
       {/* Toast Notification */}
-      {toast && <div className="app-toast">{toast}</div>}
+      {toast && <p role="status" className={styles.notice}>{toast}</p>}
+      {saveError && <p role="alert" className={styles.error}>{saveError}</p>}
 
       {/* Top Header & Navigation */}
-      <div style={{ marginBottom: 14 }}>
-        <button
-          onClick={() => router.back()}
-          style={{
-            background: "transparent",
-            border: "none",
-            display: "inline-flex",
-            alignItems: "center",
-            gap: 6,
-            cursor: "pointer",
-            fontSize: "12.5px",
-            color: "#666",
-            padding: 0
-          }}
-        >
-          <ArrowLeft size={14} /> Kembali ke Menu Utama
-        </button>
-      </div>
+      <button className={styles.back} onClick={() => router.back()}>
+        <ArrowLeft size={18} aria-hidden="true" /> Back to menu
+      </button>
 
-      <div style={{ marginBottom: 18, display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 10 }}>
+      <header className={styles.header}>
         <div>
-          <h1 style={{ fontSize: "19px", fontWeight: 600, color: "#222" }}>
-            Kalkulator Kebutuhan Gizi & Standar BMI
+          <h1>
+            Energy needs and BMI estimates
           </h1>
-          <p style={{ fontSize: "12px", color: "#666", marginTop: 3 }}>
-            Perhitungan ilmiah standar Kemenkes RI & WHO Asia-Pasifik untuk rekomendasi menu ShopeeFood harian.
+          <p>
+            Estimates based on nutrition formulas and references. BMI and energy needs are not a diagnosis or a complete health assessment.
           </p>
         </div>
 
         <button
+          className={styles.demo}
+          disabled={isSaving}
           onClick={loadLilyPreset}
-          style={{
-            backgroundColor: "#FFF5F1",
-            border: "1px solid #EE4D2D",
-            color: "#EE4D2D",
-            borderRadius: "4px",
-            padding: "5px 12px",
-            fontSize: "11.5px",
-            fontWeight: 500,
-            cursor: "pointer",
-            display: "inline-flex",
-            alignItems: "center",
-            gap: 5
-          }}
         >
-          <Sparkles size={13} /> Muat Profil Lily (SCBD)
+          Load demo data
         </button>
-      </div>
+      </header>
 
       {/* Main 2-Column Responsive Layout */}
-      <div className="bmi-grid">
+      <div className={`bmi-grid ${styles.grid}`}>
         {/* Left Column: Input Form */}
-        <div
-          style={{
-            backgroundColor: "#FFFFFF",
-            padding: "18px 20px",
-            borderRadius: "8px",
-            border: "1px solid var(--border-card)",
-            boxShadow: "var(--shadow-subtle)",
-            display: "flex",
-            flexDirection: "column",
-            gap: 16
-          }}
-        >
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid #F0F0F0", paddingBottom: 10 }}>
-            <div style={{ fontSize: "13.5px", fontWeight: 600, color: "#222" }}>
-              Parameter Profil Fisik
-            </div>
-            <span style={{ fontSize: "11px", color: "#00B14F", fontWeight: 500, display: "flex", alignItems: "center", gap: 4 }}>
-              <ShieldCheck size={13} /> Terverifikasi Kemenkes
-            </span>
+        <div className={styles.formCard}>
+          <div className={styles.sectionHeader}>
+            <h2>Physical profile</h2>
+            <span>Estimated calculation</span>
           </div>
 
           {/* Gender & Age */}
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
             <div className="bmi-input-group">
-              <label className="bmi-input-label">Jenis Kelamin</label>
+              <label className="bmi-input-label">Sex used for calculation</label>
               <div style={{ display: "flex", gap: 6 }}>
                 <button
                   type="button"
+                  disabled={isSaving}
+                  aria-pressed={localGender === "wanita"}
                   onClick={() => setLocalGender("wanita")}
+                  className={styles.choice}
                   style={{
                     flex: 1,
                     height: 38,
@@ -210,16 +182,19 @@ export default function BmiPage() {
                     border: localGender === "wanita" ? "1px solid #EE4D2D" : "1px solid #E0E0E0",
                     backgroundColor: localGender === "wanita" ? "#FFF5F1" : "#FAFAFA",
                     color: localGender === "wanita" ? "#EE4D2D" : "#555",
-                    fontSize: "12px",
+                    fontSize: "14px",
                     fontWeight: localGender === "wanita" ? 600 : 400,
                     cursor: "pointer"
                   }}
                 >
-                  Wanita
+                  Female
                 </button>
                 <button
                   type="button"
+                  disabled={isSaving}
+                  aria-pressed={localGender === "pria"}
                   onClick={() => setLocalGender("pria")}
+                  className={styles.choice}
                   style={{
                     flex: 1,
                     height: 38,
@@ -227,27 +202,29 @@ export default function BmiPage() {
                     border: localGender === "pria" ? "1px solid #EE4D2D" : "1px solid #E0E0E0",
                     backgroundColor: localGender === "pria" ? "#FFF5F1" : "#FAFAFA",
                     color: localGender === "pria" ? "#EE4D2D" : "#555",
-                    fontSize: "12px",
+                    fontSize: "14px",
                     fontWeight: localGender === "pria" ? 600 : 400,
                     cursor: "pointer"
                   }}
                 >
-                  Pria
+                  Male
                 </button>
               </div>
             </div>
 
             <div className="bmi-input-group">
-              <label className="bmi-input-label">Usia</label>
+              <label htmlFor="bmi-age" className="bmi-input-label">Age</label>
               <div className="bmi-input-control">
                 <input
                   type="number"
-                  min="15"
-                  max="80"
+                  disabled={isSaving}
+                  min="18"
+                  max="100"
+                  id="bmi-age"
                   value={localAge}
-                  onChange={(e) => setLocalAge(Number(e.target.value) || 26)}
+                  onChange={(e) => setLocalAge(Number(e.target.value))}
                 />
-                <span className="bmi-input-unit">tahun</span>
+                <span className="bmi-input-unit">years</span>
               </div>
             </div>
           </div>
@@ -255,12 +232,14 @@ export default function BmiPage() {
           {/* Height and Weight */}
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
             <div className="bmi-input-group">
-              <label className="bmi-input-label">Tinggi Badan</label>
+              <label htmlFor="bmi-height" className="bmi-input-label">Height</label>
               <div className="bmi-input-control">
                 <input
                   type="number"
+                  disabled={isSaving}
                   min="120"
-                  max="220"
+                  max="230"
+                  id="bmi-height"
                   value={localHeight}
                   onChange={(e) => setLocalHeight(Number(e.target.value) || 0)}
                 />
@@ -269,12 +248,14 @@ export default function BmiPage() {
             </div>
 
             <div className="bmi-input-group">
-              <label className="bmi-input-label">Berat Badan</label>
+              <label htmlFor="bmi-weight" className="bmi-input-label">Weight</label>
               <div className="bmi-input-control">
                 <input
                   type="number"
+                  disabled={isSaving}
                   min="30"
-                  max="180"
+                  max="250"
+                  id="bmi-weight"
                   value={localWeight}
                   onChange={(e) => setLocalWeight(Number(e.target.value) || 0)}
                 />
@@ -285,33 +266,23 @@ export default function BmiPage() {
 
           {/* Daily Activity Level */}
           <div className="bmi-input-group">
-            <label className="bmi-input-label">Intensitas Aktivitas Harian</label>
+            <label className="bmi-input-label">Daily activity level</label>
             <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
               {[
-                { id: "sedentary", title: "Duduk Seharian (Kantoran/SCBD Desk)", sub: "Jarang berolahraga, duduk >7 jam/hari" },
-                { id: "light", title: "Aktivitas Ringan (1-3x Jalan Santai/Gym)", sub: "Banyak berdiri atau jalan kaki sedang" },
-                { id: "active", title: "Sangat Aktif (Latihan Intensif 4-5x)", sub: "Pekerja lapangan atau olahraga rutin" }
+                { id: "sedentary", title: "Mostly sitting", sub: "Little exercise; sitting more than 7 hours a day" },
+                { id: "light", title: "Light activity", sub: "Frequent standing or walking; exercise 1–3 times a week" },
+                { id: "active", title: "High activity", sub: "Physical work or intensive exercise 4–5 times a week" }
               ].map((act) => (
                 <button
                   key={act.id}
                   type="button"
-                  onClick={() => setLocalActivity(act.id as any)}
-                  style={{
-                    textAlign: "left",
-                    padding: "8px 12px",
-                    borderRadius: 4,
-                    border: localActivity === act.id ? "1px solid #EE4D2D" : "1px solid #E5E5E5",
-                    backgroundColor: localActivity === act.id ? "#FFF9F6" : "#FAFAFA",
-                    cursor: "pointer",
-                    transition: "all 0.15s ease"
-                  }}
+                  disabled={isSaving}
+                  aria-pressed={localActivity === act.id}
+                  className={styles.activityChoice}
+                  onClick={() => setLocalActivity(act.id as typeof localActivity)}
                 >
-                  <div style={{ fontSize: "12px", fontWeight: localActivity === act.id ? 600 : 500, color: localActivity === act.id ? "#EE4D2D" : "#333" }}>
-                    {act.title}
-                  </div>
-                  <div style={{ fontSize: "10.5px", color: "#777", marginTop: 2 }}>
-                    {act.sub}
-                  </div>
+                  <strong>{act.title}</strong>
+                  <span>{act.sub}</span>
                 </button>
               ))}
             </div>
@@ -319,18 +290,20 @@ export default function BmiPage() {
 
           {/* Goal Selector */}
           <div className="bmi-input-group">
-            <label className="bmi-input-label">Target Kesehatan Anda</label>
+            <label className="bmi-input-label">Energy goal</label>
             <div className="bmi-goals-grid">
               {[
-                { key: "turun", label: "Defisit Kalori" },
-                { key: "ideal", label: "Jaga Ideal" },
-                { key: "otot", label: "Massa Otot" }
+                { key: "turun", label: "Calorie deficit" },
+                { key: "ideal", label: "Maintain" },
+                { key: "otot", label: "Build muscle" }
               ].map((g) => (
                 <button
                   key={g.key}
                   type="button"
                   className={`bmi-goal-btn ${localGoal === g.key ? "active" : ""}`}
-                  onClick={() => setLocalGoal(g.key as any)}
+                  disabled={isSaving}
+                  aria-pressed={localGoal === g.key}
+                  onClick={() => setLocalGoal(g.key as typeof localGoal)}
                 >
                   {g.label}
                 </button>
@@ -338,28 +311,22 @@ export default function BmiPage() {
             </div>
           </div>
 
-          {/* Action Button */}
-          <button
-            className="btn-shopee-primary"
-            style={{ width: "100%", marginTop: 4, height: 42, fontSize: "13px" }}
-            onClick={handleSave}
-          >
-            Simpan & Sinkronkan ke Menu Sehat
-          </button>
+          {!isInputValid && <p role="status" className={styles.error}>Enter an age from 18 to 100 years, height from 120 to 230 cm, and weight from 30 to 250 kg to view estimates and save your profile.</p>}
+
         </div>
 
         {/* Right Column: Calculated Results & Guides */}
         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
           {/* Result Summary Card */}
-          <div className="bmi-result-summary">
+          {isInputValid && <div className="bmi-result-summary">
             <div className="bmi-score-row">
               <div>
-                <span style={{ fontSize: "11.5px", color: "#666", fontWeight: 500 }}>
-                  Skor Indeks Massa Tubuh (BMI)
+                <span style={{ fontSize: "14px", color: "#555", fontWeight: 500 }}>
+                  Body mass index (BMI)
                 </span>
                 <div className="bmi-score-number">{liveScore}</div>
               </div>
-              <span className={`bmi-category-badge ${liveBadgeClass}`} style={{ fontSize: "12px", padding: "4px 10px" }}>
+              <span className={`bmi-category-badge ${liveBadgeClass}`} style={{ fontSize: "13px", padding: "6px 10px" }}>
                 {liveCategory}
               </span>
             </div>
@@ -367,10 +334,10 @@ export default function BmiPage() {
             {/* Visual Spectrum Gauge */}
             <div className="bmi-spectrum-container">
               <div className="bmi-spectrum-bar">
-                <div className="spectrum-seg under" title="Kurus (<18.5)" />
-                <div className="spectrum-seg normal" title="Ideal (18.5 - 22.9)" />
-                <div className="spectrum-seg over" title="Berlebih (23.0 - 24.9)" />
-                <div className="spectrum-seg obese" title="Obesitas (>=25.0)" />
+                <div className="spectrum-seg under" title="Underweight (<18.5)" />
+                <div className="spectrum-seg normal" title="Normal range (18.5 - 22.9)" />
+                <div className="spectrum-seg over" title="Overweight (23.0 - 24.9)" />
+                <div className="spectrum-seg obese" title="Obesity (>=25.0)" />
 
                 {/* Needle pointer */}
                 <div
@@ -390,72 +357,76 @@ export default function BmiPage() {
               </div>
 
               <div className="bmi-spectrum-labels">
-                <span>&lt; 18.5 Kurus</span>
-                <span style={{ color: "#00B14F", fontWeight: 600 }}>18.5 - 22.9 Ideal</span>
-                <span>23 - 24.9 Berlebih</span>
-                <span>&gt; 25 Obesitas</span>
+                <span>&lt; 18.5 Underweight</span>
+                <span style={{ color: "#247243", fontWeight: 600 }}>18.5 - 22.9 Normal</span>
+                <span>23 - 24.9 Overweight</span>
+                <span>&gt; 25 Obesity</span>
               </div>
             </div>
 
-            {/* Nutrients Grid */}
-            <div className="bmi-nutrients-grid">
+            <div className={styles.energySummary}>
+              <span>Estimated daily energy</span>
+              <strong>{tdee} kcal</strong>
+            </div>
+            <details className={styles.secondary}>
+              <summary>Nutrition details and calculation</summary>
+              <div className={`bmi-nutrients-grid ${styles.nutritionDetails}`}>
               <div className="bmi-nutrient-item">
-                <span className="bmi-nutrient-val" style={{ color: "#EE4D2D" }}>{tdee} kcal</span>
-                <span className="bmi-nutrient-lbl">Target Kalori / Hari</span>
-              </div>
-              <div className="bmi-nutrient-item">
-                <span className="bmi-nutrient-val" style={{ color: "#00B14F" }}>
+                <span className="bmi-nutrient-val" style={{ color: "#263238" }}>
                   {Math.round(localWeight * (localGoal === "otot" ? 1.6 : 1.2))}g
                 </span>
-                <span className="bmi-nutrient-lbl">Target Protein</span>
+                <span className="bmi-nutrient-lbl">Estimated protein</span>
               </div>
               <div className="bmi-nutrient-item">
-                <span className="bmi-nutrient-val" style={{ color: "#0048A0" }}>&lt; 2.000 mg</span>
-                <span className="bmi-nutrient-lbl">Batas Garam</span>
+                <span className="bmi-nutrient-val" style={{ color: "#263238" }}>&lt; 2,000 mg</span>
+                <span className="bmi-nutrient-lbl">App sodium reference</span>
               </div>
             </div>
 
             {/* Meal Distribution Guide */}
-            <div style={{ backgroundColor: "#FAFAFA", borderRadius: 6, padding: "10px 12px", border: "1px solid #ECECEC" }}>
-              <div style={{ fontSize: "11.5px", fontWeight: 600, color: "#333", marginBottom: 6 }}>
-                Alokasi Porsi Kalori Sekali Makan:
-              </div>
+            <div className={styles.mealGuide}>
+              <h3>Example energy allocation</h3>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 6, textAlign: "center" }}>
                 <div style={{ background: "#FFFFFF", padding: "6px 4px", borderRadius: 4, border: "1px solid #EFEFEF" }}>
-                  <div style={{ fontSize: "10px", color: "#777" }}>Sarapan</div>
+                  <div style={{ fontSize: "10px", color: "#777" }}>Breakfast</div>
                   <div style={{ fontSize: "12px", fontWeight: 600, color: "#333", marginTop: 2 }}>
                     ~{Math.round(tdee * 0.25)} kcal
                   </div>
                 </div>
                 <div style={{ background: "#FFF5F1", padding: "6px 4px", borderRadius: 4, border: "1px solid #FFD8CC" }}>
-                  <div style={{ fontSize: "10px", color: "#EE4D2D", fontWeight: 500 }}>Makan Siang</div>
+                  <div style={{ fontSize: "10px", color: "#EE4D2D", fontWeight: 500 }}>Lunch</div>
                   <div style={{ fontSize: "12px", fontWeight: 600, color: "#EE4D2D", marginTop: 2 }}>
                     ~{Math.round(tdee * 0.40)} kcal
                   </div>
                 </div>
                 <div style={{ background: "#FFFFFF", padding: "6px 4px", borderRadius: 4, border: "1px solid #EFEFEF" }}>
-                  <div style={{ fontSize: "10px", color: "#777" }}>Makan Malam</div>
+                  <div style={{ fontSize: "10px", color: "#777" }}>Dinner</div>
                   <div style={{ fontSize: "12px", fontWeight: 600, color: "#333", marginTop: 2 }}>
                     ~{Math.round(tdee * 0.35)} kcal
                   </div>
                 </div>
               </div>
             </div>
-          </div>
+            <p className={styles.explanation}>Energy estimates use the Mifflin-St Jeor equation, an activity factor, and the app&apos;s goal adjustments. Portions and protein are estimates based on these settings; your needs may differ.</p>
+            </details>
+          </div>}
 
+          {!account?.profile && <p className={styles.explanation}>The current values are a demo until you enter and save your own profile.</p>}
+          <button className="btn-shopee-primary" disabled={!isInputValid || isSaving} onClick={handleSave}>{isSaving ? "Saving..." : "Save profile"}</button>
+          <details className={styles.secondary}><summary>Example plate portions</summary>
           {/* Isi Piringku Guidelines */}
           <div className="balance-card">
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
               <div style={{ fontSize: "12.5px", fontWeight: 600, color: "#222" }}>
-                Panduan Porsi "Isi Piringku" (Kemenkes RI)
+                Example portion breakdown in the app
               </div>
-              <span style={{ fontSize: "10px", color: "#666" }}>Per Sekali Makan</span>
+              <span style={{ fontSize: "10px", color: "#666" }}>Per meal</span>
             </div>
 
             <div className="balance-item-row">
               <div className="balance-label-row">
-                <span style={{ color: "#D97706" }}>Karbohidrat Kompleks (Nasi Merah/Jagung/Ubi)</span>
-                <span>35% (1/3 Piring)</span>
+                <span style={{ color: "#D97706" }}>Complex carbohydrates (brown rice/corn/sweet potato)</span>
+                <span>35% (1/3 plate)</span>
               </div>
               <div className="balance-track">
                 <div className="balance-fill carb" style={{ width: "35%" }} />
@@ -464,8 +435,8 @@ export default function BmiPage() {
 
             <div className="balance-item-row">
               <div className="balance-label-row">
-                <span style={{ color: "#00B14F" }}>Lauk Protein Sehat (Ikan/Dada Ayam/Tempe)</span>
-                <span>35% (1/3 Piring)</span>
+                <span style={{ color: "#00B14F" }}>Protein foods (fish/chicken breast/tempe)</span>
+                <span>35% (1/3 plate)</span>
               </div>
               <div className="balance-track">
                 <div className="balance-fill protein" style={{ width: "35%" }} />
@@ -474,8 +445,8 @@ export default function BmiPage() {
 
             <div className="balance-item-row">
               <div className="balance-label-row">
-                <span style={{ color: "#00A699" }}>Sayuran & Serat Hijau (Bayam/Brokoli/Capcay)</span>
-                <span>30% (1/3 Piring)</span>
+                <span style={{ color: "#00A699" }}>Vegetables and fiber (spinach/broccoli/capcay)</span>
+                <span>30% (1/3 plate)</span>
               </div>
               <div className="balance-track">
                 <div className="balance-fill fiber" style={{ width: "30%" }} />
@@ -483,32 +454,7 @@ export default function BmiPage() {
             </div>
           </div>
 
-          {/* SeaBank Wellness Saver Card Integration */}
-          <div className="seabank-card">
-            <div className="seabank-card-header">
-              <div className="seabank-brand">
-                <Wallet size={16} />
-                <span>SeaBank Wellness Saver</span>
-              </div>
-              <span className="seabank-badge">Mitra Finansial Sehat</span>
-            </div>
-
-            <p className="seabank-desc">
-              Menjaga target gizi NutriSea setiap hari membuka fasilitas suku bunga tabungan spesial + cashback 25% langsung di ShopeeFood.
-            </p>
-
-            <div className="seabank-rewards-row">
-              <div className="seabank-reward-chip">
-                Bunga Khusus: <strong>+0.5% p.a.</strong>
-              </div>
-              <div className="seabank-reward-chip">
-                Cashback Menu: <strong>25% Tiap Hari</strong>
-              </div>
-              <div className="seabank-reward-chip">
-                Bebas Biaya: <strong>Transfer Rp 0</strong>
-              </div>
-            </div>
-          </div>
+          </details>
         </div>
       </div>
     </div>

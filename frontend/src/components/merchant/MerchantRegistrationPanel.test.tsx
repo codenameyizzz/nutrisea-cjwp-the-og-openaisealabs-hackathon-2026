@@ -22,10 +22,10 @@ afterEach(async () => { if (root) await act(async () => root!.unmount()); root =
 
 test("customer sees merchant registration form with required business fields", async () => {
   await mount();
-  assert.match(host.textContent!, /Daftar sebagai Merchant/);
+  assert.match(host.textContent!, /Register as a merchant/);
   for (const key of Object.keys(data)) assert.equal(host.querySelector<HTMLInputElement>(`input[name=${key}]`)?.required, true);
   assert.equal(host.querySelector<HTMLInputElement>('input[type=checkbox]')?.required, true);
-  assert.match(host.querySelector('button[type=submit]')!.textContent!, /Kirim Pengajuan Merchant/);
+  assert.match(host.querySelector('button[type=submit]')!.textContent!, /Submit merchant application/);
 });
 
 test("form submits applicant business data without role or user identity fields", async () => {
@@ -39,33 +39,33 @@ test("form submits applicant business data without role or user identity fields"
 
 test("pending applicant sees status and can keep shopping without duplicate form", async () => {
   await mount({ application });
-  assert.match(host.textContent!, /Menunggu verifikasi/);
+  assert.match(host.textContent!, /Awaiting review/);
   assert.equal(host.querySelector("form"), null);
-  assert.equal(host.querySelector('a[href="/"]')?.textContent, "Lanjut berbelanja");
+  assert.equal(host.querySelector('a[href="/"]')?.textContent, "Continue shopping");
 });
 
 test("approved applicant sees merchant dashboard while retaining customer messaging", async () => {
   await mount({ hasAccess: true, application: { ...application, status: "APPROVED", merchant_id: "MTR-approved" } });
-  assert.equal(host.querySelector('a[href="/merchant"]')?.textContent, "Buka Dashboard Merchant");
-  assert.match(host.textContent!, /tetap dapat berbelanja/);
+  assert.equal(host.querySelector('a[href="/merchant"]')?.textContent, "Open merchant dashboard");
+  assert.match(host.textContent!, /can still shop/);
   assert.equal(host.querySelector("form"), null);
 });
 
 test("database approval without session permission waits for access refresh", async () => {
   await mount({ hasAccess: false, application: { ...application, status: "APPROVED", merchant_id: "MTR-approved" } });
   assert.equal(host.querySelector('a[href="/merchant"]'), null);
-  assert.match(host.textContent!, /Perbarui sesi dan akses/);
+  assert.match(host.textContent!, /Refresh session and access/);
 });
 
 test("rejected application shows review reason and populated resubmission form", async () => {
   await mount({ application: { ...application, status: "REJECTED", review_reason: "Alamat belum lengkap" } });
   assert.match(host.textContent!, /Alamat belum lengkap/);
-  assert.match(host.querySelector('button[type=submit]')!.textContent!, /Kirim Ulang Pengajuan/);
+  assert.match(host.querySelector('button[type=submit]')!.textContent!, /Resubmit application/);
 });
 
 test("submission errors remain visible and busy state prevents another submission", async () => {
-  await mount({ error: "Pengajuan gagal dikirim", busy: true });
-  assert.match(host.querySelector('[role=alert]')!.textContent!, /Pengajuan gagal dikirim/);
+  await mount({ error: "Application could not be submitted", busy: true });
+  assert.match(host.querySelector('[role=alert]')!.textContent!, /Application could not be submitted/);
   assert.equal(host.querySelector<HTMLButtonElement>('button[type=submit]')!.disabled, true);
   await act(async () => { host.querySelector("form")!.dispatchEvent(new window.Event("submit", { bubbles: true, cancelable: true })); });
   assert.equal(submitted, undefined);

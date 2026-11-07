@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useApp } from "@/context/AppContext";
 import IngredientAutocomplete from "@/components/ingredients/IngredientAutocomplete";
@@ -13,25 +13,14 @@ import {
   Store,
   ArrowLeft,
   Sparkles,
-  TrendingUp,
-  ShieldCheck,
   CheckCircle2,
   Check,
   Plus,
   RefreshCw,
-  Award,
-  AlertCircle,
-  Clock,
-  MapPin,
   Utensils,
-  DollarSign,
   Edit2,
   Trash2,
   X,
-  Scale,
-  Flame,
-  Info,
-  ChevronRight,
   Building2
 } from "lucide-react";
 
@@ -71,15 +60,6 @@ interface DishItem {
   cookingNotes?: string;
 }
 
-interface DemandInsight {
-  district: string;
-  radius_km: number;
-  unmet_demand_count: number;
-  opportunity_detected: string;
-  actionable_suggestion: string;
-  suggested_healthy_tags: string[];
-}
-
 export default function MerchantPage() {
   return <IngredientGuard mode="merchant"><MerchantContent /></IngredientGuard>;
 }
@@ -96,9 +76,9 @@ function MerchantContent() {
   const [dishes, setDishes] = useState<DishItem[]>([]);
   const [isLoadingDishes, setIsLoadingDishes] = useState(false);
   const [outlets, setOutlets] = useState<OutletItem[]>([]);
-  const [merchantPartner, setMerchantPartner] = useState<any>(null);
-  const [insight, setInsight] = useState<DemandInsight | null>(null);
-  const [isLoadingInsight, setIsLoadingInsight] = useState(false);
+  const [merchantPartner, setMerchantPartner] = useState<{ name: string; seabank_account_no?: string } | null>(null);
+  const [outletError, setOutletError] = useState("");
+  const [menuError, setMenuError] = useState("");
   const [toast, setToast] = useState<string | null>(null);
   const [togglingOutletId, setTogglingOutletId] = useState<string | null>(null);
 
@@ -112,7 +92,7 @@ function MerchantContent() {
     const request = editingDishId ? ingredientApi.recipe(editingDishId, controller.signal)
       : Promise.resolve({ items: [], version: EMPTY_RECIPE_VERSION });
     request.then(value => { if (!controller.signal.aborted) { setRecipe(value); setRecipeError(""); } })
-      .catch(err => { if (!controller.signal.aborted) setRecipeError(err instanceof Error ? err.message : "Gagal memuat komposisi menu."); });
+      .catch(err => { if (!controller.signal.aborted) setRecipeError(err instanceof Error ? err.message : "Could not load the meal ingredients."); });
     return () => controller.abort();
   }, [editingDishId, isModalOpen, ingredientApi]);
 
@@ -122,15 +102,29 @@ function MerchantContent() {
   const [formPrice, setFormPrice] = useState<number>(25000);
   const [formDescription, setFormDescription] = useState("");
   const [formImageUrl, setFormImageUrl] = useState("https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400&q=80");
-  const [formKcal, setFormKcal] = useState<number>(350);
-  const [formProtein, setFormProtein] = useState<number>(30);
-  const [formCarbs, setFormCarbs] = useState<number>(25);
-  const [formFat, setFormFat] = useState<number>(8);
-  const [formSodium, setFormSodium] = useState<number>(450);
-  const [formTags, setFormTags] = useState<string[]>(["MINYAK_BARU", "TINGGI_PROTEIN"]);
-  const [formCookingNotes, setFormCookingNotes] = useState("Standar Higienis NutriSea (Minyak Baru)");
+  const [formKcal, setFormKcal] = useState<number | "">("");
+  const [formProtein, setFormProtein] = useState<number | "">("");
+  const [formCarbs, setFormCarbs] = useState<number | "">("");
+  const [formFat, setFormFat] = useState<number | "">("");
+  const [formSodium, setFormSodium] = useState<number | "">("");
+  const [formTags, setFormTags] = useState<string[]>([]);
+  const [formCookingNotes, setFormCookingNotes] = useState("");
 
-  const [isGeneratingDescription, setIsGeneratingDescription] = useState(false);
+  const [descriptionPreview, setDescriptionPreview] = useState<{ context: string; description: string; source?: string } | null>(null);
+  const [descriptionPendingContext, setDescriptionPendingContext] = useState<string | null>(null);
+  const descriptionRequest = useRef<AbortController | null>(null);
+  const descriptionContext = JSON.stringify([isModalOpen, editingDishId, formName, formCategory, recipe?.items, formCookingNotes]);
+  const isGeneratingDescription = descriptionPendingContext === descriptionContext;
+  const currentDescriptionPreview = descriptionPreview?.context === descriptionContext ? descriptionPreview : null;
+
+  useEffect(() => () => { descriptionRequest.current?.abort(); }, [descriptionContext]);
+
+  function clearDescriptionPreview() {
+    descriptionRequest.current?.abort();
+    descriptionRequest.current = null;
+    setDescriptionPreview(null);
+    setDescriptionPendingContext(null);
+  }
 
   // AI Estimation state
   const [isEstimatingAi, setIsEstimatingAi] = useState(false);
@@ -145,45 +139,43 @@ function MerchantContent() {
   };
 
   const handleGenerateDescription = async () => {
-    if (!formName.trim() || isGeneratingDescription) return;
-    setIsGeneratingDescription(true);
+    if (!formName.trim() || isGeneratingDescription || !recipe || saveBusy) return;
+    descriptionRequest.current?.abort();
+    const controller = new AbortController();
+    descriptionRequest.current = controller;
+    setDescriptionPendingContext(descriptionContext);
+    setDescriptionPreview(null);
     try {
       const response = await authenticatedFetch("/api/merchant/generate-description", {
-        method: "POST",
+        method: "POST", signal: controller.signal,
         body: JSON.stringify({
-          dish_name: formName,
-          category: formCategory,
-          ingredients: recipe?.items.map(item => `${item.quantity} ${item.unit} ${item.name}`) || [],
+          dish_name: formName, category: formCategory,
+          ingredients: recipe.items.map(item => `${item.quantity} ${item.unit} ${item.name}`),
           cooking_notes: formCookingNotes,
         }),
       });
-      const data = await responseJson<{ description: string }>(response);
-      setFormDescription(data.description);
-      showToast("Deskripsi menu berhasil dibuat. Anda bisa mengeditnya sebelum menyimpan.");
+      const data = await responseJson<{ description: string; source?: string }>(response);
+      if (controller.signal.aborted || descriptionRequest.current !== controller) return;
+      if (typeof data.description !== "string" || !data.description.trim()) throw new Error("The generated description was empty. Your current description has been kept.");
+      setDescriptionPreview({ context: descriptionContext, description: data.description.slice(0, 500), source: data.source });
     } catch (error) {
-      showToast(error instanceof Error ? error.message : "Gagal membuat deskripsi menu.");
+      if (!controller.signal.aborted && descriptionRequest.current === controller) {
+        showToast(error instanceof Error ? error.message : "Description generation failed. Your current description has been kept.");
+      }
     } finally {
-      setIsGeneratingDescription(false);
+      if (descriptionRequest.current === controller) setDescriptionPendingContext(null);
     }
   };
 
-  useEffect(() => {
-    setActiveRole("MERCHANT");
-    fetchOutlets();
-    fetchDishes();
-    fetchDemandInsights();
-  }, []);
 
   const fetchOutlets = async () => {
     try {
-      const res = await authenticatedFetch("/api/merchant/outlets");
-      if (res.ok) {
-        const json = await res.json();
-        setOutlets(json.outlets || []);
-        setMerchantPartner(json.merchant);
-      }
+      const json = await responseJson<{ outlets: OutletItem[]; merchant: { name: string; seabank_account_no?: string } | null }>(await authenticatedFetch("/api/merchant/outlets"));
+      setOutlets(json.outlets || []);
+      setMerchantPartner(json.merchant);
+      setOutletError("");
     } catch (e) {
-      console.warn("Failed to fetch outlets:", e);
+      setOutletError(e instanceof Error ? e.message : "Outlets could not be loaded. Try again.");
     }
   };
 
@@ -196,10 +188,10 @@ function MerchantContent() {
       if (res.ok) {
         const json = await res.json();
         setOutlets(prev => prev.map(o => o.id === outletId ? { ...o, is_open: json.is_open } : o));
-        showToast(json.message);
-      }
+        showToast(json.is_open ? "Outlet is now open." : "Outlet is now closed.");
+      } else { await responseJson(res); }
     } catch (e) {
-      showToast("Gagal memperbarui status gerai");
+      showToast(e instanceof Error ? e.message : "Could not update outlet status.");
     } finally {
       setTogglingOutletId(null);
     }
@@ -208,44 +200,26 @@ function MerchantContent() {
   const fetchDishes = async () => {
     setIsLoadingDishes(true);
     try {
-      const res = await authenticatedFetch("/api/merchant/dishes");
-      if (res.ok) {
-        const json = await res.json();
-        setDishes(json.data || []);
-        setMerchantOptions(json.merchants || []);
-      }
+      const json = await responseJson<{ data: DishItem[]; merchants: { id: string; name: string }[] }>(await authenticatedFetch("/api/merchant/dishes"));
+      setDishes(json.data || []);
+      setMerchantOptions(json.merchants || []);
+      setMenuError("");
     } catch (e) {
-      showToast(e instanceof Error ? e.message : "Gagal memuat menu.");
+      setMenuError(e instanceof Error ? e.message : "Could not load the menu. Try again.");
     } finally {
       setIsLoadingDishes(false);
     }
   };
 
-  const fetchDemandInsights = async () => {
-    setIsLoadingInsight(true);
-    try {
-      const res = await authenticatedFetch("/api/merchant/demand-insights?district=Kuningan");
-      if (res.ok) {
-        const data = await res.json();
-        setInsight(data);
-      }
-    } catch (e) {
-      // High-fidelity fallback
-      setInsight({
-        district: "Kuningan / SCBD",
-        radius_km: 2.0,
-        unmet_demand_count: 65,
-        opportunity_detected: "HIGH_PROTEIN_LOW_SUGAR_GRILLED_CHICKEN",
-        actionable_suggestion: "65 pengguna di sekitar radius 2 km mencari menu tinggi protein rendah gula minggu ini. Tambahkan paket Ayam Bakar Bumbu Kuning Non-Kecap untuk estimasi peningkatan order +20%.",
-        suggested_healthy_tags: ["MINYAK_BARU", "TANPA_SANTAN", "TINGGI_PROTEIN"]
-      });
-    } finally {
-      setIsLoadingInsight(false);
-    }
-  };
+  useEffect(() => {
+    setActiveRole("MERCHANT");
+    fetchOutlets();
+    fetchDishes();
+  }, []);
 
   // Open Modal for Create
   const handleOpenCreateModal = () => {
+    clearDescriptionPreview();
     setEditingDishId(null);
     setRecipe(null); setRecipeError(""); setFormMerchantId(merchantOptions.length === 1 ? merchantOptions[0].id : "");
     setFormName("");
@@ -253,19 +227,20 @@ function MerchantContent() {
     setFormPrice(25000);
     setFormDescription("");
     setFormImageUrl("https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400&q=80");
-    setFormKcal(340);
-    setFormProtein(32);
-    setFormCarbs(20);
-    setFormFat(8);
-    setFormSodium(420);
-    setFormTags(["MINYAK_BARU", "TINGGI_PROTEIN"]);
-    setFormCookingNotes("Standar Higienis NutriSea (Minyak Baru)");
+    setFormKcal("");
+    setFormProtein("");
+    setFormCarbs("");
+    setFormFat("");
+    setFormSodium("");
+    setFormTags([]);
+    setFormCookingNotes("");
     setAiRationale(null);
     setIsModalOpen(true);
   };
 
   // Open Modal for Edit
   const handleOpenEditModal = (dish: DishItem) => {
+    clearDescriptionPreview();
     setEditingDishId(dish.id);
     setRecipe(null); setRecipeError(""); setFormMerchantId(dish.merchant_id || "");
     setFormName(dish.name);
@@ -273,13 +248,13 @@ function MerchantContent() {
     setFormPrice(dish.price);
     setFormDescription(dish.description || "");
     setFormImageUrl(dish.imageUrl || "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400&q=80");
-    setFormKcal(dish.macros?.kcal || 350);
-    setFormProtein(dish.macros?.protein_g || 30);
-    setFormCarbs(dish.macros?.carbs_g || 25);
-    setFormFat(dish.macros?.fat_g || 8);
-    setFormSodium(dish.macros?.sodium_mg || 450);
+    setFormKcal(dish.macros?.kcal ?? "");
+    setFormProtein(dish.macros?.protein_g ?? "");
+    setFormCarbs(dish.macros?.carbs_g ?? "");
+    setFormFat(dish.macros?.fat_g ?? "");
+    setFormSodium(dish.macros?.sodium_mg ?? "");
     setFormTags(dish.tags || []);
-    setFormCookingNotes(dish.cookingNotes || "Standar Higienis NutriSea");
+    setFormCookingNotes(dish.cookingNotes || "Review preparation notes before saving");
     setAiRationale(null);
     setIsModalOpen(true);
   };
@@ -291,7 +266,7 @@ function MerchantContent() {
     const targetCat = typeof customCat === "string" ? customCat : formCategory;
 
     if (!targetName.trim()) {
-      showToast("Ketik nama makanan terlebih dahulu!");
+      showToast("Enter a food name first.");
       return;
     }
 
@@ -319,22 +294,14 @@ function MerchantContent() {
         setFormTags(data.healthy_tags);
         setFormCookingNotes(data.cooking_notes);
         setAiRationale(data.rationale);
-        showToast("Nilai gizi & kalori berhasil dihitung otomatis oleh AI!");
+        showToast("AI nutrition estimates received. Review the values before saving.");
       } else {
         throw new Error("AI estimation endpoint returned error");
       }
     } catch (e) {
       console.warn("AI estimation error fallback:", e);
-      // High fidelity client-side fallback
-      setFormKcal(295);
-      setFormProtein(33);
-      setFormCarbs(8);
-      setFormFat(7);
-      setFormSodium(390);
-      setFormTags(["MINYAK_BARU", "BEBAS_GORENGAN", "TINGGI_PROTEIN"]);
-      setFormCookingNotes("1 ekor ikan nila dibakar rempah kuning kaldu segar, tanpa minyak jelantah & sambal dabu-dabu segar");
-      setAiRationale("Estimasi gizi dihitung otomatis berdasarkan porsi standar TKPI Kemenkes RI.");
-      showToast("Nilai gizi berhasil diperkirakan berdasarkan porsi standar TKPI Kemenkes!");
+      setAiRationale("AI estimation failed. Your existing values have been kept; enter or verify nutrition information before saving.");
+      showToast("AI estimation failed. No nutrition values were changed.");
     } finally {
       setIsEstimatingAi(false);
     }
@@ -343,13 +310,14 @@ function MerchantContent() {
   // Listen to 1-click Demo Trigger from DemoBar
   useEffect(() => {
     if (merchantDemoTrigger) {
+      clearDescriptionPreview();
       setMerchantDemoTrigger(false);
       setEditingDishId(null);
     setRecipe(null); setRecipeError(""); setFormMerchantId(merchantOptions.length === 1 ? merchantOptions[0].id : "");
       const demoName = "Ikan Nila Bakar Sambal Dabu-dabu";
       const demoCat = "protein";
       const demoPrice = 28000;
-      const demoDesc = "1 ekor ikan nila segar dibakar bumbu rempah kuning kaldu segar, disajikan dengan lalapan kemangi dan sambal dabu-dabu tomat segar tanpa minyak jelantah.";
+      const demoDesc = "One fresh tilapia grilled with turmeric spices and broth, served with basil and fresh tomato sambal dabu-dabu, without reused cooking oil.";
       const demoImg = "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400&q=80";
 
       setFormName(demoName);
@@ -360,11 +328,9 @@ function MerchantContent() {
       setAiRationale(null);
       setIsModalOpen(true);
 
-      const timer = setTimeout(() => {
-        handleEstimateWithAi(demoName, demoDesc, demoCat);
-      }, 400);
-
-      return () => clearTimeout(timer);
+      setFormKcal(""); setFormProtein(""); setFormCarbs(""); setFormFat(""); setFormSodium("");
+      setFormTags([]); setFormCookingNotes("");
+      setAiRationale("Example draft only. Nothing has been saved. Review the meal details, then enter nutrition information or explicitly request an AI estimate.");
     }
   }, [merchantDemoTrigger]);
 
@@ -372,7 +338,10 @@ function MerchantContent() {
   const handleSaveDish = async (e: React.FormEvent) => {
     e.preventDefault();
     if (saveBusy) return;
-    if (!recipe) { showToast("Komposisi belum dimuat. Tutup dan buka kembali form untuk mencoba lagi."); return; }
+    if ([formKcal, formProtein, formCarbs, formFat, formSodium].some(value => value === "" || !Number.isFinite(value) || value < 0)) {
+      showToast("Enter valid nutrition values before saving. Missing values cannot be saved as zero."); return;
+    }
+    if (!recipe) { showToast("Ingredients have not loaded. Close and reopen the form to try again."); return; }
     setSaveBusy(true);
     try {
       const payload = {
@@ -387,10 +356,11 @@ function MerchantContent() {
       });
       const json = await responseJson<{ dish: DishItem }>(response);
       setDishes(prev => editingDishId ? prev.map(d => d.id === editingDishId ? json.dish : d) : [json.dish, ...prev]);
-      showToast("Menu dan komposisi bahan berhasil disimpan.");
+      showToast("Meal and ingredient composition saved.");
+      clearDescriptionPreview();
       setIsModalOpen(false);
     } catch (err) {
-      showToast(err instanceof Error ? err.message : "Gagal menyimpan. Perubahan belum tersimpan.");
+      showToast(err instanceof Error ? err.message : "Save failed. Your changes have not been saved.");
     } finally { setSaveBusy(false); }
   };
 
@@ -399,9 +369,9 @@ function MerchantContent() {
     try {
       await responseJson(await authenticatedFetch(`/api/merchant/dishes/${encodeURIComponent(dishId)}`, { method: "DELETE" }));
       setDishes(prev => prev.filter(d => d.id !== dishId));
-      showToast("Menu dinonaktifkan dari etalase.");
+      showToast("Meal deactivated in the catalog.");
       setDeleteConfirmId(null);
-    } catch (err) { showToast(err instanceof Error ? err.message : "Gagal menonaktifkan menu."); }
+    } catch (err) { showToast(err instanceof Error ? err.message : "Could not deactivate the meal."); }
   };
 
   // Toggle Tag in quick list
@@ -419,53 +389,14 @@ function MerchantContent() {
         method: "PUT", body: JSON.stringify(updated)
       }));
       setDishes(prev => prev.map(d => d.id === dishId ? json.dish : d));
-      showToast("Tag menu diperbarui.");
-    } catch (err) { showToast(err instanceof Error ? err.message : "Gagal memperbarui tag."); }
-  };
-
-  // 1-Click add from AI Demand Insight
-  const handleAddAiRecommendedMenu = async () => {
-    const newDishPayload = {
-      merchant_id: merchantOptions.length === 1 ? merchantOptions[0].id : undefined,
-      name: "Paket Ayam Bakar Bumbu Kuning Non-Kecap (Rekomendasi AI)",
-      category: "protein",
-      price: 28000,
-      description: "Dada ayam bakar bumbu kuning kaldu segar, tanpa olesan kecap manis berlebih, lalapan bayam",
-      imageUrl: "https://images.unsplash.com/photo-1598515214211-89d3c73ae83b?w=400&q=80",
-      tags: ["MINYAK_BARU", "TANPA_SANTAN", "TINGGI_PROTEIN"],
-      macros: {
-        kcal: 360,
-        protein_g: 38,
-        carbs_g: 14,
-        fat_g: 8,
-        sodium_mg: 450
-      },
-      cookingNotes: "Dada ayam tanpa kulit, bumbu ungkep rempah tanpa kecap manis, sambal pisah"
-    };
-
-    try {
-      const res = await authenticatedFetch("/api/merchant/dishes", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(newDishPayload)
-      });
-      if (res.ok) {
-        const json = await res.json();
-        setDishes(prev => [json.dish, ...prev]);
-      } else {
-        throw new Error("create error");
-      }
-    } catch (err) {
-      showToast(err instanceof Error ? err.message : "Gagal menambahkan menu.");
-      return;
-    }
-    showToast("Menu rekomendasi berhasil ditambahkan.");
+      showToast("Meal tags updated.");
+    } catch (err) { showToast(err instanceof Error ? err.message : "Could not update meal tags."); }
   };
 
   return (
     <div>
       {/* Toast Notification */}
-      {toast && <div className="app-toast">{toast}</div>}
+      {toast && <div role="status" className="app-toast">{toast}</div>}
 
       {/* Back to Consumer App */}
       <div style={{ marginBottom: 14 }}>
@@ -480,7 +411,7 @@ function MerchantContent() {
             textDecoration: "none"
           }}
         >
-          <ArrowLeft size={14} /> Kembali ke Aplikasi Konsumen ShopeeFood
+          <ArrowLeft size={14} /> Back to the customer app
         </Link>
       </div>
 
@@ -494,17 +425,19 @@ function MerchantContent() {
           <div>
             <div className="merchant-header-title-row">
               <h1 className="merchant-header-name">
-                Warteg Berkah Mandiri
+                {merchantPartner?.name || "Merchant workspace"}
               </h1>
               <span className="merchant-header-badge">
-                <ShieldCheck size={13} /> Mitra Higienis NutriSea Terverifikasi
+                <Store size={13} /> Menu and outlets
               </span>
             </div>
 
             <div className="merchant-header-sub">
-              <span>Kuningan Barat &bull; Radius Pengantaran 2.5 km</span>
-              <span>&bull;</span>
-              <span style={{ color: "#00B14F", fontWeight: 600 }}>Komisi Hemat 5% Aktif</span>
+              <a href="#merchant-outlets">Manage outlets</a>
+              <span aria-hidden="true">&bull;</span>
+              <a href="#merchant-meals">Manage meals</a>
+              <span aria-hidden="true">&bull;</span>
+              <Link href="/merchant/register">Application status</Link>
             </div>
           </div>
         </div>
@@ -514,12 +447,13 @@ function MerchantContent() {
           onClick={handleOpenCreateModal}
           className="btn-shopee-primary merchant-add-btn"
         >
-          <Plus size={15} /> Tambah Menu Baru (AI Auto-Gizi)
+          <Plus size={15} /> Add meal
         </button>
       </div>
 
+      {outletError && <p role="alert">{outletError} <button onClick={() => void fetchOutlets()}>Retry outlets</button></p>}
       {/* Managed Restaurant Outlets & Brands */}
-      <div style={{
+      <div id="merchant-outlets" style={{
         backgroundColor: "#FFFFFF",
         borderRadius: "10px",
         padding: "16px 20px",
@@ -532,19 +466,19 @@ function MerchantContent() {
             <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
               <Building2 size={18} color="#EE4D2D" />
               <h3 style={{ margin: 0, fontSize: "15px", fontWeight: 700, color: "#0F172A" }}>
-                Gerai & Brand Restoran yang Dikelola ({outlets.length} Gerai)
+                Managed outlets and restaurant brands ({outlets.length} outlets)
               </h3>
             </div>
             <p style={{ margin: "2px 0 0 0", fontSize: "11px", color: "#64748B" }}>
-              Satu mitra bisnis ({merchantPartner?.name || "PT Berkah Boga Mandiri"}) mengelola beberapa cabang outlet dan merek kuliner berbeda di ShopeeFood.
+              Outlets and restaurant brands managed by {merchantPartner?.name || "your business"}.
             </p>
           </div>
           <span style={{ fontSize: "11px", color: "#10B981", fontWeight: 700, backgroundColor: "#ECFDF5", padding: "4px 8px", borderRadius: "6px" }}>
-            Rekening SeaBank: {merchantPartner?.seabank_account_no || "9012-3456-7890"} (Pencairan Komisi 5%)
+            SeaBank account: {merchantPartner?.seabank_account_no || "Not provided"}
           </span>
         </div>
 
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "12px" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 280px), 1fr))", gap: "12px" }}>
           {outlets.map((outlet) => (
             <div
               key={outlet.id}
@@ -562,7 +496,7 @@ function MerchantContent() {
                     Brand: <strong>{outlet.brand_name}</strong> &bull; {outlet.cuisine_type}
                   </div>
                   <div style={{ fontSize: "11px", color: "#64748B", marginTop: "2px" }}>
-                    📍 {outlet.area} &bull; Radius {outlet.delivery_radius_km} km &bull; {outlet.dish_count} Menu
+                    📍 {outlet.area} &bull; Radius {outlet.delivery_radius_km} km &bull; {outlet.dish_count} meals
                   </div>
                 </div>
                 <button
@@ -580,7 +514,7 @@ function MerchantContent() {
                     cursor: "pointer"
                   }}
                 >
-                  {togglingOutletId === outlet.id ? "..." : (outlet.is_open ? "🟢 BUKA" : "🔴 TUTUP")}
+                  {togglingOutletId === outlet.id ? "..." : (outlet.is_open ? "🟢 OPEN" : "🔴 CLOSED")}
                 </button>
               </div>
             </div>
@@ -588,85 +522,30 @@ function MerchantContent() {
         </div>
       </div>
 
-      {/* Metrics Row */}
-      <div className="merchant-metrics-grid">
-        <div className="merchant-metric-card">
-          <div className="merchant-metric-title">Pesanan Sehat Hari Ini</div>
-          <div className="merchant-metric-val" style={{ color: "#222" }}>38 Order</div>
-          <div className="merchant-metric-trend" style={{ color: "#00B14F" }}>
-            <TrendingUp size={12} /> +18% dibanding minggu lalu
-          </div>
-        </div>
-
-        <div className="merchant-metric-card">
-          <div className="merchant-metric-title">Rating Higienis Dapur</div>
-          <div className="merchant-metric-val" style={{ color: "#EE4D2D" }}>4.9 / 5.0</div>
-          <div className="merchant-metric-sub">Berdasarkan 420 ulasan pelanggan</div>
-        </div>
-
-        <div className="merchant-metric-card">
-          <div className="merchant-metric-title">Tambahan Omzet NutriSea</div>
-          <div className="merchant-metric-val" style={{ color: "#00B14F" }}>+24.8%</div>
-          <div className="merchant-metric-sub">Rp 4.250.000 bulan ini</div>
-        </div>
-
-        <div className="merchant-metric-card">
-          <div className="merchant-metric-title">Boost Pencarian Shopee</div>
-          <div className="merchant-metric-val" style={{ color: "#003B7A" }}>+35%</div>
-          <div className="merchant-metric-sub" style={{ color: "#003B7A" }}>Prioritas Algoritma Menu Sehat</div>
-        </div>
-      </div>
-
-      {/* AI Demand Gap Co-Pilot Banner */}
-      <div className="merchant-demand-banner">
-        <div className="merchant-demand-header">
-          <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
-            <span className="merchant-demand-tag">
-              <Sparkles size={12} /> AI Demand Gap Co-Pilot
-            </span>
-            <span style={{ fontSize: "11.5px", color: "#666", fontWeight: 600 }}>
-              Sinyal Kebutuhan Gizi SCBD / Kuningan
-            </span>
-          </div>
-
-          <span className="merchant-demand-stat">
-            65 Konsumen Sedang Mencari Menu Ini
-          </span>
-        </div>
-
-        <p className="merchant-demand-desc">
-          {insight?.actionable_suggestion || "65 pengguna di sekitar radius 2 km mencari menu tinggi protein rendah gula minggu ini. Tambahkan paket Ayam Bakar Bumbu Kuning Non-Kecap untuk estimasi peningkatan order +20%."}
-        </p>
-
-        <button
-          onClick={handleAddAiRecommendedMenu}
-          className="merchant-demand-btn"
-        >
-          <Plus size={13} /> + Pasang Menu Rekomendasi AI Ini ke Etalase (+20% Estimasi Order)
-        </button>
-      </div>
-
       {/* Main Section: Dish Management Table / Grid (CRUD) */}
-      <div className="merchant-dishes-card">
+      <div id="merchant-meals" className="merchant-dishes-card">
         <div className="merchant-dishes-header">
           <div>
             <div style={{ fontSize: "14.5px", fontWeight: 700, color: "#222" }}>
-              Manajemen Etalase & Rincian Gizi Menu Warung
+              Meal catalog and nutrition management
             </div>
             <div style={{ fontSize: "11px", color: "#777", marginTop: 2 }}>
-              Daftar menu aktif yang terdaftar di ShopeeFood NutriSea ({dishes.length} Menu)
+              Active meals in the NutriSea catalog ({dishes.length} meals)
             </div>
           </div>
 
           <button
             onClick={handleOpenCreateModal}
             className="btn-shopee-primary"
-            style={{ height: 32, padding: "0 10px", fontSize: "11.5px", fontWeight: 600, flexShrink: 0 }}
+            style={{ minHeight: 44, padding: "0 12px", fontSize: "11.5px", fontWeight: 600, flexShrink: 0 }}
           >
-            <Plus size={13} /> Tambah Menu
+            <Plus size={13} /> Add meal
           </button>
         </div>
 
+        {menuError && <p role="alert">{menuError} <button onClick={() => void fetchDishes()}>Retry menu</button></p>}
+        {isLoadingDishes && <p role="status">Loading meals...</p>}
+        {!isLoadingDishes && !menuError && !dishes.length && <p>No meals yet. Add your first meal to start building the catalog.</p>}
         {/* Dishes Grid */}
         <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 12 }}>
           {dishes.map((dish) => (
@@ -688,7 +567,7 @@ function MerchantContent() {
                     </div>
                     {dish.cookingNotes && (
                       <div className="merchant-dish-cooking-note">
-                        Instruksi: {dish.cookingNotes}
+                        Instructions: {dish.cookingNotes}
                       </div>
                     )}
                   </div>
@@ -707,7 +586,7 @@ function MerchantContent() {
                     onClick={() => setDeleteConfirmId(dish.id)}
                     className="merchant-btn-delete"
                   >
-                    <Trash2 size={12} /> Hapus
+                    <Trash2 size={12} /> Remove
                   </button>
                 </div>
               </div>
@@ -726,20 +605,20 @@ function MerchantContent() {
                   }}
                 >
                   <span style={{ fontSize: "12px", color: "#D4380D" }}>
-                    Yakin ingin menghapus menu ini dari etalase?
+                    Remove this meal from the catalog?
                   </span>
                   <div style={{ display: "flex", gap: 6 }}>
                     <button
                       onClick={() => handleDeleteDish(dish.id)}
                       style={{ backgroundColor: "#D4380D", color: "#FFF", border: "none", borderRadius: 4, padding: "3px 8px", fontSize: "11px", cursor: "pointer" }}
                     >
-                      Ya, Hapus
+                      Yes, remove
                     </button>
                     <button
                       onClick={() => setDeleteConfirmId(null)}
                       style={{ backgroundColor: "#FFF", border: "1px solid #CCC", borderRadius: 4, padding: "3px 8px", fontSize: "11px", cursor: "pointer" }}
                     >
-                      Batal
+                      Cancel
                     </button>
                   </div>
                 </div>
@@ -749,51 +628,51 @@ function MerchantContent() {
               <div className="merchant-dish-macros">
                 <div>
                   <div className="merchant-dish-macro-val" style={{ color: "#EE4D2D" }}>
-                    {dish.macros?.kcal || 0} kcal
+                    {dish.macros?.kcal ?? "?"} kcal
                   </div>
-                  <div className="merchant-dish-macro-lbl">Kalori</div>
+                  <div className="merchant-dish-macro-lbl">Calories</div>
                 </div>
 
                 <div>
                   <div className="merchant-dish-macro-val" style={{ color: "#00B14F" }}>
-                    {dish.macros?.protein_g || 0}g
+                    {dish.macros?.protein_g ?? "?"}g
                   </div>
                   <div className="merchant-dish-macro-lbl">Protein</div>
                 </div>
 
                 <div>
                   <div className="merchant-dish-macro-val" style={{ color: "#333" }}>
-                    {dish.macros?.carbs_g || 0}g
+                    {dish.macros?.carbs_g ?? "?"}g
                   </div>
-                  <div className="merchant-dish-macro-lbl">Karbo</div>
+                  <div className="merchant-dish-macro-lbl">Carbs</div>
                 </div>
 
                 <div>
                   <div className="merchant-dish-macro-val" style={{ color: "#333" }}>
-                    {dish.macros?.fat_g || 0}g
+                    {dish.macros?.fat_g ?? "?"}g
                   </div>
-                  <div className="merchant-dish-macro-lbl">Lemak</div>
+                  <div className="merchant-dish-macro-lbl">Fat</div>
                 </div>
 
                 <div>
                   <div className="merchant-dish-macro-val" style={{ color: "#003B7A" }}>
-                    {dish.macros?.sodium_mg || 0}mg
+                    {dish.macros?.sodium_mg ?? "?"}mg
                   </div>
-                  <div className="merchant-dish-macro-lbl">Garam</div>
+                  <div className="merchant-dish-macro-lbl">Sodium</div>
                 </div>
               </div>
 
               {/* Bottom Row: Healthy Tag Toggles */}
               <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
                 <span style={{ fontSize: "11px", color: "#666", marginRight: 4 }}>
-                  Atribut Sehat:
+                  Meal attributes:
                 </span>
                 {[
-                  { tag: "MINYAK_BARU", label: "Minyak Baru" },
-                  { tag: "TANPA_SANTAN", label: "Tanpa Santan" },
-                  { tag: "TINGGI_PROTEIN", label: "Tinggi Protein" },
-                  { tag: "SAYUR_BENING", label: "Sayur Bening" },
-                  { tag: "BEBAS_GORENGAN", label: "Bebas Gorengan" }
+                  { tag: "MINYAK_BARU", label: "Fresh cooking oil" },
+                  { tag: "TANPA_SANTAN", label: "No coconut milk" },
+                  { tag: "TINGGI_PROTEIN", label: "High protein" },
+                  { tag: "SAYUR_BENING", label: "Clear vegetable soup" },
+                  { tag: "BEBAS_GORENGAN", label: "Not fried" }
                 ].map((t) => {
                   const isTagged = (dish.tags || []).includes(t.tag);
                   return (
@@ -845,7 +724,7 @@ function MerchantContent() {
             padding: "16px",
             backdropFilter: "blur(4px)"
           }}
-          onClick={() => { if (!saveBusy) setIsModalOpen(false); }}
+          onClick={() => { if (!saveBusy) { clearDescriptionPreview(); setIsModalOpen(false); } }}
         >
           <div className="merchant-modal-box" onClick={(e) => e.stopPropagation()}>
             {/* Modal Header */}
@@ -862,11 +741,11 @@ function MerchantContent() {
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 <Utensils size={17} />
                 <div style={{ fontSize: "14.5px", fontWeight: 700 }}>
-                  {editingDishId ? "Edit Menu Warung & Gizi" : "Tambah Menu Baru ke ShopeeFood"}
+                  {editingDishId ? "Edit meal and nutrition" : "Add a meal to NutriSea"}
                 </div>
               </div>
               <button
-                onClick={() => { if (!saveBusy) setIsModalOpen(false); }}
+                onClick={() => { if (!saveBusy) { clearDescriptionPreview(); setIsModalOpen(false); } }}
                 style={{ background: "transparent", border: "none", color: "#FFFFFF", cursor: "pointer", padding: 4 }}
               >
                 <X size={18} />
@@ -875,23 +754,23 @@ function MerchantContent() {
 
             {/* Modal Form */}
             <form onSubmit={handleSaveDish} className="merchant-modal-form">
-              {!editingDishId && <label className="bmi-input-group">Merchant pemilik menu
+              {!editingDishId && <label className="bmi-input-group">Meal owner
                 <select value={formMerchantId} onChange={e => setFormMerchantId(e.target.value)} required disabled={saveBusy}>
-                  <option value="">Pilih merchant</option>
+                  <option value="">Choose a merchant</option>
                   {merchantOptions.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
                 </select>
               </label>}
               {recipeError && <p role="alert">{recipeError}</p>}
-              {!recipe && !recipeError && <p role="status">Memuat komposisi bahan...</p>}
+              {!recipe && !recipeError && <p role="status">Loading ingredients...</p>}
               <IngredientAutocomplete value={recipe?.items || []} onChange={items => setRecipe(r => r ? { ...r, items } : r)}
                 search={ingredientApi.search} disabled={saveBusy || !recipe} />
               {/* Dish Name */}
               <div className="bmi-input-group">
-                <label className="bmi-input-label">Nama Menu Masakan *</label>
+                <label className="bmi-input-label">Meal name *</label>
                 <div className="bmi-input-control">
                   <input
                     type="text"
-                    placeholder="Contoh: Ikan Nila Bakar Sambal Dabu-dabu"
+                    placeholder="Example: Ikan Nila Bakar Sambal Dabu-dabu"
                     value={formName}
                     onChange={(e) => setFormName(e.target.value)}
                     required
@@ -902,7 +781,7 @@ function MerchantContent() {
               {/* Price & Category */}
               <div className="merchant-modal-row-2">
                 <div className="bmi-input-group">
-                  <label className="bmi-input-label">Harga Jual (Rp) *</label>
+                  <label className="bmi-input-label">Price (Rp) *</label>
                   <div className="bmi-input-control">
                     <input
                       type="number"
@@ -914,7 +793,7 @@ function MerchantContent() {
                 </div>
 
                 <div className="bmi-input-group">
-                  <label className="bmi-input-label">Kategori Gizi</label>
+                  <label className="bmi-input-label">Nutrition category</label>
                   <select
                     value={formCategory}
                     onChange={(e) => setFormCategory(e.target.value)}
@@ -928,21 +807,23 @@ function MerchantContent() {
                       backgroundColor: "#FFF"
                     }}
                   >
-                    <option value="protein">Tinggi Protein</option>
-                    <option value="rendah-kalori">Rendah Kalori</option>
-                    <option value="bebas-santan">Bebas Santan</option>
-                    <option value="hemat">Budget Hemat</option>
-                    <option value="lambung">Ramah Asam Lambung</option>
+                    <option value="protein">High protein</option>
+                    <option value="rendah-kalori">Lower calorie</option>
+                    <option value="bebas-santan">No coconut milk</option>
+                    <option value="hemat">Budget friendly</option>
+                    <option value="lambung">Gentler meal preference</option>
                   </select>
                 </div>
               </div>
 
               {/* Description & Ingredients */}
               <div className="bmi-input-group">
-                <label className="bmi-input-label">Deskripsi & Bahan Masakan</label>
+                <label className="bmi-input-label">Description and ingredients</label>
                 <textarea
                   rows={2}
-                  placeholder="Contoh: Ikan nila 1 ekor dibakar bumbu rempah kuning kaldu segar, disajikan dengan sambal dabu-dabu tomat segar tanpa minyak goreng berlebih."
+                  maxLength={500}
+                  aria-label="Description and ingredients"
+                  placeholder="Example: One tilapia grilled with turmeric spices and broth, served with fresh tomato sambal dabu-dabu and a small amount of cooking oil."
                   value={formDescription}
                   onChange={(e) => setFormDescription(e.target.value)}
                   style={{
@@ -957,12 +838,21 @@ function MerchantContent() {
                 <button
                   type="button"
                   onClick={handleGenerateDescription}
-                  disabled={isGeneratingDescription || !formName.trim()}
-                  style={{ marginTop: 8, background: isGeneratingDescription ? "#CCC" : "#EE4D2D", color: "#FFF", border: 0, borderRadius: 4, padding: "9px 12px", fontSize: 12.5, fontWeight: 600, cursor: isGeneratingDescription || !formName.trim() ? "not-allowed" : "pointer", display: "inline-flex", alignItems: "center", gap: 6 }}
+                  disabled={isGeneratingDescription || !formName.trim() || !recipe || saveBusy}
+                  style={{ minHeight: 44, marginTop: 8, background: isGeneratingDescription ? "#CCC" : "#EE4D2D", color: "#FFF", border: 0, borderRadius: 4, padding: "9px 12px", fontSize: 12.5, fontWeight: 600, cursor: isGeneratingDescription || !formName.trim() ? "not-allowed" : "pointer", display: "inline-flex", alignItems: "center", gap: 6 }}
                 >
                   {isGeneratingDescription ? <RefreshCw size={14} className="spin-icon" /> : <Sparkles size={14} />}
-                  {isGeneratingDescription ? "AI sedang membuat deskripsi..." : "Generate Deskripsi dengan AI"}
+                  {isGeneratingDescription ? "Generating a description..." : "Draft description with AI"}
                 </button>
+                {currentDescriptionPreview && <div role="region" aria-label="Generated description preview" style={{ padding: 12, border: "1px solid #DDD", borderRadius: 6, marginTop: 10 }}>
+                  <p><strong>{currentDescriptionPreview.source === "input_template" ? "Template from your inputs (AI unavailable)" : currentDescriptionPreview.source === "ai_generated" ? "AI-generated draft" : "Generated draft"}</strong></p>
+                  <p>{currentDescriptionPreview.description}</p>
+                  <p style={{ fontSize: 12, color: "#555" }}>Review the wording and ingredients. Applying this draft replaces the description in this form; save the meal to publish it.</p>
+                  <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 10 }}>
+                    <button type="button" disabled={saveBusy} style={{ minHeight: 44 }} onClick={() => { setFormDescription(currentDescriptionPreview.description); clearDescriptionPreview(); }}>Apply draft description</button>
+                    <button type="button" disabled={saveBusy} style={{ minHeight: 44 }} onClick={clearDescriptionPreview}>Discard draft</button>
+                  </div>
+                </div>}
               </div>
 
               {/* ========================================================
@@ -983,14 +873,14 @@ function MerchantContent() {
                   <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                     <Sparkles size={15} color="#EE4D2D" />
                     <span style={{ fontSize: "13px", fontWeight: 700, color: "#222" }}>
-                      AI Auto-Hitung Gizi (TKPI Kemenkes RI)
+                      AI nutrition estimates
                     </span>
                   </div>
-                  <span style={{ fontSize: "10.5px", color: "#666" }}>Standar 1 Porsi</span>
+                  <span style={{ fontSize: "10.5px", color: "#666" }}>Per serving estimate</span>
                 </div>
 
                 <p style={{ fontSize: "11.5px", color: "#555", margin: 0 }}>
-                  Ketik nama menu di atas, lalu klik tombol di bawah. AI akan otomatis memperkirakan kalori, protein, lemak, karbohidrat, dan batas garam secara ilmiah!
+                  Enter a meal name, then request estimates for calories, protein, fat, carbohydrates, and sodium. Review the portion size and values before saving; these are not laboratory measurements.
                 </p>
 
                 <button
@@ -1015,12 +905,12 @@ function MerchantContent() {
                   {isEstimatingAi ? (
                     <>
                       <RefreshCw size={14} className="spin-icon" />
-                      AI Sedang Menghitung Gizi Berdasarkan TKPI Kemenkes...
+                      Estimating nutrition with AI...
                     </>
                   ) : (
                     <>
                       <Sparkles size={14} />
-                      ✨ Hitung Gizi & Kalori Otomatis dengan AI
+                      Estimate nutrition and calories with AI
                     </>
                   )}
                 </button>
@@ -1028,7 +918,7 @@ function MerchantContent() {
                 {aiRationale && (
                   <div style={{ backgroundColor: "#F9FBF9", border: "1px solid #D5EED8", borderRadius: 6, padding: "8px 10px", fontSize: "11.5px", color: "#00B14F", display: "flex", alignItems: "flex-start", gap: 6 }}>
                     <CheckCircle2 size={14} style={{ flexShrink: 0, marginTop: 1 }} />
-                    <span><strong>Dasar Perhitungan AI:</strong> {aiRationale}</span>
+                    <span><strong>Estimate explanation:</strong> {aiRationale}</span>
                   </div>
                 )}
               </div>
@@ -1036,16 +926,18 @@ function MerchantContent() {
               {/* 5 Macro Inputs (Auto-filled by AI, can be tweaked manually) */}
               <div>
                 <label className="bmi-input-label" style={{ marginBottom: 6, display: "block" }}>
-                  Rincian 5 Makronutrisi (Dapat Disesuaikan):
+                  Nutrition values (editable):
                 </label>
                 <div className="merchant-macro-inputs-grid">
                   <div>
-                    <span style={{ fontSize: "10px", color: "#EE4D2D", fontWeight: 600 }}>Kalori (kcal)</span>
+                    <span style={{ fontSize: "10px", color: "#EE4D2D", fontWeight: 600 }}>Calories (kcal)</span>
                     <input
                       type="number"
+                      min="0" step="any"
+                      aria-label="Calories (kcal)"
                       value={formKcal}
-                      onChange={(e) => setFormKcal(Number(e.target.value) || 0)}
-                      style={{ width: "100%", height: 36, border: "1px solid #DDD", borderRadius: 4, textAlign: "center", fontSize: "13px", fontWeight: 700 }}
+                      onChange={(e) => setFormKcal(e.target.value === "" ? "" : Number(e.target.value))}
+                      style={{ width: "100%", minHeight: 44, border: "1px solid #DDD", borderRadius: 4, textAlign: "center", fontSize: "13px", fontWeight: 700 }}
                       required
                     />
                   </div>
@@ -1054,42 +946,50 @@ function MerchantContent() {
                     <span style={{ fontSize: "10px", color: "#00B14F", fontWeight: 600 }}>Protein (g)</span>
                     <input
                       type="number"
+                      min="0" step="any"
+                      aria-label="Protein (g)"
                       value={formProtein}
-                      onChange={(e) => setFormProtein(Number(e.target.value) || 0)}
-                      style={{ width: "100%", height: 36, border: "1px solid #DDD", borderRadius: 4, textAlign: "center", fontSize: "13px", fontWeight: 700 }}
+                      onChange={(e) => setFormProtein(e.target.value === "" ? "" : Number(e.target.value))}
+                      style={{ width: "100%", minHeight: 44, border: "1px solid #DDD", borderRadius: 4, textAlign: "center", fontSize: "13px", fontWeight: 700 }}
                       required
                     />
                   </div>
 
                   <div>
-                    <span style={{ fontSize: "10px", color: "#333", fontWeight: 600 }}>Karbo (g)</span>
+                    <span style={{ fontSize: "10px", color: "#333", fontWeight: 600 }}>Carbs (g)</span>
                     <input
                       type="number"
+                      min="0" step="any"
+                      aria-label="Carbohydrates (g)"
                       value={formCarbs}
-                      onChange={(e) => setFormCarbs(Number(e.target.value) || 0)}
-                      style={{ width: "100%", height: 36, border: "1px solid #DDD", borderRadius: 4, textAlign: "center", fontSize: "13px", fontWeight: 700 }}
+                      onChange={(e) => setFormCarbs(e.target.value === "" ? "" : Number(e.target.value))}
+                      style={{ width: "100%", minHeight: 44, border: "1px solid #DDD", borderRadius: 4, textAlign: "center", fontSize: "13px", fontWeight: 700 }}
                       required
                     />
                   </div>
 
                   <div>
-                    <span style={{ fontSize: "10px", color: "#333", fontWeight: 600 }}>Lemak (g)</span>
+                    <span style={{ fontSize: "10px", color: "#333", fontWeight: 600 }}>Fat (g)</span>
                     <input
                       type="number"
+                      min="0" step="any"
+                      aria-label="Fat (g)"
                       value={formFat}
-                      onChange={(e) => setFormFat(Number(e.target.value) || 0)}
-                      style={{ width: "100%", height: 36, border: "1px solid #DDD", borderRadius: 4, textAlign: "center", fontSize: "13px", fontWeight: 700 }}
+                      onChange={(e) => setFormFat(e.target.value === "" ? "" : Number(e.target.value))}
+                      style={{ width: "100%", minHeight: 44, border: "1px solid #DDD", borderRadius: 4, textAlign: "center", fontSize: "13px", fontWeight: 700 }}
                       required
                     />
                   </div>
 
                   <div>
-                    <span style={{ fontSize: "10px", color: "#003B7A", fontWeight: 600 }}>Garam (mg)</span>
+                    <span style={{ fontSize: "10px", color: "#003B7A", fontWeight: 600 }}>Sodium (mg)</span>
                     <input
                       type="number"
+                      min="0" step="any"
+                      aria-label="Sodium (mg)"
                       value={formSodium}
-                      onChange={(e) => setFormSodium(Number(e.target.value) || 0)}
-                      style={{ width: "100%", height: 36, border: "1px solid #DDD", borderRadius: 4, textAlign: "center", fontSize: "13px", fontWeight: 700 }}
+                      onChange={(e) => setFormSodium(e.target.value === "" ? "" : Number(e.target.value))}
+                      style={{ width: "100%", minHeight: 44, border: "1px solid #DDD", borderRadius: 4, textAlign: "center", fontSize: "13px", fontWeight: 700 }}
                       required
                     />
                   </div>
@@ -1098,10 +998,10 @@ function MerchantContent() {
 
               {/* Cooking Notes */}
               <div className="bmi-input-group">
-                <label className="bmi-input-label">Catatan Instruksi Masak Higienis</label>
+                <label className="bmi-input-label">Preparation instructions</label>
                 <input
                   type="text"
-                  placeholder="Contoh: Gunakan minyak baru maksimal 2x, sambal dipisah"
+                  placeholder="Example: Use fresh cooking oil and serve sambal separately"
                   value={formCookingNotes}
                   onChange={(e) => setFormCookingNotes(e.target.value)}
                   style={{ height: 38, border: "1px solid #DDD", borderRadius: 4, padding: "0 10px", fontSize: "12.5px" }}
@@ -1112,10 +1012,10 @@ function MerchantContent() {
               <div style={{ display: "flex", gap: 10, marginTop: 8 }}>
                 <button
                   type="button"
-                  onClick={() => { if (!saveBusy) setIsModalOpen(false); }}
+                  onClick={() => { if (!saveBusy) { clearDescriptionPreview(); setIsModalOpen(false); } }}
                   style={{ flex: 1, height: 42, border: "1px solid #DDD", borderRadius: 4, backgroundColor: "#FFF", fontSize: "13px", fontWeight: 600, cursor: "pointer" }}
                 >
-                  Batal
+                  Cancel
                 </button>
 
                 <button
@@ -1124,7 +1024,7 @@ function MerchantContent() {
                   className="btn-shopee-primary"
                   style={{ flex: 2, height: 42, fontSize: "13px", fontWeight: 600 }}
                 >
-                  {editingDishId ? "Simpan Perubahan Menu" : "Simpan & Pasang ke ShopeeFood"}
+                  {editingDishId ? "Save meal changes" : "Save to NutriSea catalog"}
                 </button>
               </div>
             </form>
