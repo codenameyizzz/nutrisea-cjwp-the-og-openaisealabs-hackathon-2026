@@ -1,0 +1,738 @@
+[
+  {
+    "merchant_id": "SPF-MTR-DISH-01",
+    "merchant_name": "Warteg Berkah Mandiri - Kuningan",
+    "item_id": "DISH-01",
+    "item_name": "Paket Nasi Merah Dada Ayam Bakar & Sayur Bayam",
+    "base_price": 32000,
+    "discounted_price": 25600,
+    "has_promo": true,
+    "healthy_tags": [
+      "MINYAK_BARU",
+      "SAYUR_BENING",
+      "BEBAS_SANTAN"
+    ],
+    "allergens": [],
+    "estimated_macros": {
+      "kcal": 410,
+      "protein_g": 36,
+      "carbs_g": 42,
+      "fat_g": 8,
+      "sodium_mg": 580
+    },
+    "default_cooking_notes": "Nasi merah setengah porsi, sambal dipisah, tanpa kuah santan"
+  },
+  {
+    "merchant_id": "SPF-MTR-DISH-02",
+    "merchant_name": "Warteg Berkah Mandiri - Kuningan",
+    "item_id": "DISH-02",
+    "item_name": "Paket Double Protein: Dada Ayam + Orek Tempe Basah",
+    "base_price": 35000,
+    "discounted_price": 28000,
+    "has_promo": true,
+    "healthy_tags": [
+      "TINGGI_PROTEIN",
+      "RENDAH_GULA",
+      "MINYAK_BARU"
+    ],
+    "allergens": [],
+    "estimated_macros": {
+      "kcal": 480,
+      "protein_g": 44,
+      "carbs_g": 46,
+      "fat_g": 10,
+      "sodium_mg": 640
+    },
+    "default_cooking_notes": "Orek tempe tidak manis, ayam tanpa kulit, sayur capcay kuah bening"
+  },
+  {
+    "merchant_id": "SPF-MTR-DISH-03",
+    "merchant_name": "Soto Kudus Menara - SCBD",
+    "item_id": "DISH-03",
+    "item_name": "Soto Ayam Suwir Kuah Bening + Telur Rebus",
+    "base_price": 28000,
+    "discounted_price": 22000,
+    "has_promo": true,
+    "healthy_tags": [
+      "BEBAS_SANTAN",
+      "KALDU_ALAMI",
+      "TINGGI_PROTEIN"
+    ],
+    "allergens": [],
+    "estimated_macros": {
+      "kcal": 310,
+      "protein_g": 28,
+      "carbs_g": 28,
+      "fat_g": 7,
+      "sodium_mg": 520
+    },
+    "default_cooking_notes": "Tanpa koya, tauge diperbanyak, sambal dipisah, garam sedikit"
+  },
+  {
+    "merchant_id": "SPF-MTR-DISH-04",
+    "merchant_name": "Gado-Gado Ibu Marni - Palmerah",
+    "item_id": "DISH-04",
+    "item_name": "Gado-Gado Siram Sehat Bumbu Kacang Pisah",
+    "base_price": 23000,
+    "discounted_price": 18500,
+    "has_promo": true,
+    "healthy_tags": [
+      "SERAT_TINGGI",
+      "SAYUR_SEGAR",
+      "BUDGET_HEMAT"
+    ],
+    "allergens": [],
+    "estimated_macros": {
+      "kcal": 330,
+      "protein_g": 16,
+      "carbs_g": 40,
+      "fat_g": 9,
+      "sodium_mg": 480
+    },
+    "default_cooking_notes": "Bumbu kacang dipisah separuh, kerupuk diganti emping sedikit"
+  },
+  {
+    "merchant_id": "SPF-MTR-DISH-05",
+    "merchant_name": "Pecel Sayur Bu Sri - Kuningan",
+    "item_id": "DISH-05",
+    "item_name": "Pecel Sayur Madiun Serat Tinggi + Tahu Tempe Kukus",
+    "base_price": 22000,
+    "discounted_price": 18000,
+    "has_promo": true,
+    "healthy_tags": [
+      "SERAT_TINGGI",
+      "RAMAH_LAMBUNG",
+      "TANPA_SANTAN"
+    ],
+    "allergens": [],
+    "estimated_macros": {
+      "kcal": 280,
+      "protein_g": 18,
+      "carbs_g": 38,
+      "fat_g": 7,
+      "sodium_mg": 420
+    },
+    "default_cooking_notes": "Bumbu pecel dikurangi separuh, sayuran dikukus matang, tidak pedas"
+  },
+  {
+    "merchant_id": "SPF-MTR-DISH-06",
+    "merchant_name": "Pondok Ikan Bakar Bahari - Menteng",
+    "item_id": "DISH-06",
+    "item_name": "Paket Ikan Nila Bakar Bumbu Kunyit + Lalapan Segar",
+    "base_price": 36000,
+    "discounted_price": 29500,
+    "has_promo": true,
+    "healthy_tags": [
+      "OMEGA-3",
+      "TINGGI_PROTEIN",
+      "BAKAR_TANPA_ARANG"
+    ],
+    "allergens": [],
+    "estimated_macros": {
+      "kcal": 390,
+      "protein_g": 34,
+      "carbs_g": 32,
+      "fat_g": 9,
+      "sodium_mg": 510
+    },
+    "default_cooking_notes": "Olesan kecap tipis, lalapan dicuci matang, sambal dabu-dabu pisah"
+  },
+  {
+    "merchant_id": "SPF-MTR-DISH-07",
+    "merchant_name": "Warteg Kharisma Sehat - Senayan",
+    "item_id": "DISH-07",
+    "item_name": "Paket Sayur Asem Segar + Ikan Asin Tipis + Tahu",
+    "base_price": 20000,
+    "discounted_price": 16500,
+    "has_promo": true,
+    "healthy_tags": [
+      "BUDGET_HEMAT",
+      "KUAH_BENING",
+      "BEBAS_SANTAN"
+    ],
+    "allergens": [],
+    "estimated_macros": {
+      "kcal": 270,
+      "protein_g": 14,
+      "carbs_g": 36,
+      "fat_g": 6,
+      "sodium_mg": 490
+    },
+    "default_cooking_notes": "Sayur asem tidak terlalu asam, nasi putih setengah, tahu kukus"
+  },
+  {
+    "merchant_id": "SPF-MTR-DISH-08",
+    "merchant_name": "Dapur Sup Sehat Bu Haji - SCBD",
+    "item_id": "DISH-08",
+    "item_name": "Sup Ayam Bening Jahe Hangat + Wortel & Kentang",
+    "base_price": 30000,
+    "discounted_price": 24000,
+    "has_promo": true,
+    "healthy_tags": [
+      "RAMAH_LAMBUNG",
+      "ANTI_INFLAMASI",
+      "KALDU_MURNI"
+    ],
+    "allergens": [],
+    "estimated_macros": {
+      "kcal": 250,
+      "protein_g": 30,
+      "carbs_g": 22,
+      "fat_g": 5,
+      "sodium_mg": 460
+    },
+    "default_cooking_notes": "Ekstra jahe geprek, tanpa merica tajam, ayam suwir tanpa kulit"
+  },
+  {
+    "merchant_id": "SPF-MTR-DISH-09",
+    "merchant_name": "Warteg Berkah Mandiri - Kuningan",
+    "item_id": "DISH-09",
+    "item_name": "Paket Warteg Hemat: Orek Tempe Basah + Tumis Kangkung",
+    "base_price": 18000,
+    "discounted_price": 14500,
+    "has_promo": true,
+    "healthy_tags": [
+      "BUDGET_HEMAT",
+      "KAYA_ZAT_BESI",
+      "MINYAK_BARU"
+    ],
+    "allergens": [],
+    "estimated_macros": {
+      "kcal": 290,
+      "protein_g": 15,
+      "carbs_g": 38,
+      "fat_g": 7,
+      "sodium_mg": 450
+    },
+    "default_cooking_notes": "Kangkung ditumis minyak sedikit, garam sedikit, nasi 1 centong"
+  },
+  {
+    "merchant_id": "SPF-MTR-DISH-10",
+    "merchant_name": "Dapur Sunda Laras - Palmerah",
+    "item_id": "DISH-10",
+    "item_name": "Pepes Tahu Kemangi Kukus Daun Pisang",
+    "base_price": 16000,
+    "discounted_price": 13000,
+    "has_promo": true,
+    "healthy_tags": [
+      "RENDAH_KALORI",
+      "KUKUS_ALAMI",
+      "BEBAS_MINYAK"
+    ],
+    "allergens": [],
+    "estimated_macros": {
+      "kcal": 180,
+      "protein_g": 14,
+      "carbs_g": 14,
+      "fat_g": 5,
+      "sodium_mg": 310
+    },
+    "default_cooking_notes": "Kukus matang daun pisang, bumbu kunyit kemangi wangi, tanpa cabe rawit utuh"
+  },
+  {
+    "merchant_id": "SPF-MTR-DISH-11",
+    "merchant_name": "Dapur Sunda Laras - Palmerah",
+    "item_id": "DISH-11",
+    "item_name": "Pepes Ikan Mas Duri Lunak Bumbu Kuning",
+    "base_price": 33000,
+    "discounted_price": 27000,
+    "has_promo": true,
+    "healthy_tags": [
+      "TINGGI_KALSIUM",
+      "TINGGI_PROTEIN",
+      "KUKUS_ALAMI"
+    ],
+    "allergens": [],
+    "estimated_macros": {
+      "kcal": 320,
+      "protein_g": 32,
+      "carbs_g": 18,
+      "fat_g": 8,
+      "sodium_mg": 470
+    },
+    "default_cooking_notes": "Kukus presto duri lunak, kemangi segar, bumbu kunyit hangat"
+  },
+  {
+    "merchant_id": "SPF-MTR-DISH-12",
+    "merchant_name": "Warteg Lestari Sehat - Sudirman",
+    "item_id": "DISH-12",
+    "item_name": "Paket Nasi Merah Tongkol Suwir Rendah Minyak",
+    "base_price": 26000,
+    "discounted_price": 21000,
+    "has_promo": true,
+    "healthy_tags": [
+      "TINGGI_PROTEIN",
+      "NASI_MERAH",
+      "BEBAS_SANTAN"
+    ],
+    "allergens": [],
+    "estimated_macros": {
+      "kcal": 380,
+      "protein_g": 29,
+      "carbs_g": 40,
+      "fat_g": 7,
+      "sodium_mg": 510
+    },
+    "default_cooking_notes": "Tongkol disangrai bukan digoreng kering, tumis buncis bening"
+  },
+  {
+    "merchant_id": "SPF-MTR-DISH-13",
+    "merchant_name": "Warteg Sejahtera - SCBD",
+    "item_id": "DISH-13",
+    "item_name": "Sup Bening Bayam Jagung Manis + Telur Dadar Jamur",
+    "base_price": 21000,
+    "discounted_price": 17000,
+    "has_promo": true,
+    "healthy_tags": [
+      "BUDGET_HEMAT",
+      "KUAH_BENING",
+      "SAYUR_BAYAM"
+    ],
+    "allergens": [],
+    "estimated_macros": {
+      "kcal": 260,
+      "protein_g": 18,
+      "carbs_g": 24,
+      "fat_g": 7,
+      "sodium_mg": 420
+    },
+    "default_cooking_notes": "Bayam baru dimasak, telur dadar jamur tiram minyak sedikit"
+  },
+  {
+    "merchant_id": "SPF-MTR-DISH-14",
+    "merchant_name": "Resto Sehat Kencana - Kuningan",
+    "item_id": "DISH-14",
+    "item_name": "Capcay Kuah Segar Sayur Campur + Dada Ayam Suwir",
+    "base_price": 29000,
+    "discounted_price": 23500,
+    "has_promo": true,
+    "healthy_tags": [
+      "RENDAH_KALORI",
+      "KAYA_SERAT",
+      "TANPA_MAIZENA_KENTAL"
+    ],
+    "allergens": [],
+    "estimated_macros": {
+      "kcal": 290,
+      "protein_g": 26,
+      "carbs_g": 26,
+      "fat_g": 6,
+      "sodium_mg": 480
+    },
+    "default_cooking_notes": "Kuah bening encer tanpa maizena pekat, wortel, brokoli, kembang kol renyah"
+  },
+  {
+    "merchant_id": "SPF-MTR-DISH-15",
+    "merchant_name": "Dapur Nasi Tim Sehat - Menteng",
+    "item_id": "DISH-15",
+    "item_name": "Nasi Tim Ayam Jamur Merang Hangat Lembut",
+    "base_price": 30000,
+    "discounted_price": 24000,
+    "has_promo": true,
+    "healthy_tags": [
+      "RAMAH_LAMBUNG",
+      "TEKSTUR_LEMBUT",
+      "KALDU_HANGAT"
+    ],
+    "allergens": [],
+    "estimated_macros": {
+      "kcal": 340,
+      "protein_g": 22,
+      "carbs_g": 44,
+      "fat_g": 6,
+      "sodium_mg": 460
+    },
+    "default_cooking_notes": "Nasi tim lembut ramah maag, jamur merang segar, kaldu ayam jahe terpisah"
+  },
+  {
+    "merchant_id": "SPF-MTR-DISH-16",
+    "merchant_name": "Rawon Bening Cak Tris - Senayan",
+    "item_id": "DISH-16",
+    "item_name": "Rawon Daging Bening Surabaya Tanpa Lemak",
+    "base_price": 40000,
+    "discounted_price": 33000,
+    "has_promo": true,
+    "healthy_tags": [
+      "KLUWEK_ALAMI",
+      "BEBAS_SANTAN",
+      "DAGING_PILIHAN"
+    ],
+    "allergens": [],
+    "estimated_macros": {
+      "kcal": 360,
+      "protein_g": 35,
+      "carbs_g": 26,
+      "fat_g": 9,
+      "sodium_mg": 560
+    },
+    "default_cooking_notes": "Daging sapi gandik tanpa lemak, kuah kluwek bening, tauge pendek segar"
+  },
+  {
+    "merchant_id": "SPF-MTR-DISH-17",
+    "merchant_name": "Warung Jawa Segar - Palmerah",
+    "item_id": "DISH-17",
+    "item_name": "Asem-Asem Daging Sapi Kuah Bening Belimbing Wuluh",
+    "base_price": 38000,
+    "discounted_price": 31000,
+    "has_promo": true,
+    "healthy_tags": [
+      "BEBAS_SANTAN",
+      "SEGAR_ALAMI",
+      "TINGGI_ZAT_BESI"
+    ],
+    "allergens": [],
+    "estimated_macros": {
+      "kcal": 330,
+      "protein_g": 32,
+      "carbs_g": 24,
+      "fat_g": 8,
+      "sodium_mg": 520
+    },
+    "default_cooking_notes": "Belimbing wuluh segar, kuah bening kaldu murni, buncis segar"
+  },
+  {
+    "merchant_id": "SPF-MTR-DISH-18",
+    "merchant_name": "Dapur Kudus Asli - SCBD",
+    "item_id": "DISH-18",
+    "item_name": "Garang Asem Ayam Kampung Bening Daun Pisang",
+    "base_price": 35000,
+    "discounted_price": 28500,
+    "has_promo": true,
+    "healthy_tags": [
+      "TANPA_SANTAN",
+      "AYAM_KAMPUNG",
+      "KUKUS_TRADISIONAL"
+    ],
+    "allergens": [],
+    "estimated_macros": {
+      "kcal": 310,
+      "protein_g": 30,
+      "carbs_g": 18,
+      "fat_g": 7,
+      "sodium_mg": 490
+    },
+    "default_cooking_notes": "Tanpa santan, kuah belimbing wuluh dan tomat hijau, cabe utuh tidak digerus"
+  },
+  {
+    "merchant_id": "SPF-MTR-DISH-19",
+    "merchant_name": "Bubur Sehat Barito - Senayan",
+    "item_id": "DISH-19",
+    "item_name": "Bubur Ayam Kampung Kaldu Bening Tanpa Merica",
+    "base_price": 24000,
+    "discounted_price": 19000,
+    "has_promo": true,
+    "healthy_tags": [
+      "RAMAH_LAMBUNG",
+      "TEKSTUR_HALUS",
+      "AYAM_SUWIR"
+    ],
+    "allergens": [],
+    "estimated_macros": {
+      "kcal": 280,
+      "protein_g": 19,
+      "carbs_g": 42,
+      "fat_g": 5,
+      "sodium_mg": 380
+    },
+    "default_cooking_notes": "Tanpa lada bubuk, tanpa cakwe berminyak, kaldu kuning dipisah, seledri segar"
+  },
+  {
+    "merchant_id": "SPF-MTR-DISH-20",
+    "merchant_name": "Dapur Mama Sehat - Kuningan",
+    "item_id": "DISH-20",
+    "item_name": "Sup Jagung Manis Telur Puyuh Lembut Ramah Maag",
+    "base_price": 25000,
+    "discounted_price": 20000,
+    "has_promo": true,
+    "healthy_tags": [
+      "RAMAH_LAMBUNG",
+      "MUDAH_CERNA",
+      "KALDU_BENING"
+    ],
+    "allergens": [],
+    "estimated_macros": {
+      "kcal": 240,
+      "protein_g": 15,
+      "carbs_g": 30,
+      "fat_g": 6,
+      "sodium_mg": 390
+    },
+    "default_cooking_notes": "Jagung manis dipipil halus, telur puyuh rebus matang, kaldu ayam hangat tanpa pedas"
+  },
+  {
+    "merchant_id": "SPF-MTR-DISH-21",
+    "merchant_name": "Warteg Sejahtera - SCBD",
+    "item_id": "DISH-21",
+    "item_name": "Sayur Labu Siam Bening Kuah Temu Kunci",
+    "base_price": 17000,
+    "discounted_price": 14000,
+    "has_promo": true,
+    "healthy_tags": [
+      "RAMAH_LAMBUNG",
+      "RENDAH_ASAM",
+      "BUDGET_HEMAT"
+    ],
+    "allergens": [],
+    "estimated_macros": {
+      "kcal": 150,
+      "protein_g": 8,
+      "carbs_g": 20,
+      "fat_g": 3,
+      "sodium_mg": 320
+    },
+    "default_cooking_notes": "Labu siam empuk dipotong korek, temu kunci segar harum, kuah jernih"
+  },
+  {
+    "merchant_id": "SPF-MTR-DISH-22",
+    "merchant_name": "Dapur Bakso Ikan Sehat - Menteng",
+    "item_id": "DISH-22",
+    "item_name": "Sup Wortel Kentang Bakso Ikan Tenggiri Asli",
+    "base_price": 28000,
+    "discounted_price": 22500,
+    "has_promo": true,
+    "healthy_tags": [
+      "RENDAH_LEMAK",
+      "TENGGIRI_ASLI",
+      "BEBAS_BORAKS"
+    ],
+    "allergens": [],
+    "estimated_macros": {
+      "kcal": 260,
+      "protein_g": 24,
+      "carbs_g": 24,
+      "fat_g": 4,
+      "sodium_mg": 490
+    },
+    "default_cooking_notes": "Bakso ikan rebus tanpa minyak, kuah kaldu ikan bening segar, seledri dan daun bawang"
+  },
+  {
+    "merchant_id": "SPF-MTR-DISH-23",
+    "merchant_name": "FitBite Greens - SCBD",
+    "item_id": "DISH-23",
+    "item_name": "Salad Segar Nusantara Saus Wijen Sangrai",
+    "base_price": 32000,
+    "discounted_price": 26000,
+    "has_promo": true,
+    "healthy_tags": [
+      "RENDAH_KALORI",
+      "KAYA_ANTIOKSIDAN",
+      "FRESH_CUT"
+    ],
+    "allergens": [],
+    "estimated_macros": {
+      "kcal": 210,
+      "protein_g": 12,
+      "carbs_g": 22,
+      "fat_g": 6,
+      "sodium_mg": 290
+    },
+    "default_cooking_notes": "Selada romaine, tomat ceri, timun jepang, dressing wijen sangrai dipisah"
+  },
+  {
+    "merchant_id": "SPF-MTR-DISH-24",
+    "merchant_name": "FitBite Greens - SCBD",
+    "item_id": "DISH-24",
+    "item_name": "Poke Bowl Lokal Tempe Bacem Edamame Nasi Merah",
+    "base_price": 36000,
+    "discounted_price": 29000,
+    "has_promo": true,
+    "healthy_tags": [
+      "TINGGI_PROTEIN",
+      "PLANT-BASED",
+      "GLUKOSA_STABIL"
+    ],
+    "allergens": [],
+    "estimated_macros": {
+      "kcal": 350,
+      "protein_g": 26,
+      "carbs_g": 44,
+      "fat_g": 8,
+      "sodium_mg": 410
+    },
+    "default_cooking_notes": "Tempe bacem panggang, edamame kukus, telur rebus setengah matang, shoyu rendah sodium"
+  },
+  {
+    "merchant_id": "SPF-MTR-DISH-25",
+    "merchant_name": "Ayam Panggang Bu Citro - Kuningan",
+    "item_id": "DISH-25",
+    "item_name": "Ayam Panggang Klaten Bumbu Rempah Tanpa Santan",
+    "base_price": 34000,
+    "discounted_price": 27500,
+    "has_promo": true,
+    "healthy_tags": [
+      "TINGGI_PROTEIN",
+      "BAKAR_ALAMI",
+      "BEBAS_SANTAN"
+    ],
+    "allergens": [],
+    "estimated_macros": {
+      "kcal": 340,
+      "protein_g": 35,
+      "carbs_g": 20,
+      "fat_g": 8,
+      "sodium_mg": 490
+    },
+    "default_cooking_notes": "Ungkep air kelapa murni tanpa santan kental, panggang kering harum"
+  },
+  {
+    "merchant_id": "SPF-MTR-DISH-26",
+    "merchant_name": "Dapur Ikan Laut Segar - Palmerah",
+    "item_id": "DISH-26",
+    "item_name": "Ikan Kembung Bakar Kunyit + Sambal Dabu-Dabu",
+    "base_price": 30000,
+    "discounted_price": 24000,
+    "has_promo": true,
+    "healthy_tags": [
+      "TINGGI_OMEGA-3",
+      "TINGGI_PROTEIN",
+      "RENDAH_LEMAK_JENUH"
+    ],
+    "allergens": [],
+    "estimated_macros": {
+      "kcal": 310,
+      "protein_g": 30,
+      "carbs_g": 14,
+      "fat_g": 7,
+      "sodium_mg": 450
+    },
+    "default_cooking_notes": "Kembung banjar segar, bakar tanpa arang gosong, sambal dabu-dabu segar jeruk nipis"
+  },
+  {
+    "merchant_id": "SPF-MTR-DISH-27",
+    "merchant_name": "Warteg Sehat Organik - Sudirman",
+    "item_id": "DISH-27",
+    "item_name": "Tumis Buncis Jagung Manis + Tahu Sutra Organik",
+    "base_price": 19000,
+    "discounted_price": 15500,
+    "has_promo": true,
+    "healthy_tags": [
+      "BUDGET_HEMAT",
+      "KAYA_SERAT",
+      "MINYAK_BARU"
+    ],
+    "allergens": [],
+    "estimated_macros": {
+      "kcal": 200,
+      "protein_g": 12,
+      "carbs_g": 26,
+      "fat_g": 4,
+      "sodium_mg": 340
+    },
+    "default_cooking_notes": "Buncis renyah matang, tahu sutra kukus lembut, tumis bawang putih harum"
+  },
+  {
+    "merchant_id": "SPF-MTR-DISH-28",
+    "merchant_name": "Dapur Vegan Sehat - Menteng",
+    "item_id": "DISH-28",
+    "item_name": "Sup Jamur Tiram Kaldu Jamur Gurih Alami",
+    "base_price": 22000,
+    "discounted_price": 18000,
+    "has_promo": true,
+    "healthy_tags": [
+      "RENDAH_KALORI",
+      "BEBAS_KOLESTEROL",
+      "KALDU_SAYUR"
+    ],
+    "allergens": [],
+    "estimated_macros": {
+      "kcal": 160,
+      "protein_g": 10,
+      "carbs_g": 20,
+      "fat_g": 3,
+      "sodium_mg": 310
+    },
+    "default_cooking_notes": "Jamur tiram & kuping segar, kaldu sayur bening wangi seledri, tanpa bumbu instan"
+  },
+  {
+    "merchant_id": "SPF-MTR-DISH-29",
+    "merchant_name": "Pondok Gurame Sehat - Senayan",
+    "item_id": "DISH-29",
+    "item_name": "Paket Ikan Gurame Asam Manis Kukus Kuah Segar",
+    "base_price": 42000,
+    "discounted_price": 34500,
+    "has_promo": true,
+    "healthy_tags": [
+      "KUKUS_SEHAT",
+      "BEBAS_SANTAN",
+      "IKAN_AIR_TAWAR_SEGAR"
+    ],
+    "allergens": [],
+    "estimated_macros": {
+      "kcal": 330,
+      "protein_g": 33,
+      "carbs_g": 28,
+      "fat_g": 6,
+      "sodium_mg": 510
+    },
+    "default_cooking_notes": "Ikan gurame dikukus bukan digoreng tepung, saus tomat nanas segar alami"
+  },
+  {
+    "merchant_id": "SPF-MTR-DISH-30",
+    "merchant_name": "Warteg Lestari Sehat - Sudirman",
+    "item_id": "DISH-30",
+    "item_name": "Sayur Lodeh Kuah Susu Kedelai Rendah Lemak",
+    "base_price": 21000,
+    "discounted_price": 17500,
+    "has_promo": true,
+    "healthy_tags": [
+      "PENGGANTI_SANTAN",
+      "RENDAH_LEMAK_JENUH",
+      "KAYA_SERAT"
+    ],
+    "allergens": [],
+    "estimated_macros": {
+      "kcal": 220,
+      "protein_g": 14,
+      "carbs_g": 28,
+      "fat_g": 5,
+      "sodium_mg": 390
+    },
+    "default_cooking_notes": "Kuah gurih dari susu kedelai tanpa gula, terong labu siam kacang panjang empuk"
+  },
+  {
+    "merchant_id": "SPF-MTR-DISH-31",
+    "merchant_name": "Dapur Jogja Bening - Kuningan",
+    "item_id": "DISH-31",
+    "item_name": "Tahu Tempe Bacem Kukus Rendah Gula Aren",
+    "base_price": 15000,
+    "discounted_price": 12500,
+    "has_promo": true,
+    "healthy_tags": [
+      "BUDGET_HEMAT",
+      "KUKUS_ALAMI",
+      "RENDAH_GLIKEMIK"
+    ],
+    "allergens": [],
+    "estimated_macros": {
+      "kcal": 190,
+      "protein_g": 16,
+      "carbs_g": 20,
+      "fat_g": 5,
+      "sodium_mg": 310
+    },
+    "default_cooking_notes": "Bacem dikukus air kelapa tanpa goreng ulang, manis gurih ketumbar alami"
+  },
+  {
+    "merchant_id": "SPF-MTR-DISH-32",
+    "merchant_name": "Dapur Manado Sehat - SCBD",
+    "item_id": "DISH-32",
+    "item_name": "Sup Daging Sapi Kacang Merah (Brenebon Bening)",
+    "base_price": 39000,
+    "discounted_price": 32000,
+    "has_promo": true,
+    "healthy_tags": [
+      "TINGGI_PROTEIN",
+      "TINGGI_ZAT_BESI",
+      "TANPA_LEMAK"
+    ],
+    "allergens": [],
+    "estimated_macros": {
+      "kcal": 340,
+      "protein_g": 31,
+      "carbs_g": 32,
+      "fat_g": 7,
+      "sodium_mg": 520
+    },
+    "default_cooking_notes": "Daging sapi tanpa lemak dipresto empuk, kacang merah empuk, pala cengkeh wangi"
+  }
+]

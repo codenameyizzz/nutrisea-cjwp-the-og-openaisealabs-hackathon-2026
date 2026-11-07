@@ -1,0 +1,138 @@
+{
+  "version": "1.0.0",
+  "name": "NutriSea Indonesian Culinary & Clinical Ingredient Ontology",
+  "description": "Ontology mapping of authentic Indonesian culinary ingredients and cooking methods with clinical sensitivities, purine levels, glycemic indices, and health impact rules.",
+  "ingredients": {
+    "santan_kental": {
+      "display_name": "Santan Kental",
+      "aliases": ["santan", "kuah gulai santan", "kelapa parut kental"],
+      "category": "lemak_nabati",
+      "saturated_fat": "high",
+      "purine_level": "low",
+      "glycemic_index": "low",
+      "clinical_sensitivities": ["GERD_MAAG", "BORDERLINE_CHOLESTEROL", "OBESITY"],
+      "impact_mechanism": "Menghambat pengosongan lambung (gastric emptying delay) dan memicu relaksasi sfingter esofagus bawah (LES), serta meningkatkan fraksi LDL kolesterol plasma.",
+      "recommended_alternative": "Kuah kaldu bening atau santan encer berbasis kemiri sangrai"
+    },
+    "cabai_rawit_ekstrem": {
+      "display_name": "Cabai Rawit Ekstrem / Sambal Ulek",
+      "aliases": ["sambal rawit", "sambal korek", "sambal geprek", "cabai rawit merah"],
+      "category": "bumbu_pedas",
+      "capsaicin_level": "high",
+      "clinical_sensitivities": ["GERD_MAAG"],
+      "impact_mechanism": "Capsaicin konsentrasi tinggi menstimulasi reseptor TRPV1 mukosa lambung, memicu hipersekresi asam klorida lambung dan iritasi dinding mukosa.",
+      "recommended_alternative": "Sambal tomat manis kukus atau bumbu rempah aromatik non-pedas (kunyit, serai, lengkuas)"
+    },
+    "jeroan_sapi_ayam": {
+      "display_name": "Jeroan (Usus, Hati, Paru, Babat)",
+      "aliases": ["jeroan", "usus", "hati ampela", "paru goreng", "babat", "kikil berlemak"],
+      "category": "protein_hewani_tinggi_lemak",
+      "saturated_fat": "very_high",
+      "purine_level": "very_high",
+      "cholesterol_content": "very_high",
+      "clinical_sensitivities": ["BORDERLINE_CHOLESTEROL", "HYPERTENSION_STAGE1", "OBESITY"],
+      "impact_mechanism": "Tinggi kolesterol ester dan purine metabolit yang meningkatkan asam urat serum dan pembentukan plak aterosklerosis pembuluh darah.",
+      "recommended_alternative": "Dada ayam fillet tanpa kulit atau tempe bacem panggang"
+    },
+    "minyak_jelantah_deep_fry": {
+      "display_name": "Minyak Goreng Jelantah / Deep Frying Berulang",
+      "aliases": ["goreng tepung renyah", "deep fry minyak berulang", "kremesan gurih"],
+      "category": "minyak_lemak_trans",
+      "trans_fat": "high",
+      "saturated_fat": "high",
+      "clinical_sensitivities": ["BORDERLINE_CHOLESTEROL", "GERD_MAAG", "OBESITY", "HYPERTENSION_STAGE1"],
+      "impact_mechanism": "Polimerisasi asam lemak tak jenuh saat penggorengan berulang menghasilkan radikal bebas dan asam lemak trans yang memperparah dislipidemia dan memperlambat pencernaan.",
+      "recommended_alternative": "Pemanggangan oven/air-fryer atau pepes bungkus daun pisang"
+    },
+    "garam_monosodium_glutamat_tinggi": {
+      "display_name": "Garam Dapur Berlebih & Kaldu Instan",
+      "aliases": ["garam natrium tinggi", "bumbu instan gurih", "kuah asin pekat"],
+      "category": "bumbu_mineral",
+      "sodium_density": "very_high",
+      "clinical_sensitivities": ["HYPERTENSION_STAGE1", "BORDERLINE_CHOLESTEROL"],
+      "impact_mechanism": "Retensi ion natrium intravaskular yang memicu volume overload dan peningkatan resistensi vaskular sistemik perifer.",
+      "recommended_alternative": "Rempah aromatik bawang putih panggang, jahe, lada putih, dan garam beriodium rendah sodium"
+    },
+    "gula_aren_sirup_manis": {
+      "display_name": "Gula Aren, SKM & Sirup Manis",
+      "aliases": ["gula pasir", "susu kental manis", "gula aren", "sirup kental"],
+      "category": "karbohidrat_sederhana",
+      "glycemic_index": "high",
+      "fructose_content": "high",
+      "clinical_sensitivities": ["PREDIABETES_GLUKOSA", "OBESITY"],
+      "impact_mechanism": "Lonjakan glukosa darah post-prandial cepat yang memicu resistensi insulin dan lipogenesis hepatik.",
+      "recommended_alternative": "Pemanis alami stevia atau ekstrak buah monk fruit"
+    },
+    "dada_ayam_tanpa_kulit": {
+      "display_name": "Dada Ayam Fillet Tanpa Kulit",
+      "aliases": ["ayam bakar dada", "ayam suwir kukus", "fillet dada"],
+      "category": "protein_hewani_lean",
+      "saturated_fat": "low",
+      "purine_level": "moderate",
+      "protein_density": "high",
+      "clinical_benefits": ["OBESITY", "BORDERLINE_CHOLESTEROL", "PREDIABETES_GLUKOSA"],
+      "impact_mechanism": "Rasio protein-terhadap-kalori tinggi merangsang pelepasan hormon kenyang peptida YY (PYY) dan glukagon-like peptide-1 (GLP-1)."
+    },
+    "tempe_kedelai_fermentasi": {
+      "display_name": "Tempe Kedelai Fermentasi",
+      "aliases": ["tempe bacem", "tempe kukus", "tempe panggang"],
+      "category": "protein_nabati",
+      "fiber_content": "high",
+      "isoflavone_content": "high",
+      "saturated_fat": "low",
+      "clinical_benefits": ["BORDERLINE_CHOLESTEROL", "PREDIABETES_GLUKOSA", "OBESITY"],
+      "impact_mechanism": "Kandungan serat larut dan isoflavon aktif membantu penurunan kolesterol total serum dan meningkatkan sensitivitas insulin perifer."
+    },
+    "ikan_kembung_patin_segar": {
+      "display_name": "Ikan Kembung / Ikan Air Tawar Segar",
+      "aliases": ["ikan kembung bakar", "sup ikan patin", "pepes ikan mas"],
+      "category": "protein_hewani_omega3",
+      "omega_3_fatty_acids": "high",
+      "saturated_fat": "low",
+      "clinical_benefits": ["BORDERLINE_CHOLESTEROL", "HYPERTENSION_STAGE1"],
+      "impact_mechanism": "Asam lemak omega-3 (EPA dan DHA) menurunkan kadar trigliserida serum dan memiliki efek kardioprotektif melalui stabilisasi endotel vaskular."
+    },
+    "sayur_bening_bayam_labu": {
+      "display_name": "Sayur Bening Bayam, Labu Siam & Jagung Manis",
+      "aliases": ["sayur bening bayam", "labu siam rebus", "sup jagung bening"],
+      "category": "sayuran_serat_tinggi",
+      "fiber_content": "high",
+      "potassium_content": "high",
+      "sodium_density": "very_low",
+      "clinical_benefits": ["HYPERTENSION_STAGE1", "GERD_MAAG", "PREDIABETES_GLUKOSA", "OBESITY"],
+      "impact_mechanism": "Tinggi kalium yang bertindak sebagai antagonis natrium fisiologis, memicu natriuresis dan vasodilatasi pembuluh darah sistemik."
+    }
+  },
+  "cooking_methods": {
+    "goreng_deep_fry": {
+      "display_name": "Goreng Minyak Banyak (Deep Frying)",
+      "oil_absorption_multiplier": 2.2,
+      "risk_flags": ["HIGH_SATURATED_FAT", "TRANS_FAT_POTENTIAL", "HIGH_CALORIC_DENSITY"],
+      "contraindicated_for": ["GERD_MAAG", "BORDERLINE_CHOLESTEROL", "OBESITY"]
+    },
+    "bakar_rempah": {
+      "display_name": "Panggang / Bakar Bumbu Rempah",
+      "oil_absorption_multiplier": 0.4,
+      "risk_flags": ["LOW_FAT", "HIGH_FLAVOR_HERBS"],
+      "beneficial_for": ["BORDERLINE_CHOLESTEROL", "OBESITY", "PREDIABETES_GLUKOSA"]
+    },
+    "kukus_rebus": {
+      "display_name": "Kukus & Rebus (Steamed / Boiled)",
+      "oil_absorption_multiplier": 0.0,
+      "risk_flags": ["ZERO_ADDED_FAT", "EASY_DIGESTION"],
+      "beneficial_for": ["GERD_MAAG", "BORDERLINE_CHOLESTEROL", "HYPERTENSION_STAGE1", "OBESITY"]
+    },
+    "kuah_bening": {
+      "display_name": "Kuah Kaldu Bening Rempah",
+      "oil_absorption_multiplier": 0.1,
+      "risk_flags": ["HYDRATING", "LOW_SATURATED_FAT"],
+      "beneficial_for": ["GERD_MAAG", "BORDERLINE_CHOLESTEROL", "HYPERTENSION_STAGE1"]
+    },
+    "gulai_santan": {
+      "display_name": "Gulai / Rendang Kuah Santan Pekat",
+      "oil_absorption_multiplier": 2.5,
+      "risk_flags": ["HIGH_SATURATED_FAT", "HIGH_CALORIES", "DELAYED_GASTRIC_EMPTYING"],
+      "contraindicated_for": ["GERD_MAAG", "BORDERLINE_CHOLESTEROL", "OBESITY"]
+    }
+  }
+}

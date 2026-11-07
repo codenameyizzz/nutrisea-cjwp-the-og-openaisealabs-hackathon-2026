@@ -1,0 +1,193 @@
+{
+  "version": "1.0.0",
+  "guidelines_source": "Kemenkes RI Permenkes No. 28/2019 (AKG) & WHO Western Pacific Region",
+  "conditions": {
+    "GERD_MAAG": {
+      "display_name": "Gastroesophageal Reflux Disease (GERD) & Gastritis Kronis",
+      "risk_level": "HIGH",
+      "contraindicated_ingredients": [
+        "cabai_ekstrem",
+        "cabai_rawit_berlebih",
+        "santan_kental",
+        "minyak_jelantah",
+        "cuka_asam_pekat",
+        "saus_tomat_asam",
+        "lada_hitam_berlebih",
+        "gorengan_tepung_tebal"
+      ],
+      "contraindicated_tags": [
+        "pedas",
+        "ekstra-pedas",
+        "gorengan",
+        "santan-kental"
+      ],
+      "max_fat_per_meal_g": 10.0,
+      "max_sodium_per_meal_mg": 500,
+      "recommended_cooking_methods": [
+        "kuah_bening",
+        "kukus",
+        "rebus",
+        "pepes_non_pedas",
+        "tim"
+      ],
+      "beneficial_ingredients": [
+        "kunyit",
+        "jahe",
+        "kencur",
+        "labu_siam",
+        "bayam",
+        "kembang_tahu",
+        "kentang_rebus"
+      ],
+      "clinical_rationale": "Asam lemak jenuh dan capsaicin tinggi memicu relaksasi Lower Esophageal Sphincter (LES) dan menstimulasi sekresi asam lambung berlebih."
+    },
+    "BORDERLINE_CHOLESTEROL": {
+      "display_name": "Dislipidemia & Borderline Total Cholesterol (>200 mg/dL)",
+      "risk_level": "HIGH",
+      "contraindicated_ingredients": [
+        "santan_kental",
+        "minyak_goreng_jelantah",
+        "jeroan_sapi",
+        "jeroan_ayam",
+        "kulit_ayam",
+        "lemak_gajih",
+        "otak_sapi",
+        "kuning_telur_berlebih",
+        "gorengan"
+      ],
+      "contraindicated_tags": [
+        "santan",
+        "jeroan",
+        "gorengan",
+        "lemak-tinggi"
+      ],
+      "max_saturated_fat_per_meal_g": 6.0,
+      "max_fat_per_meal_g": 12.0,
+      "max_sodium_per_meal_mg": 550,
+      "recommended_cooking_methods": [
+        "bakar_tanpa_minyak",
+        "panggang",
+        "sup_bening",
+        "kukus",
+        "pepes"
+      ],
+      "beneficial_ingredients": [
+        "ikan_kembung",
+        "ikan_patin",
+        "tempe",
+        "tahu",
+        "bawang_putih",
+        "sayur_bayam",
+        "kacang_merah"
+      ],
+      "clinical_rationale": "Membatasi asupan asam lemak jenuh dan kolesterol eksogen guna menekan sintesis Low-Density Lipoprotein (LDL) di hepatosit hati."
+    },
+    "HYPERTENSION_STAGE1": {
+      "display_name": "Hipertensi Derajat 1 (Sistolik 130-139 / Diastolik 80-89 mmHg)",
+      "risk_level": "HIGH",
+      "contraindicated_ingredients": [
+        "ikan_asin",
+        "telur_asin",
+        "tauco_pekat",
+        "terasi_berlebih",
+        "kecap_asin_berlebih",
+        "msg_berlebih",
+        "makanan_kaleng",
+        "daging_olahan"
+      ],
+      "contraindicated_tags": [
+        "tinggi-garam",
+        "asin",
+        "ikan-asin",
+        "olahan"
+      ],
+      "max_sodium_per_meal_mg": 430,
+      "recommended_cooking_methods": [
+        "sup_rempah_alami",
+        "kukus",
+        "rebus",
+        "lalapan_segar"
+      ],
+      "beneficial_ingredients": [
+        "seledri",
+        "mentimun",
+        "bawang_putih",
+        "belimbing_wuluh",
+        "daun_salam",
+        "serai",
+        "labu_siam"
+      ],
+      "clinical_rationale": "Restriksi natrium ketat (Diet DASH) untuk menurunkan volume intravaskular dan resistensi vaskular perifer sistemik."
+    },
+    "PREDIABETES_GLUKOSA": {
+      "display_name": "Gangguan Toleransi Glukosa / Prediabetes (HbA1c 5.7 - 6.4%)",
+      "risk_level": "MEDIUM",
+      "contraindicated_ingredients": [
+        "gula_aren_cair",
+        "sirup_manis",
+        "tepung_terigu_gorengan",
+        "mie_instan",
+        "nasi_porsi_ganda",
+        "bakwan_tepung_tebal"
+      ],
+      "contraindicated_tags": [
+        "manis",
+        "gula-tinggi",
+        "karbo-ganda",
+        "tepung-tebal"
+      ],
+      "max_carbs_per_meal_g": 55.0,
+      "min_fiber_per_meal_g": 6.0,
+      "recommended_cooking_methods": [
+        "rebus",
+        "kukus",
+        "bakar",
+        "tumis_sedikit_minyak"
+      ],
+      "beneficial_ingredients": [
+        "nasi_merah",
+        "buncis",
+        "pare",
+        "kayu_manis",
+        "daun_kelor",
+        "tempe_kukus",
+        "telur_rebus"
+      ],
+      "clinical_rationale": "Pencegahan lonjakan glukosa postprandial melalui karbohidrat kompleks berindeks glikemik rendah dan serat larut penahan absorpsi glukosa."
+    },
+    "OBESITY": {
+      "display_name": "Obesitas IMT >= 25.0 kg/m2 (WHO Western Pacific Region)",
+      "risk_level": "MEDIUM",
+      "contraindicated_ingredients": [
+        "gorengan_minyak_jelantah",
+        "kulit_ayam_krispi",
+        "santan_kental",
+        "minuman_manis_kemasan",
+        "kerupuk_berlebih"
+      ],
+      "contraindicated_tags": [
+        "kalori-tinggi",
+        "gorengan",
+        "lemak-jenuh"
+      ],
+      "max_lunch_kcal": 650,
+      "min_protein_per_meal_g": 25.0,
+      "recommended_cooking_methods": [
+        "rebus",
+        "kukus",
+        "bakar_rempah",
+        "sayur_bening"
+      ],
+      "beneficial_ingredients": [
+        "dada_ayam",
+        "ikan_nila",
+        "ikan_patin",
+        "tahu",
+        "tempe",
+        "lalapan_timun_kemangi",
+        "sayur_asam"
+      ],
+      "clinical_rationale": "Defisit energi moderat 300-400 kcal disertai asupan protein tinggi guna mempertahankan Resting Metabolic Rate dan memicu sekresi hormon kenyang GLP-1."
+    }
+  }
+}

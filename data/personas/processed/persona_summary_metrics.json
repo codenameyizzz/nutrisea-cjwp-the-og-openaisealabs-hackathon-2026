@@ -1,0 +1,47 @@
+{
+  "total_personas_generated": 120,
+  "total_live_scraped_reviews_ingested": 209,
+  "scraped_sources_breakdown": {
+    "Google Play - Shopee (ShopeeFood)": 58,
+    "Google Play - Gojek (GoFood)": 58,
+    "Google Play - FatSecret Calorie Counter ID": 46,
+    "Google Play - MyFitnessPal Indonesia": 47
+  },
+  "data_provenance": "100% grounded in live online Google Play Store consumer reviews (ShopeeFood, GoFood, FatSecret, MyFitnessPal)",
+  "average_target_lunch_budget_idr": 34842,
+  "average_target_lunch_kcal": 645,
+  "average_baseline_scroll_friction_minutes": 19.5,
+  "target_nutrisea_decision_time_seconds": 90,
+  "archetype_distribution": {
+    "The Budget-Conscious Fitness Enthusiast": 23,
+    "The Preventive Health Starter": 33,
+    "The Overloaded Corporate Professional": 52,
+    "The Digestive & Gentle Palate Fighter": 12
+  },
+  "gender_distribution": {
+    "perempuan": 54,
+    "laki-laki": 66
+  },
+  "district_distribution": {
+    "Menteng": 23,
+    "Sudirman": 20,
+    "SCBD": 18,
+    "Palmerah": 25,
+    "Kuningan": 23,
+    "Senayan": 11
+  },
+  "bmi_category_distribution": {
+    "NORMAL": 47,
+    "OBESE": 46,
+    "OVERWEIGHT": 25,
+    "UNDERWEIGHT": 2
+  },
+  "methodological_standards": [
+    "Real Live Web Scraping (Google Play Store Consumer Reviews)",
+    "Jobs-To-Be-Done (JTBD) Framework (Harvard Business School)",
+    "Mifflin-St Jeor Clinical BMR/TDEE Equations",
+    "WHO Western Pacific Region BMI Thresholds",
+    "Indonesian Ministry of Health (Kemenkes RI AKG 2019 / Isi Piringku)",
+    "Dual-Tier Memory Architecture (Odysseus Pattern / Reforge)"
+  ]
+}

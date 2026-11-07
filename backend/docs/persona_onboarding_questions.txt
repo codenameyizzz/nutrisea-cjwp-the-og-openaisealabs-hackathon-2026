@@ -1,0 +1,114 @@
+PERSONA-BASED ONBOARDING QUESTIONS
+Food Recommendation Feature
+
+Purpose:
+These questions help determine a user's primary persona type during onboarding. Use answers as signals, not as a rigid diagnosis or scoring test.
+
+Q1. What is your main goal when choosing food?
+Type: Single choice
+- Keep my energy steady and choose a balanced meal.
+- Eat healthier and reduce my risk of future health problems.
+- Build muscle or support my fitness progress.
+- Choose food that is gentle on my stomach.
+- I'm not sure yet.
+
+Q2. Which best describes your current food-related concern?
+Type: Single choice
+- I often feel sleepy, sluggish, or too full after lunch.
+- I want to be more careful about things like salt, sugar, or fat.
+- I want enough protein without spending too much.
+- Some foods can trigger stomach discomfort, acidity, or heartburn.
+- None of these.
+
+Q3. Do you have any dietary needs or restrictions we should consider?
+Type: Single choice; show follow-up if applicable
+- I need to limit salt.
+- I need to be mindful of sugar or blood glucose.
+- I need to be mindful of cholesterol or saturated fat.
+- I need food that is gentle on my stomach.
+- I have a food allergy or intolerance.
+- I don't have any specific dietary restrictions.
+- Prefer not to say.
+
+Conditional follow-up:
+Is this based on guidance from a healthcare professional, or is it a personal preference?
+- Guidance from a healthcare professional
+- Personal preference
+- Prefer not to say
+
+Note: Use this to guide food filtering, not to diagnose a condition. Keep allergy information separate from general dietary preferences.
+
+Q4. What matters most when choosing your lunch?
+Type: Single choice
+- I want a quick recommendation so I don't have to browse many options.
+- I want a meal that supports my long-term health.
+- I want good nutrition and enough protein at an affordable price.
+- I want to avoid ingredients or preparation styles that may upset my stomach.
+- I mainly want to choose based on taste.
+
+Q5. What is your usual budget for one lunch?
+Type: Single choice
+- Under Rp25,000
+- Rp25,000–Rp35,000
+- Rp35,001–Rp45,000
+- More than Rp45,000
+- It depends on the day
+
+Q6. How active is your usual day?
+Type: Single choice
+- Mostly sitting; little planned exercise
+- Light activity or occasional exercise
+- Moderate activity or regular exercise
+- Very active or frequent intense exercise
+- Not sure
+
+Q7. Which age range are you in?
+Type: Single choice; optional
+- Under 21
+- 21–27
+- 28–33
+- 34–48
+- 49 or older
+- Prefer not to say
+
+Q8. What usually makes choosing lunch difficult for you?
+Type: Single choice
+- Too many options; I spend too much time deciding.
+- I'm unsure whether a meal is balanced or healthy.
+- Healthy food often costs more than I want to spend.
+- I'm worried a meal may trigger stomach discomfort.
+- I find it difficult to estimate nutrition information.
+- None of these.
+
+PERSONA ASSIGNMENT GUIDE
+
+The Overloaded Corporate Professional (CORP_OVERLOADED)
+Strong signals:
+- Wants a quick, balanced lunch.
+- Experiences decision fatigue or post-lunch sluggishness.
+- Focuses on maintaining energy and routine.
+
+The Preventive Health Starter (PREVENTIVE_HEALTH)
+Strong signals:
+- Wants to eat healthier for long-term wellbeing.
+- Mentions being mindful of salt, sugar/glucose, cholesterol, or saturated fat.
+
+The Budget-Conscious Fitness Enthusiast (BUDGET_FITNESS)
+Strong signals:
+- Wants muscle or fitness progress.
+- Prioritizes protein and has a limited meal budget.
+- Is active or exercises regularly.
+
+The Digestive & Gentle Palate Fighter (DIGESTIVE_GERD)
+Strong signals:
+- Prioritizes stomach-friendly meals.
+- Is concerned about discomfort, acidity, or heartburn.
+- Wants gentle foods and preparation styles.
+
+IMPLEMENTATION NOTES
+- Use Q1 and Q2 as the primary classification questions.
+- Use Q3 to set dietary safeguards and refine classification.
+- Use Q5–Q8 to personalize recommendations; do not let them independently determine persona.
+- If answers match multiple archetypes, store a primary and secondary persona (for example, CORP_OVERLOADED + PREVENTIVE_HEALTH).
+- If no pattern is strong, assign a neutral/default profile and refine it through later interactions.
+- These questions are a proposed onboarding instrument based on the persona dataset; they are not questions already included in the CSV.

@@ -1,0 +1,70 @@
+.page {
+  display: flex;
+  min-height: 100vh;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 16px;
+  background:
+    radial-gradient(ellipse at 12% 12%, rgba(238, 77, 45, 0.1), transparent 38%),
+    #f6f6f6;
+}
+
+.content {
+  display: flex;
+  width: min(100%, 440px);
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  text-align: center;
+}
+
+.content h1 {
+  margin-top: 16px;
+  color: #222;
+  font-size: clamp(24px, 5vw, 30px);
+  font-weight: 700;
+  letter-spacing: -0.5px;
+}
+
+.content p {
+  margin-bottom: 12px;
+  color: #666;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.logo {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.logo img {
+  width: min(240px, 70vw);
+  height: 64px;
+  object-fit: contain;
+}
+
+.clerkCard {
+  width: 100%;
+  box-shadow: 0 12px 40px rgba(34, 34, 34, 0.08);
+}
+
+.clerkTitle {
+  color: #222;
+}
+
+.clerkButton {
+  background-color: #ee4d2d;
+}
+
+.clerkButton:hover {
+  background-color: #d73211;
+}
+
+@media (max-width: 480px) {
+  .page {
+    align-items: flex-start;
+    padding-top: 24px;
+  }
+}
