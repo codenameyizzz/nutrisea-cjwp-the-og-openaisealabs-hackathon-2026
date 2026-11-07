@@ -156,6 +156,9 @@ def upsert_health_profile(db: Session, user_id: str, data: Dict[str, Any], *, co
     profile = get_health_profile(db, user_id)
 
     age = int(data.get("age", 25))
+    if profile and (profile.learned_palate or {}).get("birth_date"):
+        from ..services.profile_actions import age_from_birth_date
+        age = age_from_birth_date(profile.learned_palate["birth_date"])
     raw_sex = str(data.get("sex", data.get("gender", "F"))).upper()
     sex_enum = UserSex.F if raw_sex in ("F", "PEREMPUAN", "WANITA") else UserSex.M
     height_cm = float(data.get("height_cm", data.get("heightCm", 160.0)))
@@ -556,7 +559,8 @@ def log_meal(
     return entry
 
 def get_user_meal_logs_today(db: Session, user_id: str) -> List[MealLog]:
-    today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+    from datetime import timedelta
+    today_start = datetime.now(timezone(timedelta(hours=7))).replace(hour=0, minute=0, second=0, microsecond=0).astimezone(timezone.utc)
     return (
         db.query(MealLog)
         .filter(MealLog.user_id == user_id, MealLog.logged_at >= today_start)

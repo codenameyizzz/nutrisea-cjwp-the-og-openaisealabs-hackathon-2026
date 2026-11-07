@@ -28,6 +28,8 @@ def passes_hard_filters(item: Dict[str, Any], profile: Optional[Dict[str, Any]] 
         user_allergens = [a.lower().strip() for a in raw_allergens.split(",") if a.strip()]
 
     if user_allergens:
+        if item.get("allergenCoverage") != "complete":
+            return False
         item_allergens = [str(a).lower().strip() for a in (item.get("allergens") or [])]
         item_name = str(item.get("name") or item.get("item_name") or "").lower()
         for allergen in user_allergens:
@@ -261,7 +263,7 @@ def score_menu_item(
 
     if not has_query:
         # Equation 1: No active search query
-        # R(u, m) = (0.25P + 0.10S + 0.15B + 0.25G + 0.15N + 0.10F) × V
+        # R(u, m) = (0.25P + 0.10S + 0.15B + 0.25G + 0.15N + 0.10F) Ã— V
         raw_score = (
             0.25 * p_score +
             0.10 * s_score +
@@ -272,7 +274,7 @@ def score_menu_item(
         )
     else:
         # Equation 2: Active search query
-        # R(u, m) = (0.20P + 0.05S + 0.10B + 0.20G + 0.10N + 0.05F + 0.30Q) × V
+        # R(u, m) = (0.20P + 0.05S + 0.10B + 0.20G + 0.10N + 0.05F + 0.30Q) Ã— V
         raw_score = (
             0.20 * p_score +
             0.05 * s_score +

@@ -16,17 +16,9 @@ class PlateVisionClassifier:
         self.client = get_openai_client()
         self.model = settings.OPENAI_MODEL
 
-    def analyze_plate(self, image_base64: str) -> Dict[str, Any]:
-        if not settings.OPENAI_API_KEY:
-            logger.info("Using mock vision response (No OpenAI API key provided)")
-            return {
-                "detected_dish": "2x Bakwan Sayur Goreng & Es Teh Manis",
-                "preparation_style": "DEEP_FRIED",
-                "nutritional_density_flags": ["HIGH_FAT", "HIGH_SIMPLE_SUGAR"],
-                "qualitative_kcal_estimate": 320,
-                "confidence_rating": "HIGH",
-                "friendly_rebalance_note": "Cemilan gorengan tercatat (+320 kcal). Tenang, menu makan malam otomatis disesuaikan ke sup bening serat tinggi agar target mingguan tetap aman."
-            }
+    def analyze_plate(self, image_base64: str, image_mime_type: str = "image/jpeg") -> Dict[str, Any]:
+        if not image_base64 or not settings.OPENAI_API_KEY:
+            return self.unavailable()
 
         try:
             response = self.client.chat.completions.create(
@@ -39,7 +31,7 @@ class PlateVisionClassifier:
                             {
                                 "type": "image_url",
                                 "image_url": {
-                                    "url": f"data:image/jpeg;base64,{image_base64}",
+                                    "url": f"data:{image_mime_type};base64,{image_base64}",
                                     "detail": "low"
                                 }
                             }
@@ -49,14 +41,24 @@ class PlateVisionClassifier:
                 response_format={"type": "json_object"},
                 temperature=0.2
             )
-            return json.loads(response.choices[0].message.content)
-        except Exception as e:
-            logger.error(f"Vision analysis failed: {e}")
-            return {
-                "detected_dish": "Makanan Ringan / Gorengan",
-                "preparation_style": "DEEP_FRIED",
-                "nutritional_density_flags": ["HIGH_FAT"],
-                "qualitative_kcal_estimate": 280,
-                "confidence_rating": "MEDIUM",
-                "friendly_rebalance_note": "Cemilan tercatat. Menu makan malam akan disesuaikan otomatis."
-            }
+            result = json.loads(response.choices[0].message.content)
+            if not isinstance(result, dict):
+                return self.unavailable()
+            result.update(analysis_source="ai", analysis_status="success")
+            result["friendly_rebalance_note"] = "Hasil ini merupakan perkiraan dan belum dicatat sebagai makanan Anda."
+            return result
+        except Exception as error:
+            logger.warning("Vision analysis unavailable: %s", type(error).__name__)
+            return self.unavailable()
+
+    @staticmethod
+    def unavailable():
+        return {
+            "analysis_source": "unavailable",
+            "analysis_status": "unavailable",
+            "detected_dish": None,
+            "qualitative_kcal_estimate": None,
+            "confidence_rating": None,
+            "nutritional_density_flags": [],
+            "friendly_rebalance_note": "Foto belum berhasil dianalisis. Tidak ada makanan yang dicatat. Silakan coba lagi.",
+        }

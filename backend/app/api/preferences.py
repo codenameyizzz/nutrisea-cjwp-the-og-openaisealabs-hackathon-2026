@@ -1,7 +1,7 @@
 """Authenticated preference updates and recommendations from the live catalog."""
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 from ..core.database import get_db
 from ..core.ingredient_auth import current_principal
 from ..db import crud
@@ -10,6 +10,11 @@ from ..services.explicit_preferences import preferences, save_preference, matche
 from ..services.recommendation_scorer import passes_hard_filters
 from .dishes import serialize_dish
 from ..ai.planner import MealPlannerAgent
+from ..services.profile_actions import effective_profile
+import re
+import logging
+from time import perf_counter
+from ..services.recommendation_scorer import rank_recommendations
 
 router = APIRouter(prefix="/api/preferences", tags=["Adaptive preferences"])
 
@@ -32,24 +37,32 @@ def read_preferences(principal=Depends(current_principal), db: Session = Depends
 
 @router.get("/recommendation")
 def personalized_recommendation(principal=Depends(current_principal), db: Session = Depends(get_db)):
-    excluded = preferences(db, principal.user_id)
+    started = perf_counter()
+    state = effective_profile(db, principal.user_id)
+    excluded = state["excluded_foods"]
     health = crud.get_health_profile(db, principal.user_id)
-    # Reference personas describe examples, not this account's medical facts.
-    profile = {
-        "allergens": health.allergies or [] if health else [],
-        "medical_conditions": [],
-    }
-    budget = health.meal_budget_idr if health else None
-    items = db.query(MenuItem).filter(MenuItem.is_available.is_(True)).order_by(MenuItem.id).all()
+    profile = {"allergens": state["allergies"], "medical_conditions": []}
+    budget = state["meal_budget_idr"]
+    if health is not None and not state["temporary_until"]:
+        budget = health.meal_budget_idr
+    items = db.query(MenuItem).options(selectinload(MenuItem.tags), selectinload(MenuItem.merchant), selectinload(MenuItem.restaurant)).filter(MenuItem.is_available.is_(True)).order_by(MenuItem.id).all()
     candidates = [serialize_dish(item, item.restaurant, item.merchant) for item in items
                   if item.merchant and item.merchant.is_open
                   and (item.restaurant is None or item.restaurant.is_open)]
     candidates = [d for d in candidates if passes_hard_filters(d, profile)
                   and matches_preference(d, excluded)
                   and (budget is None or d["discountedPrice"] <= budget)]
+    user = crud.get_user(db, principal.user_id)
+    score_profile = {**profile, "target_budget": budget, "health_goal": {"LOSE_WEIGHT": "turun", "MAINTAIN": "ideal", "GAIN_MUSCLE": "otot"}.get(state["goal"], state["goal"]),
+        "primary_persona_id": user.main_persona_id if user else None,
+        "secondary_persona_ids": user.side_persona_ids if user else [],
+        "target_lunch_kcal": round(health.kcal_target * 0.4) if health and hasattr(health, "kcal_target") else None}
+    candidates = rank_recommendations(candidates, score_profile, variance_map={d["id"]: 1.0 for d in candidates})
+    if state["reduce_fried_food"]:
+        candidates.sort(key=lambda d: bool(re.search(r"goreng|crispy|fried|katsu", d["name"], re.I)))
     selected = candidates[0] if candidates else None
     source = "deterministic"
-    if candidates:
+    if candidates and not state["reduce_fried_food"]:
         planner_candidates = [{"item_id": d["id"], "item_name": d["name"],
                                "merchant_name": d["merchantName"], "discounted_price": d["discountedPrice"],
                                "default_cooking_notes": d["cookingNotes"],
@@ -66,11 +79,13 @@ def personalized_recommendation(principal=Depends(current_principal), db: Sessio
         if match:
             selected = match
             source = result.get("source", "deterministic")
+    logging.getLogger(__name__).info("recommendation rule=profile-v1 retrieved=%d eligible=%d selected=%s source=%s latency_ms=%d",
+        len(items), len(candidates), selected["id"] if selected else None, source, (perf_counter() - started) * 1000)
     return {"status": "ok" if candidates else "no_candidates", "source": source,
             "user_id": principal.user_id, "excluded_foods": excluded,
-            "candidate_ids": [d["id"] for d in candidates],
+            "candidate_ids": [d["id"] for d in candidates], "candidates": candidates, "effective_profile": state,
             "dish": selected,
-            "reason": ("Pilihan dari katalog tersedia dan preferensi tersimpan. "
-                       + (f"Harga menu maksimal Rp {budget:,}; belum termasuk ongkir." if budget is not None
-                          else "Anggaran belum diatur."))
-                      if candidates else "Belum ada menu sesuai batasan dan preferensi Anda."}
+            "reason": ("Selected from the available catalog using your current preferences. "
+                       + (f"Meal budget: Rp{budget:,}, excluding delivery." if budget is not None
+                          else "No budget has been set."))
+                      if candidates else "No dishes meet your current restrictions and preferences. Unknown recipe information cannot establish allergy safety."}

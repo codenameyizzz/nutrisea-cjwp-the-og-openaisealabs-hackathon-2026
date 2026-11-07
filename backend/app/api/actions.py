@@ -5,17 +5,21 @@ from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 from ..core.database import get_db
 from ..db import crud
+from ..core.ingredient_auth import current_principal
+from typing import Literal
 
 router = APIRouter(prefix="/api/actions", tags=["Short-Term Memory & User Actions"])
 logger = logging.getLogger(__name__)
 
 class UserActionPayload(BaseModel):
-    user_id: str = Field(..., description="Clerk User ID or Demo Persona ID")
-    action_type: str = Field(..., description="e.g. CLICK_MENU_ITEM, SEARCH_QUERY, ADD_TO_CART, VIEW_DETAILS")
+    user_id: Optional[str] = None
+    action_type: Literal["CLICK_MENU_ITEM", "SEARCH_QUERY", "ADD_TO_CART", "VIEW_DETAILS", "DISMISS_SUGGESTION", "REMOVE_FROM_CART", "FEEDBACK"]
     payload: Dict[str, Any] = Field(default_factory=dict, description="Metadata including dish personas, price, query")
 
 @router.post("/log")
-def log_action(req: UserActionPayload, db: Session = Depends(get_db)):
+def log_action(req: UserActionPayload, principal=Depends(current_principal), db: Session = Depends(get_db)):
+    if req.user_id and req.user_id != principal.user_id:
+        raise HTTPException(403, "Account mismatch")
     """
     Persists immediate user interaction (click, search, add-to-cart)
     with dish personas into Short-Term Memory (PostgreSQL).
@@ -23,7 +27,7 @@ def log_action(req: UserActionPayload, db: Session = Depends(get_db)):
     try:
         action = crud.log_user_action(
             db=db,
-            user_id=req.user_id,
+            user_id=principal.user_id,
             action_type=req.action_type,
             payload=req.payload
         )
@@ -36,13 +40,15 @@ def log_action(req: UserActionPayload, db: Session = Depends(get_db)):
         }
     except Exception as e:
         logger.error(f"Failed to log user action: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Action could not be saved")
 
 @router.get("/{user_id}")
-def get_user_actions(user_id: str, limit: int = Query(15, ge=1, le=50), db: Session = Depends(get_db)):
+def get_user_actions(user_id: str, limit: int = Query(15, ge=1, le=50), principal=Depends(current_principal), db: Session = Depends(get_db)):
     """
     Returns recent short-term user actions for a specific user.
     """
+    if user_id != principal.user_id:
+        raise HTTPException(403, "Account mismatch")
     actions = crud.get_user_recent_actions(db=db, user_id=user_id, limit=limit)
     return {
         "status": "success",

@@ -1,4 +1,4 @@
-from typing import Optional, List, Dict, Any
+from typing import Optional, List, Dict, Any, Literal, Annotated
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
@@ -10,6 +10,7 @@ from ..core.ingredient_auth import current_principal
 from ..models import Persona, AppUser, UserMemoryItem, HealthProfile, UserRole
 from .users import HealthProfilePayload
 from ..db import crud
+from ..services.onboarding_details import save_onboarding_details, FIELDS as ONBOARDING_FIELDS
 
 router = APIRouter(prefix="/api/personas", tags=["Personas & Dual-Tier Memory"])
 
@@ -23,6 +24,9 @@ class UserPersonasPayload(BaseModel):
     email: Optional[str] = Field(None, description="Email address from Clerk auth")
     role: Optional[str] = Field(None, description="Legacy input, ignored; permissions come from the Clerk session")
     profile: Optional[HealthProfilePayload] = None
+    dietary_needs: Optional[List[Annotated[str, Field(min_length=1, max_length=100, pattern=r"^[^\x00-\x1f]+$")]]] = Field(None, max_length=12)
+    dietary_guidance: Optional[Literal["professional", "personal", "undisclosed"]] = None
+    allergy_status: Optional[Literal["reported", "none", "undisclosed"]] = None
 
 class OnboardingAnswersPayload(BaseModel):
     q1_goal: Optional[str] = Field(None, description="Q1: Main goal when choosing food")
@@ -198,7 +202,16 @@ def assign_user_personas(
     # Reference persona biometrics/medical conditions never become user facts.
     db.flush()
     if payload.profile is not None:
-        hp = crud.upsert_health_profile(db, user_id, payload.profile.model_dump(), commit=False)
+        profile_values = payload.profile.model_dump()
+        if hp is not None:
+            if payload.allergy_status == "undisclosed":
+                profile_values["allergies"] = hp.allergies
+            if "has_medical_condition" not in payload.profile.model_fields_set:
+                profile_values["has_medical_condition"] = hp.has_medical_condition
+        hp = crud.upsert_health_profile(db, user_id, profile_values, commit=False)
+    save_onboarding_details(db, user_id, {
+        field: getattr(payload, field) for field in ONBOARDING_FIELDS if field in payload.model_fields_set
+    })
 
     # Initialize Odysseus Long-Term Memory (LTM) facts for this user
     # 1. Clear old auto-generated persona baseline facts

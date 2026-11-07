@@ -1,3 +1,4 @@
+from ..services.profile_actions import age_from_birth_date
 from typing import Optional, List, Dict, Any
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel, Field
@@ -7,6 +8,7 @@ from ..core.ingredient_auth import current_principal, IngredientPrincipal
 from ..db import crud
 from ..db.models import AppUser, HealthProfile, MealLog, RewardLedger, UserRole
 from ..models import Persona
+from ..services.onboarding_details import read_onboarding_details
 
 def require_own_account(request: Request, principal: IngredientPrincipal = Depends(current_principal)):
     user_id = request.path_params.get("user_id")
@@ -89,7 +91,7 @@ def serialize_health_profile(profile):
     if profile is None:
         return None
     return {
-        "user_id": profile.user_id, "age": profile.age, "sex": profile.sex.value,
+        "user_id": profile.user_id, "age": age_from_birth_date(profile.learned_palate["birth_date"]) if (profile.learned_palate or {}).get("birth_date") else profile.age, "sex": profile.sex.value,
         "height_cm": float(profile.height_cm), "weight_kg": float(profile.weight_kg),
         "occupation": profile.occupation, "activity_level": profile.activity_level.value,
         "goal": profile.goal.value, "allergies": profile.allergies,
@@ -126,6 +128,7 @@ def sync_user(payload: UserSyncPayload, db: Session = Depends(get_db), principal
         "main_persona": persona,
         "side_persona_ids": user.side_persona_ids or [],
         "profile": serialize_health_profile(profile),
+        **read_onboarding_details(db, user.id),
         "user": {
             "id": user.id,
             "name": user.name,
@@ -173,7 +176,7 @@ def get_user_dashboard(user_id: str, db: Session = Depends(get_db)):
     profile_dict = None
     if profile:
         profile_dict = {
-            "age": profile.age,
+            "age": age_from_birth_date(profile.learned_palate["birth_date"]) if (profile.learned_palate or {}).get("birth_date") else profile.age,
             "sex": profile.sex.value,
             "height_cm": float(profile.height_cm),
             "weight_kg": float(profile.weight_kg),
@@ -223,7 +226,8 @@ def get_profile(user_id: str, db: Session = Depends(get_db), principal=Depends(c
         raise HTTPException(status_code=404, detail="Health profile not found for user")
     return {
         "user_id": profile.user_id,
-        "age": profile.age,
+        "age": age_from_birth_date(profile.learned_palate["birth_date"]) if (profile.learned_palate or {}).get("birth_date") else profile.age,
+        "occupation": profile.occupation,
         "sex": profile.sex.value,
         "height_cm": float(profile.height_cm),
         "weight_kg": float(profile.weight_kg),
@@ -257,7 +261,7 @@ def save_profile(user_id: str, payload: HealthProfilePayload, db: Session = Depe
         "status": "saved",
         "profile": {
             "user_id": profile.user_id,
-            "age": profile.age,
+            "age": age_from_birth_date(profile.learned_palate["birth_date"]) if (profile.learned_palate or {}).get("birth_date") else profile.age,
             "sex": profile.sex.value,
             "height_cm": float(profile.height_cm),
             "weight_kg": float(profile.weight_kg),
@@ -303,7 +307,7 @@ def add_meal_log(user_id: str, payload: MealLogPayload, db: Session = Depends(ge
     entry = crud.log_meal(
         db=db,
         user_id=user_id,
-        source=payload.source,
+        source="manual_note",
         meal_type=payload.meal_type,
         label=payload.label,
         kcal=payload.kcal,
@@ -412,13 +416,16 @@ def add_user_memory_endpoint(user_id: str, payload: UserMemoryPayload, db: Sessi
     """
     Explicitly adds a Long-Term Memory item for a user.
     """
+    user = crud.get_user(db, user_id)
+    if not user or not user.consent_health_data:
+        raise HTTPException(403, "Health-data consent is required before storing personal notes.")
     mem = crud.save_user_memory(
         db=db,
         user_id=user_id,
         category=payload.category,
         fact_text=payload.fact_text,
         confidence=payload.confidence,
-        source=payload.source
+        source="manual_note"
     )
     return {
         "status": "saved",
@@ -430,3 +437,16 @@ def add_user_memory_endpoint(user_id: str, payload: UserMemoryPayload, db: Sessi
             "source": mem.source
         }
     }
+
+
+@router.delete("/{user_id}/memories/{memory_id}")
+def forget_derived_memory(user_id: str, memory_id: str, db: Session = Depends(get_db)):
+    from ..models.user_memory import UserMemoryItem
+    row = db.query(UserMemoryItem).filter_by(id=memory_id, user_id=user_id).first()
+    if not row:
+        raise HTTPException(404, "Memory not found")
+    if row.source not in ("chat_interaction", "implicit_swap", "order_history", "onboarding_persona", "superseded_derived", "manual_note"):
+        raise HTTPException(409, "Change explicit settings through the profile confirmation flow.")
+    db.delete(row)
+    db.commit()
+    return {"status": "forgotten", "canonical_restrictions_unchanged": True}

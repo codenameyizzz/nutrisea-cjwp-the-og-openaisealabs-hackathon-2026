@@ -14,37 +14,13 @@ def is_api_key_configured() -> bool:
     return True
 
 def get_fallback_recommendation(candidate_dishes: List[Dict[str, Any]]) -> Dict[str, Any]:
-    first_dish = candidate_dishes[0] if candidate_dishes else {
-        "item_name": "Paket Sehat Ayam Bakar Dada + Sayur Bening Bayam",
-        "merchant_name": "Warteg Berkah Mandiri - Kuningan",
-        "discounted_price": 25600,
-        "has_promo": True,
-        "healthy_tags": ["MINYAK_BARU", "SAYUR_BENING", "TANPA_SANTAN"],
-        "estimated_macros": {"kcal": 410, "protein_g": 36, "sodium_mg": 580},
-        "default_cooking_notes": "Nasi setengah porsi, sambal dipisah, tanpa kuah santan"
-    }
-    return {
-        "source": "deterministic",
-        "recommendation_id": "REC-MOCK-001",
-        "selected_merchant": {
-            "merchant_name": first_dish.get("merchant_name", "Warteg Berkah Mandiri"),
-            "distance_km": 0.8
-        },
-        "menu_item": {
-            "item_name": first_dish.get("item_name"),
-            "price_idr": first_dish.get("discounted_price"),
-            "cooking_notes": first_dish.get("default_cooking_notes")
-        },
-        "justification_chips": [
-            "Hemat 20% Promo Hari Ini",
-            f"Tinggi Protein ({first_dish.get('estimated_macros', {}).get('protein_g', 36)}g)",
-            "Bebas Kacang"
-        ],
-        "balance_impact": {
-            "consumed_kcal": first_dish.get("estimated_macros", {}).get("kcal", 410),
-            "remaining_daily_kcal": 540
-        }
-    }
+    if not candidate_dishes:
+        return {"source": "deterministic", "status": "no_candidates", "menu_item": None}
+    dish = candidate_dishes[0]
+    return {"source": "deterministic", "menu_item": {"item_id": dish.get("item_id"),
+            "item_name": dish.get("item_name"), "price_idr": dish.get("discounted_price"),
+            "cooking_notes": dish.get("default_cooking_notes")}}
+
 
 class MealPlannerAgent:
     """
@@ -55,7 +31,7 @@ class MealPlannerAgent:
         self.model = settings.OPENAI_MODEL
 
     def plan_lunch(self, persona: Dict[str, Any], candidate_dishes: List[Dict[str, Any]]) -> Dict[str, Any]:
-        if not is_api_key_configured():
+        if not candidate_dishes or not is_api_key_configured():
             return get_fallback_recommendation(candidate_dishes)
 
         prompt_payload = {
@@ -64,7 +40,7 @@ class MealPlannerAgent:
         }
 
         try:
-            response = self.client.chat.completions.create(
+            response = self.client.with_options(timeout=8.0, max_retries=0).chat.completions.create(
                 model=self.model,
                 messages=[
                     {"role": "system", "content": MEAL_PLANNER_SYSTEM_PROMPT},
@@ -77,5 +53,5 @@ class MealPlannerAgent:
             result["source"] = "openai"
             return result
         except Exception as e:
-            logger.error(f"Meal planning LLM call failed: {e}")
+            logger.warning("Meal planner unavailable: %s", type(e).__name__)
             return get_fallback_recommendation(candidate_dishes)

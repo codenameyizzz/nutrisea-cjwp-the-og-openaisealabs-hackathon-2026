@@ -77,6 +77,10 @@ class NutriGraphEngine:
             self.clinical_rules = json.load(f)
 
         for cond_id, cond_info in self.clinical_rules.get("conditions", {}).items():
+            ceilings = dict(cond_info.get("nutrient_ceilings_per_meal", {}))
+            for source, target in (("max_sodium_per_meal_mg", "max_sodium_mg"), ("max_fat_per_meal_g", "max_fat_g")):
+                if cond_info.get(source) is not None: ceilings[target] = cond_info[source]
+            cond_info["nutrient_ceilings_per_meal"] = ceilings
             cond_node = f"COND:{cond_id}"
             self.graph.add_node(
                 cond_node,
@@ -84,7 +88,7 @@ class NutriGraphEngine:
                 code=cond_id,
                 name=cond_info.get("display_name", cond_id),
                 rationale=cond_info.get("clinical_rationale", ""),
-                guideline=cond_info.get("guidelines_reference", ""),
+                guideline=cond_info.get("guidelines_reference", cond_info.get("guidelines_source", self.clinical_rules.get("guidelines_source", ""))),
                 ceilings=cond_info.get("nutrient_ceilings_per_meal", {})
             )
             for nutrient, ceiling in cond_info.get("nutrient_ceilings_per_meal", {}).items():
@@ -324,107 +328,19 @@ class NutriGraphEngine:
         Resolves arbitrary user ID, Clerk ID, persona ID, or persona code
         to a verified Knowledge Graph persona identifier (e.g. BUDG_FACHRI_MENTENG_115).
         """
-        if not user_or_persona_id:
-            return "BUDG_FACHRI_MENTENG_115"
-
-        clean = str(user_or_persona_id).replace("PERSONA:", "").strip()
-
-        # 1. Direct match in loaded personas
-        if clean in self.personas:
-            return clean
-
-        # 2. Try AppUser lookup from DB if available
-        try:
-            from ..core.database import SessionLocal
-            from ..db.models import AppUser
-            db = SessionLocal()
-            try:
-                user = db.query(AppUser).filter(AppUser.id == clean).first()
-                if user and user.main_persona_id and user.main_persona_id in self.personas:
-                    return user.main_persona_id
-            finally:
-                db.close()
-        except Exception as e:
-            logger.debug(f"DB lookup for persona resolution failed or skipped: {e}")
-
-        # 3. Fuzzy / Token / Substring matching (e.g. CORP_LILY_SCBD -> CORP_LILY_MENTENG_111)
-        clean_upper = clean.upper()
-        for pid in self.personas.keys():
-            if clean_upper in pid or pid in clean_upper:
-                return pid
-
-        target_tokens = set([t for t in clean_upper.replace("-", "_").split("_") if t])
-        best_pid = None
-        best_overlap = 0
-        for pid in self.personas.keys():
-            p_tokens = set(pid.split("_"))
-            overlap = len(target_tokens.intersection(p_tokens))
-            if overlap > best_overlap:
-                best_overlap = overlap
-                best_pid = pid
-
-        if best_pid and best_overlap >= 1:
-            return best_pid
-
-        # Default fallback
-        return "BUDG_FACHRI_MENTENG_115"
+        clean = str(user_or_persona_id or "").removeprefix("PERSONA:").strip()
+        return clean if clean in self.personas else "UNKNOWN"
 
     def resolve_dish_id(self, dish_id_or_name: Optional[str]) -> str:
         """
         Resolves arbitrary dish identifier (DISH-FS-001, DISH-01, FS-ID-101)
         or dish name to a verified Knowledge Graph food identifier (e.g. FS-ID-101).
         """
-        if not dish_id_or_name:
-            return "FS-ID-101"
-
-        clean = str(dish_id_or_name).replace("DISH:", "").strip()
-
-        # 1. Direct match
-        if clean in self.foods:
-            return clean
-
-        # 2. DISH-FS-xxx format (e.g. DISH-FS-001 -> FS-ID-101, DISH-FS-012 -> FS-ID-112)
-        if clean.upper().startswith("DISH-FS-"):
-            try:
-                num = int(clean.upper().replace("DISH-FS-", ""))
-                candidate = f"FS-ID-{100 + num}"
-                if candidate in self.foods:
-                    return candidate
-            except Exception:
-                pass
-
-        # 3. DISH-xx format (e.g. DISH-01 -> FS-ID-101)
-        if clean.upper().startswith("DISH-"):
-            try:
-                num = int(clean.upper().replace("DISH-", ""))
-                candidate = f"FS-ID-{100 + num}"
-                if candidate in self.foods:
-                    return candidate
-            except Exception:
-                pass
-
-        # 4. Name or token overlap matching
-        target_clean = clean.lower().replace("-", " ")
-        for fid, fmeta in self.foods.items():
-            fname = (fmeta.get("name") or "").lower()
-            if fname in target_clean or target_clean in fname:
-                return fid
-
-        target_tokens = set(target_clean.split())
-        best_fid = None
-        best_overlap = 0
-        for fid, fmeta in self.foods.items():
-            fname = (fmeta.get("name") or "").lower()
-            f_tokens = set(fname.split())
-            overlap = len(target_tokens.intersection(f_tokens))
-            if overlap > best_overlap:
-                best_overlap = overlap
-                best_fid = fid
-
-        if best_fid and best_overlap >= 1:
-            return best_fid
-
-        return "FS-ID-101"
+        if not dish_id_or_name: return "UNKNOWN"
+        clean = str(dish_id_or_name).removeprefix("DISH:").strip()
+        if clean in self.foods: return clean
+        matches = [fid for fid, data in self.foods.items() if data.get("name", "").casefold() == clean.casefold()]
+        return matches[0] if len(matches) == 1 else "UNKNOWN"
 
     def get_stats(self) -> Dict[str, Any]:
         """Returns node and edge summary statistics for the Knowledge Graph."""
@@ -462,7 +378,7 @@ class NutriGraphEngine:
             return {
                 "resolved_persona_id": resolved_pid,
                 "resolved_food_id": resolved_fid,
-                "is_safe": True,
+                "is_safe": False,
                 "severity": "UNKNOWN_PERSONA",
                 "contraindications": [],
                 "benefits": [],
@@ -474,7 +390,7 @@ class NutriGraphEngine:
             return {
                 "resolved_persona_id": resolved_pid,
                 "resolved_food_id": resolved_fid,
-                "is_safe": True,
+                "is_safe": False,
                 "severity": "UNKNOWN_DISH",
                 "contraindications": [],
                 "benefits": [],
@@ -570,6 +486,10 @@ class NutriGraphEngine:
                     })
                     path_evidence.append([p_node, "HAS_CONDITION", cond, "CONTRAINDICATES_METHOD", meth_target, "PREPARED_BY", d_node])
 
+            fat_limit = cond_data.get("ceilings", {}).get("max_fat_g")
+            if fat_limit is not None and dish_data.get("fat_g", 0) > fat_limit:
+                contraindications.append({"type": "NUTRIENT_CEILING_EXCEEDED", "condition": cond_name,
+                    "nutrient": "fat_g", "reason": "Fat exceeds the configured per-meal reference limit.", "severity": "HIGH"})
             # Check nutrient limits (e.g. sodium ceiling for hypertension)
             ceilings = cond_data.get("ceilings", {})
             dish_sodium = dish_data.get("sodium_mg", 0)

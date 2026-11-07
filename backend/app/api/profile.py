@@ -1,4 +1,7 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
+from ..core.ingredient_auth import current_principal
+from ..core.database import get_db
+from ..services.profile_actions import effective_profile
 from pydantic import BaseModel
 from typing import Optional, Dict, Any
 from ..personas.engine import PersonaSynthesizer
@@ -11,11 +14,8 @@ class SwitchPersonaRequest(BaseModel):
     persona_id: str
 
 @router.get("")
-def get_current_profile(persona_id: Optional[str] = None):
-    target = persona_id or engine.active_persona_id
-    if target not in PERSONA_PRESETS:
-        raise HTTPException(status_code=404, detail="Persona not found")
-    return engine.get_persona(target)
+def get_current_profile(principal=Depends(current_principal), db=Depends(get_db)):
+    return effective_profile(db, principal.user_id)
 
 @router.get("/presets")
 def list_presets():
@@ -30,8 +30,5 @@ def list_presets():
     ]
 
 @router.post("/switch")
-def switch_persona(payload: SwitchPersonaRequest):
-    if payload.persona_id not in PERSONA_PRESETS:
-        raise HTTPException(status_code=400, detail="Invalid persona ID")
-    engine.active_persona_id = payload.persona_id
-    return {"status": "success", "active_persona": engine.get_persona(payload.persona_id)}
+def switch_persona(payload: SwitchPersonaRequest, principal=Depends(current_principal)):
+    raise HTTPException(410, "Use authenticated persona assignment during onboarding.")

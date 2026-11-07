@@ -101,63 +101,16 @@ class TestNutriGraphEngine(unittest.TestCase):
         self.assertIn("total_edges", data)
 
     def test_09_api_recommend_endpoint(self):
-        """Tests GET /api/graph/recommend/{persona_id}."""
-        persona_id = "PREV_AGNES_MENTENG_003"
-        response = self.client.get(f"/api/graph/recommend/{persona_id}?top_k=3")
-        self.assertEqual(response.status_code, 200)
-        data = response.json()
-        self.assertEqual(data["persona_id"], persona_id)
-        self.assertEqual(len(data["recommendations"]), 3)
+        self.assertEqual(self.client.get("/api/graph/recommend/PREV_AGNES_MENTENG_003").status_code, 401)
 
     def test_10_api_coach_endpoint(self):
-        """Tests POST /api/graph/coach (deterministic fallback or OpenAI promotion)."""
-        payload = {
-            "persona_id": "DIGE_RANGGA_KUNINGAN_070",
-            "food_id": "FS-ID-176",
-            "user_query": "Apakah menu ini aman untuk lambung saya?"
-        }
-        response = self.client.post("/api/graph/coach", json=payload)
-        self.assertEqual(response.status_code, 200)
-        data = response.json()
-        self.assertIn("mode", data)
-        self.assertIn("coaching_message", data)
-        self.assertIn("graph_evidence", data)
+        self.assertEqual(self.client.post("/api/graph/coach", json={"persona_id": "other", "food_id": "unknown"}).status_code, 401)
 
-    def test_11_flexible_id_resolution(self):
-        """Tests that Clerk user_id and DISH-FS-xxx format seamlessly resolve without 404."""
-        # Check safety with clerk ID and catalog dish format
-        response = self.client.get("/api/graph/check-dish/user_3LdSuzBP84WASHC2BC7vliRK52R/DISH-FS-001")
-        self.assertEqual(response.status_code, 200)
-        data = response.json()
-        self.assertIn("is_safe", data)
-        self.assertIn("resolved_persona_id", data)
-        self.assertIn("resolved_food_id", data)
+    def test_11_unknown_entities_are_not_substituted(self):
+        from backend.app.services.knowledge_graph import nutrigraph_engine
+        self.assertEqual(nutrigraph_engine.resolve_dish_id("DISH-FS-001"), "UNKNOWN")
+        self.assertEqual(nutrigraph_engine.resolve_persona_id("unknown-user"), "UNKNOWN")
+        self.assertFalse(nutrigraph_engine.check_clinical_safety("unknown-user", "unknown-dish")["is_safe"])
 
-        # Check explain endpoint with persona prefix and dish name
-        response_exp = self.client.get("/api/graph/explain/CORP_LILY_SCBD/DISH-FS-002")
-        self.assertEqual(response_exp.status_code, 200)
-        data_exp = response_exp.json()
-        self.assertIn("explanation_narrative", data_exp)
-        self.assertIn("clinical_citations", data_exp)
-
-    def test_12_chat_with_nutrigraph_guardrails(self):
-        """Tests that chat consultation automatically injects NutriGraph guardrails into the response."""
-        payload = {
-            "message": "Apakah menu Ayam Geprek Sambal Korek aman untuk makan siang saya?",
-            "user_id": "user_3LdSuzBP84WASHC2BC7vliRK52R",
-            "dish_context": "Paket Ayam Geprek Sambal Korek"
-        }
-        response = self.client.post("/api/ai/chat", json=payload)
-        self.assertEqual(response.status_code, 200)
-        data = response.json()
-        self.assertIn("reply", data)
-        self.assertIn("model", data)
-        # Reply must reference knowledge graph or clinical guideline
-        reply_lower = data["reply"].lower()
-        self.assertTrue(
-            "knowledge graph" in reply_lower or "pedoman" in reply_lower or "klinis" in reply_lower or "aman" in reply_lower
-        )
-
-
-if __name__ == "__main__":
-    unittest.main()
+    def test_12_chat_requires_authentication(self):
+        self.assertEqual(self.client.post("/api/ai/chat", json={"message": "hello", "user_id": "other"}).status_code, 401)

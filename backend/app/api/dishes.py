@@ -1,6 +1,6 @@
 from typing import Optional, List, Dict, Any
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 from ..core.database import get_db
 from ..models.menu_item import MenuItem
 from ..models.merchant import Merchant
@@ -20,8 +20,6 @@ def serialize_dish(
         for t in item.tags:
             tag_name = t.tag.replace("_", " ").title()
             healthy_tags.append(tag_name)
-    if not healthy_tags:
-        healthy_tags = ["Minyak Baru", "Pilihan Sehat"]
 
     # Outlet and brand info: prioritize Restaurant outlet, fallback to Merchant
     outlet_name = restaurant.name if restaurant else (merchant.name if merchant else "Warteg Berkah Mandiri")
@@ -33,6 +31,8 @@ def serialize_dish(
 
     return {
         "id": item.id,
+        "merchantId": item.merchant_id,
+        "nutritionSource": item.nutrition_source.value if item.nutrition_source else None,
         "name": item.name,
         "category": item.category,
         "restaurantId": item.restaurant_id,
@@ -54,9 +54,10 @@ def serialize_dish(
             "fatG": float(item.fat_g),
             "sodiumMg": item.sodium_mg
         },
-        "cookingNotes": item.default_notes or "Instruksi khusus NutriSea: minyak baru & rendah garam",
-        "hygieneBadges": item.hygiene_badges or ["Minyak Baru Terverifikasi", "Dapur Higienis"],
+        "cookingNotes": item.default_notes or "",
+        "hygieneBadges": item.hygiene_badges or [],
         "allergens": item.allergens or [],
+        "allergenCoverage": "unknown",
         "isAvailable": item.is_available if item.is_available is not None else True,
         "personas": item.matched_personas or [],
         "matchedPersonas": item.matched_personas or []
@@ -76,7 +77,7 @@ def list_dishes(
     Supports filtering by category, merchant, restaurant, and persona_id.
     """
     query = (
-        db.query(MenuItem, Restaurant, Merchant)
+        db.query(MenuItem, Restaurant, Merchant).options(selectinload(MenuItem.tags))
         .outerjoin(Restaurant, MenuItem.restaurant_id == Restaurant.id)
         .outerjoin(Merchant, MenuItem.merchant_id == Merchant.id)
     )
@@ -107,7 +108,7 @@ def get_dish(dish_id: str, db: Session = Depends(get_db)):
     Returns a single dish by ID with full nutritional, restaurant, and merchant data.
     """
     result = (
-        db.query(MenuItem, Restaurant, Merchant)
+        db.query(MenuItem, Restaurant, Merchant).options(selectinload(MenuItem.tags))
         .outerjoin(Restaurant, MenuItem.restaurant_id == Restaurant.id)
         .outerjoin(Merchant, MenuItem.merchant_id == Merchant.id)
         .filter(MenuItem.id == dish_id)

@@ -77,6 +77,32 @@ class AccountOnboardingTests(unittest.TestCase):
         with self.sessions() as db:
             self.assertEqual(db.get(AppUser, "user-new").streak_days, 9)
 
+    def test_explicit_dietary_answers_roundtrip_without_becoming_a_diagnosis(self):
+        self.sync()
+        selection = {**self.selection, "dietary_needs": ["I need to limit salt.", "I need food that is gentle on my stomach."],
+            "dietary_guidance": "personal", "allergy_status": "undisclosed"}
+        self.assertEqual(self.client.post("/api/personas/users/user-new/assign", json=selection).status_code, 200)
+        account = self.sync()
+        self.assertCountEqual(account["dietary_needs"], selection["dietary_needs"])
+        self.assertEqual(account["dietary_guidance"], "personal")
+        self.assertEqual(account["allergy_status"], "undisclosed")
+        self.assertFalse(account["profile"]["has_medical_condition"])
+        self.assertEqual(self.client.post("/api/personas/users/user-new/assign", json=self.selection).status_code, 200)
+        self.assertCountEqual(self.sync()["dietary_needs"], selection["dietary_needs"])
+
+    def test_undisclosed_answers_preserve_existing_allergies_and_unknown_state(self):
+        account = self.sync()
+        self.assertIsNone(account["dietary_needs"])
+        self.assertIsNone(account["allergy_status"])
+        known = {**self.selection, "profile": {**self.profile, "allergies": ["egg"], "has_medical_condition": True}, "allergy_status": "reported"}
+        self.assertEqual(self.client.post("/api/personas/users/user-new/assign", json=known).status_code, 200)
+        hidden = {**self.selection, "allergy_status": "undisclosed"}
+        self.assertEqual(self.client.post("/api/personas/users/user-new/assign", json=hidden).status_code, 200)
+        profile = self.sync()["profile"]
+        self.assertEqual(profile["allergies"], ["egg"])
+        self.assertTrue(profile["has_medical_condition"])
+        self.assertEqual(self.client.get("/api/users/user-new/health-profile").json()["occupation"], "Engineer")
+
     def test_switching_accounts_never_reuses_the_previous_persona_or_profile(self):
         self.sync()
         self.client.post("/api/personas/users/user-new/assign", json=self.selection)

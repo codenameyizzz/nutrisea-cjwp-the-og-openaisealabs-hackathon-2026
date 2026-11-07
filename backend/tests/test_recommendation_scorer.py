@@ -195,6 +195,8 @@ class TestRecommendationScorer(unittest.TestCase):
 
         self.assertFalse(passes_hard_filters(self.sample_dish_allergens, profile_with_allergy))
         self.assertFalse(passes_hard_filters(self.sample_dish_unavailable, self.sample_profile))
+        self.assertFalse(passes_hard_filters(self.sample_dish_1, profile_with_allergy))
+        self.sample_dish_1["allergenCoverage"] = "complete"
         self.assertTrue(passes_hard_filters(self.sample_dish_1, profile_with_allergy))
 
         # In ranking, excluded dishes must not appear
