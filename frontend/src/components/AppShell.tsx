@@ -5,7 +5,6 @@ import { Suspense } from "react";
 import AiAssistantModal from "@/components/AiAssistantModal";
 import BottomNav from "@/components/BottomNav";
 import DemoBar from "@/components/DemoBar";
-import RoleTabsBar from "@/components/RoleTabsBar";
 import SeaBankModal from "@/components/SeaBankModal";
 import ShopeeFooter from "@/components/ShopeeFooter";
 import ShopeeHeader from "@/components/ShopeeHeader";
@@ -25,11 +24,6 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
     return (
       <div className="app-wrapper">
-        {pathname?.startsWith("/onboarding") && (
-          <Suspense fallback={null}>
-            <RoleTabsBar />
-          </Suspense>
-        )}
         <main className="auth-main">{children}</main>
       </div>
     );
@@ -37,11 +31,6 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="app-wrapper">
-      {/* Role Switcher Bar across all screens */}
-      <Suspense fallback={null}>
-        <RoleTabsBar />
-      </Suspense>
-
       <Suspense fallback={null}>
         <ShopeeHeader />
       </Suspense>

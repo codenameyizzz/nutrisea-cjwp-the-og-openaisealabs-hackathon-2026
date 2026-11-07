@@ -24,7 +24,7 @@ import { AUTH_ROUTES } from "@/domains/auth/config/auth-routes";
 export default function ShopeeHeader() {
   const pathname = usePathname();
   const router = useRouter();
-  const { cartCount, setIsSeaBankOpen, searchQuery, setSearchQuery, logUserAction, availableRoles } = useApp();
+  const { cartCount, setIsSeaBankOpen, searchQuery, setSearchQuery, logUserAction, availableRoles, setActiveRole } = useApp();
   const { signOut } = useClerk();
   const { user } = useUser();
   const [isSigningOut, setIsSigningOut] = useState(false);
@@ -74,7 +74,7 @@ export default function ShopeeHeader() {
         <div className="navbar-top-row">
           {/* Logo: NutriSea by Shopeefood with white stroke */}
           <div className="navbar-brand-group">
-            <Link href="/" className="navbar-brand-logo" aria-label="NutriSea by ShopeeFood home">
+            <Link href="/" onClick={() => setActiveRole("CONSUMER")} className="navbar-brand-logo" aria-label="NutriSea by ShopeeFood home">
               <img
                 src="/assets/NutriSea%20by%20Shopeefood.png"
                 alt="NutriSea by ShopeeFood"
@@ -93,6 +93,7 @@ export default function ShopeeHeader() {
               onChange={(e) => setSearchQuery(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === "Enter" && searchQuery.trim().length >= 2) {
+                  setActiveRole("CONSUMER");
                   logUserAction("SEARCH_QUERY", { query: searchQuery.trim() });
                   if (pathname !== "/") router.push("/#all-dishes-catalog");
                 }
@@ -103,6 +104,7 @@ export default function ShopeeHeader() {
               aria-label="Search"
               onClick={() => {
                 if (searchQuery.trim().length >= 2) {
+                  setActiveRole("CONSUMER");
                   logUserAction("SEARCH_QUERY", { query: searchQuery.trim() });
                   if (pathname !== "/") router.push("/#all-dishes-catalog");
                 }
@@ -116,6 +118,7 @@ export default function ShopeeHeader() {
           <nav className="desktop-nav-links" aria-label="Main navigation">
             <Link
               href="/"
+              onClick={() => setActiveRole("CONSUMER")}
               className={`desktop-nav-link ${pathname === "/" ? "active" : ""}`}
             >
               <Utensils size={14} /> Food menu
@@ -208,6 +211,15 @@ export default function ShopeeHeader() {
                 >
                   <UserRound size={14} />
                   View profile
+                </Link>
+
+                <Link
+                  href="/onboarding?change=true"
+                  className="desktop-nav-profile-detail"
+                  onClick={() => setIsProfileOpen(false)}
+                >
+                  <UserRound size={14} />
+                  Switch role
                 </Link>
 
                 {signOutError && (

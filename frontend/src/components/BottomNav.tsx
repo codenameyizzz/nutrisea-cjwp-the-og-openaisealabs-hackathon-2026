@@ -8,12 +8,13 @@ import { useApp } from "@/context/AppContext";
 
 export default function BottomNav() {
   const pathname = usePathname();
-  const { cartCount, activeRole, availableRoles } = useApp();
+  const { cartCount, activeRole, availableRoles, setActiveRole } = useApp();
 
   return (
     <nav className="app-bottom-nav" aria-label="Main navigation">
       <Link
         href="/"
+        onClick={() => setActiveRole("CONSUMER")}
         aria-current={pathname === "/" ? "page" : undefined}
         className={`nav-item-btn ${pathname === "/" ? "active" : ""}`}
       >
