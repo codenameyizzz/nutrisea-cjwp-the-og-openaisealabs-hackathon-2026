@@ -302,6 +302,19 @@ Rekam satu demo berhasil setelah versi stabil tersedia. Periksa bahwa rekaman ti
 
 ## Status pekerjaan tim
 
+### Integrasi perubahan Firman
+
+Perubahan commit `9bb0084` dari repo `nutrisea-openai-sea-hackathon` disalin ke working tree ini tanpa pull, merge, atau cherry-pick Git. File sumber tetap utuh.
+
+- Halaman utama menggabungkan AccountSessionContext baru dengan rekomendasi adaptif yang sudah dibuat.
+- Chat mempertahankan penyimpanan preferensi eksplisit dan menghapus fallback ID akun contoh sesuai commit sumber.
+- Rekomendasi backend mengikuti profil akun sendiri, tanpa menyalin alergi atau kondisi medis persona referensi.
+- Checkout kini menerima perbaikan dari Firman: token autentikasi, pemeriksaan onboarding, serta sukses hanya setelah respons backend berhasil. Validasi harga server dan idempotensi tetap perlu diperiksa terpisah.
+- Baris pembuka `CREATE TABLE ingredients (` yang hilang pada commit sumber dipulihkan. Tidak ada migrasi dijalankan ke database.
+- Typecheck lulus. Sebanyak 49 test frontend lulus. Dari 89 test backend, satu test migrasi awalnya gagal; setelah perbaikan, seluruh 24 test pada suite ingredients lulus saat dijalankan ulang. Test lainnya termasuk preferensi adaptif lulus pada run penuh.
+- Tidak ada marker konflik tersisa. Verifikasi ini tidak menggantikan uji login browser dan JWT nyata.
+- Autentikasi baru membutuhkan custom session claim Clerk `metadata` berisi public metadata. Dokumentasi sumber menyatakan konfigurasi instance sudah diterapkan; sesi browser lama perlu mengambil token baru.
+
 ### Hasil implementasi tahap pertama
 
 Branch: `fix/adaptive-preferences`. Perubahan belum di-commit atau di-push oleh Codex.

@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "node --import ./tests/register-css.mjs --import tsx --test src/services/*.test.ts src/components/ingredients/*.test.tsx src/components/merchant/*.test.tsx",
+    "test": "node --import ./tests/register-css.mjs --import tsx --test src/services/*.test.ts src/components/auth/*.test.tsx src/components/ingredients/*.test.tsx src/components/merchant/*.test.tsx",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

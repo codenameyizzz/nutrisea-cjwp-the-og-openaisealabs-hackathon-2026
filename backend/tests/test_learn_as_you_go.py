@@ -1,4 +1,6 @@
 import unittest
+from unittest.mock import patch
+from backend.app.core.ingredient_auth import IngredientPrincipal
 from fastapi.testclient import TestClient
 from backend.app.main import app
 from backend.app.core.database import SessionLocal, create_all_tables
@@ -206,7 +208,8 @@ class TestLearnAsYouGo(unittest.TestCase):
         self.assertGreater(len(reply), 30)
 
         # Check that memories endpoint reflects the stored facts
-        mem_res = self.client.get(f"/api/users/{self.test_user_id}/memories")
+        with patch("backend.app.core.ingredient_auth.verify_session", return_value=IngredientPrincipal(self.test_user_id, "CONSUMER")):
+            mem_res = self.client.get(f"/api/users/{self.test_user_id}/memories", headers={"Authorization": "Bearer test-session"})
         self.assertEqual(mem_res.status_code, 200)
         self.assertGreaterEqual(mem_res.json()["count"], 1)
 

@@ -45,10 +45,16 @@ test("pending applicant sees status and can keep shopping without duplicate form
 });
 
 test("approved applicant sees merchant dashboard while retaining customer messaging", async () => {
-  await mount({ application: { ...application, status: "APPROVED", merchant_id: "MTR-approved" } });
+  await mount({ hasAccess: true, application: { ...application, status: "APPROVED", merchant_id: "MTR-approved" } });
   assert.equal(host.querySelector('a[href="/merchant"]')?.textContent, "Buka Dashboard Merchant");
   assert.match(host.textContent!, /tetap dapat berbelanja/);
   assert.equal(host.querySelector("form"), null);
+});
+
+test("database approval without session permission waits for access refresh", async () => {
+  await mount({ hasAccess: false, application: { ...application, status: "APPROVED", merchant_id: "MTR-approved" } });
+  assert.equal(host.querySelector('a[href="/merchant"]'), null);
+  assert.match(host.textContent!, /Perbarui sesi dan akses/);
 });
 
 test("rejected application shows review reason and populated resubmission form", async () => {

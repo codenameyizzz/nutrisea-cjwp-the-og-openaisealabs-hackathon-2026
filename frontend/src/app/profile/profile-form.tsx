@@ -3,11 +3,13 @@
 import { useAuth, useUser } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
-import { API_BASE_URL } from "@/lib/api";
+import { API_BASE_URL, responseJson } from "@/lib/api";
+import { ACCOUNT_UPDATED } from "@/services/account-session";
+import { useAccountSession } from "@/context/AccountSessionContext";
 import { AUTH_ROUTES } from "@/domains/auth/config/auth-routes";
 import styles from "./profile.module.css";
 import {
-  isNutriSeaProfile,
+  profileFormValue,
   type Allergy,
   type Goal,
   type NutriSeaProfile,
@@ -41,9 +43,9 @@ function ProfileEditor({
 }) {
   const router = useRouter();
   const { getToken } = useAuth();
+  const { account } = useAccountSession();
   const [profile, setProfile] = useState<NutriSeaProfile>(() => {
-    const savedProfile = user.unsafeMetadata.nutriSeaProfile;
-    return isNutriSeaProfile(savedProfile) ? savedProfile : EMPTY_PROFILE;
+    return account?.profile ? profileFormValue(account.profile) : EMPTY_PROFILE;
   });
   const [isSaving, setIsSaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -74,50 +76,18 @@ function ProfileEditor({
     setIsSaving(true);
 
     try {
-      await user.update({
-        unsafeMetadata: {
-          ...user.unsafeMetadata,
-          nutriSeaProfile: profile,
-        },
-      });
-
-      // Synchronize with PostgreSQL database on Aiven Cloud
-      try {
-        const token = await getToken();
-        if (!token) throw new Error("Silakan masuk kembali.");
-        await fetch(`${API_BASE_URL}/api/users/sync`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-          body: JSON.stringify({
-            user_id: user.id,
-            name: user.fullName || user.firstName || "NutriSea User",
-            email: user.primaryEmailAddress?.emailAddress || null,
-            consent_health_data: true,
-          }),
-        });
-
-        await fetch(`http://127.0.0.1:8000/api/users/${user.id}/health-profile`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            age: Number(profile.age) || 26,
-            sex: profile.gender === "laki-laki" ? "M" : "F",
-            height_cm: Number(profile.heightCm) || 165,
-            weight_kg: Number(profile.weightKg) || 60,
-            activity_level: "LIGHT",
-            goal:
-              profile.goal === "turun-berat-badan"
-                ? "LOSE_WEIGHT"
-                : "MAINTAIN",
-            allergies: profile.allergies,
-            meal_budget_idr: Number(profile.mealBudget) || 35000,
-            has_medical_condition: false,
-            max_dinner_cut_pct: 25,
-          }),
-        });
-      } catch (backendError) {
-        console.warn("Backend PostgreSQL sync warning:", backendError);
-      }
+      const token = await getToken();
+      if (!token) throw new Error("Silakan masuk kembali.");
+      await responseJson(await fetch(`${API_BASE_URL}/api/users/${user.id}/health-profile`, {
+        method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ age: Number(profile.age), sex: profile.gender === "laki-laki" ? "M" : "F",
+          height_cm: Number(profile.heightCm), weight_kg: Number(profile.weightKg), occupation: profile.occupation,
+          activity_level: account?.profile?.activity_level || "LIGHT",
+          goal: profile.goal === "turun-berat-badan" ? "LOSE_WEIGHT" : "MAINTAIN", allergies: profile.allergies,
+          meal_budget_idr: Number(profile.mealBudget), has_medical_condition: account?.profile?.has_medical_condition || false,
+          max_dinner_cut_pct: account?.profile?.max_dinner_cut_pct ?? 25 })
+      }));
+      window.dispatchEvent(new Event(ACCOUNT_UPDATED));
 
       router.push(AUTH_ROUTES.PROFILE);
     } catch (error) {

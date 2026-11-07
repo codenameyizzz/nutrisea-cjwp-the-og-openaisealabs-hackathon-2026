@@ -5,7 +5,6 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useUser, useAuth } from "@clerk/nextjs";
 import { API_BASE_URL, responseJson } from "@/lib/api";
-import { AUTH_ROUTES } from "@/domains/auth/config/auth-routes";
 import {
   Utensils,
   Plus,
@@ -24,6 +23,7 @@ import {
 import { DishItem, fetchMenuCatalog } from "@/data/menu";
 import { rankRecommendations, UserRecommendationProfile } from "@/services/recommendationScorer";
 import { useApp } from "@/context/AppContext";
+import { useAccountSession } from "@/context/AccountSessionContext";
 
 interface AiRecommendation {
   source?: string;
@@ -78,102 +78,20 @@ export default function HomePage() {
     availableRoles, roleAccessLoaded,
   } = useApp();
 
-  const [isCheckingDbPersona, setIsCheckingDbPersona] = useState(true);
-  const [verifiedPersonaId, setVerifiedPersonaId] = useState<string | null>(null);
-  const [secondaryPersonaIds, setSecondaryPersonaIds] = useState<string[]>([]);
-  const [userPersona, setUserPersona] = useState<any | null>(null);
+  const { account } = useAccountSession();
+  const verifiedPersonaId = account?.main_persona_id || null;
+  const secondaryPersonaIds = useMemo(() => account?.side_persona_ids || [], [account]);
+  const userPersona = account?.main_persona;
   const carouselRef = useRef<HTMLDivElement>(null);
-
   const scrollCarousel = (direction: "left" | "right") => {
-    if (carouselRef.current) {
-      const offset = direction === "left" ? -320 : 320;
-      carouselRef.current.scrollBy({ left: offset, behavior: "smooth" });
-    }
+    carouselRef.current?.scrollBy({ left: direction === "left" ? -320 : 320, behavior: "smooth" });
   };
-
-  // Route guard: queries PostgreSQL database directly. If user has no persona in DB, redirect to onboarding
   useEffect(() => {
-    if (!isLoaded || !roleAccessLoaded) return;
-
-    if (!isSignedIn || !user) {
-      router.replace(AUTH_ROUTES.SIGN_IN);
-      return;
-    }
-
+    if (!isLoaded || !isSignedIn || !roleAccessLoaded) return;
     const currentRole = availableRoles.includes(activeRole) ? activeRole : "CONSUMER";
-    if (currentRole === "MERCHANT") {
-      router.replace("/merchant");
-      return;
-    }
-    if (currentRole === "SHOPEE_ADMIN") {
-      router.replace("/admin");
-      return;
-    }
-
-    const verifyDatabasePersona = async () => {
-      try {
-        const res = await fetch(`http://127.0.0.1:8000/api/personas/users/${user.id}/personas`);
-        if (res.ok) {
-          const data = await res.json();
-          const personaId = data.main_persona_id || data.main_persona?.id;
-          if (personaId) {
-            // Persona confirmed in PostgreSQL database!
-            setVerifiedPersonaId(personaId);
-            setUserPersona(data.main_persona || null);
-            if (data.side_persona_ids && Array.isArray(data.side_persona_ids)) {
-              setSecondaryPersonaIds(data.side_persona_ids);
-            }
-            if (typeof window !== "undefined") {
-              localStorage.setItem("nutrisea_main_persona", personaId);
-              if (data.side_persona_ids) {
-                localStorage.setItem("nutrisea_side_personas", JSON.stringify(data.side_persona_ids));
-              }
-            }
-            setIsCheckingDbPersona(false);
-            return;
-          }
-        }
-
-        // If DB returned 404 or persona is null, check Clerk metadata fallback
-        const fallbackClerkPersona = (user.unsafeMetadata?.main_persona_id as string) || (typeof window !== "undefined" ? localStorage.getItem("nutrisea_main_persona") : null);
-        if (fallbackClerkPersona) {
-          setVerifiedPersonaId(fallbackClerkPersona);
-          if (typeof window !== "undefined") {
-            const savedSides = localStorage.getItem("nutrisea_side_personas");
-            if (savedSides) {
-              try { setSecondaryPersonaIds(JSON.parse(savedSides)); } catch {}
-            }
-          }
-          setIsCheckingDbPersona(false);
-          fetch(`http://127.0.0.1:8000/api/personas?search=${fallbackClerkPersona}`)
-            .then((r) => r.json())
-            .then((ps) => {
-              if (ps && ps[0]) setUserPersona(ps[0]);
-            })
-            .catch(() => {});
-          return;
-        }
-
-        // Truly no persona in DB or metadata -> route to onboarding screen
-        if (typeof window !== "undefined") {
-          localStorage.removeItem("nutrisea_main_persona");
-          localStorage.removeItem("nutrisea_side_personas");
-        }
-        router.replace(AUTH_ROUTES.PERSONA_SELECTION);
-      } catch (err) {
-        console.warn("DB persona check network notice:", err);
-        const fallbackPersona = (user.unsafeMetadata?.main_persona_id as string) || (typeof window !== "undefined" ? localStorage.getItem("nutrisea_main_persona") : null);
-        if (fallbackPersona) {
-          setVerifiedPersonaId(fallbackPersona);
-          setIsCheckingDbPersona(false);
-        } else {
-          router.replace(AUTH_ROUTES.PERSONA_SELECTION);
-        }
-      }
-    };
-
-    verifyDatabasePersona();
-  }, [isLoaded, isSignedIn, user?.id, activeRole, router, roleAccessLoaded, availableRoles]);
+    if (currentRole === "MERCHANT") router.replace("/merchant");
+    if (currentRole === "SHOPEE_ADMIN") router.replace("/admin");
+  }, [isLoaded, isSignedIn, roleAccessLoaded, availableRoles, activeRole, router]);
 
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [aiRec, setAiRec] = useState<AiRecommendation | null>(null);
@@ -195,6 +113,11 @@ export default function HomePage() {
     setCandidateIds([]);
     setPreferenceSummary("");
     setRecommendationError("");
+    if (!account?.onboarding_complete) {
+      setRecommendationError(isSignedIn ? "Lengkapi profil untuk melihat rekomendasi Anda." : "Masuk untuk melihat rekomendasi Anda.");
+      setIsLoadingAi(false);
+      return;
+    }
     try {
       const token = await getToken();
       if (!token) throw new Error("Silakan masuk untuk melihat rekomendasi Anda.");
@@ -220,7 +143,7 @@ export default function HomePage() {
     } finally {
       if (requestId === recommendationRequest.current) setIsLoadingAi(false);
     }
-  }, [getToken, user?.id]);
+  }, [getToken, user?.id, account, isSignedIn]);
 
   useEffect(() => {
     setIsLoadingCatalog(true);
@@ -245,16 +168,16 @@ export default function HomePage() {
     return {
       primaryPersonaId: verifiedPersonaId || undefined,
       secondaryPersonaIds: secondaryPersonaIds.length > 0 ? secondaryPersonaIds : (userPersona?.side_persona_ids || undefined),
-      targetBudget: userPersona?.target_lunch_budget_idr,
-      healthGoal: userPersona?.health_goal || activityGoal,
+      targetBudget: account?.profile?.meal_budget_idr,
+      healthGoal: activityGoal,
       archetypeCode: userPersona?.archetype_code,
-      targetLunchKcal: userPersona?.target_lunch_kcal || (bmiStats?.targetCalories ? Math.round(bmiStats.targetCalories * 0.4) : undefined),
+      targetLunchKcal: account?.profile?.kcal_target ? Math.round(account.profile.kcal_target * 0.4) : undefined,
       preferredTags: userPersona?.preferred_tags || undefined,
       preferredCuisines: userPersona?.preferred_cuisines || undefined,
-      allergens: userPersona?.allergens && userPersona.allergens !== "NONE" ? userPersona.allergens : undefined,
-      medicalConditions: userPersona?.medical_conditions && userPersona.medical_conditions !== "NONE" ? userPersona.medical_conditions : undefined
+      allergens: account?.profile?.allergies.join(",") || undefined,
+      medicalConditions: undefined
     };
-  }, [verifiedPersonaId, secondaryPersonaIds, userPersona, activityGoal, bmiStats]);
+  }, [verifiedPersonaId, secondaryPersonaIds, userPersona, activityGoal, account]);
 
   // Full scored recommendations
   const allScoredDishes = useMemo(() => {
@@ -324,25 +247,6 @@ export default function HomePage() {
 
   const protein =
     aiRec?.selected_meal?.estimated_macros?.protein_g || 36;
-
-  if (!isLoaded || (isSignedIn && isCheckingDbPersona && activeRole === "CONSUMER")) {
-    return (
-      <div style={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "60vh" }}>
-        <div style={{ textAlign: "center", color: "#64748B" }}>
-          <div style={{
-            width: 28,
-            height: 28,
-            border: "3px solid rgba(238,77,45,0.2)",
-            borderTopColor: "#EE4D2D",
-            borderRadius: "50%",
-            animation: "spin 0.8s linear infinite",
-            margin: "0 auto 12px auto"
-          }} />
-          <p style={{ fontSize: 13, fontWeight: 600 }}>Memeriksa profil persona...</p>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <>
@@ -633,15 +537,15 @@ export default function HomePage() {
                 </span>
                 {userPersona && (
                   <span className="shopee-rec-persona-tag">
-                    👤 {userPersona.full_name} ({userPersona.archetype_name})
+                    👤 {account?.user.name || "Customer"} ({userPersona.archetype_name})
                   </span>
                 )}
               </div>
               <h2 className="shopee-rec-title">
-                Menu Pilihan Sesuai Profil Gizi & Batasan Medis Kamu
+                Menu Pilihan Berdasarkan Profil dan Persona Kamu
               </h2>
               <p className="shopee-rec-sub">
-                Top {recommendedDishes.length} menu dengan kecocokan di atas 70% {userPersona?.target_lunch_kcal ? `• Target: ${userPersona.target_lunch_kcal} kcal` : ""} • {userPersona?.medical_conditions && userPersona.medical_conditions !== "NONE" ? `Aman: ${userPersona.medical_conditions}` : "Nutrisi seimbang & minyak baru"}
+                Top {recommendedDishes.length} menu berdasarkan preferensi dan persona pilihanmu.
               </p>
             </div>
 
@@ -823,7 +727,7 @@ export default function HomePage() {
       <section className="category-filter-bar">
         {[
           { key: "semua", label: "Semua Menu" },
-          ...(verifiedPersonaId ? [{ key: "persona", label: `✨ Khusus ${userPersona?.full_name ? userPersona.full_name.split(" ")[0] : "Persona"} (${recommendedDishes.length})` }] : []),
+          ...(verifiedPersonaId ? [{ key: "persona", label: `✨ Khusus ${user?.firstName || "Kamu"} (${recommendedDishes.length})` }] : []),
           { key: "hemat", label: "Budget Hemat (< 20rb)" },
           { key: "protein", label: "Tinggi Protein (> 25g)" },
           { key: "rendah-kalori", label: "Rendah Kalori (< 350 kcal)" },
@@ -845,7 +749,7 @@ export default function HomePage() {
         <h2 className="section-title">
           <Utensils size={16} color="#EE4D2D" />
           {activeCategory === "persona"
-            ? `Menu Sesuai Persona: ${userPersona?.full_name || "Kamu"}`
+            ? `Menu Sesuai Persona: ${account?.user.name || "Kamu"}`
             : "Eksplor Menu Warteg & Resto Sehat"}
         </h2>
         <span className="section-count">

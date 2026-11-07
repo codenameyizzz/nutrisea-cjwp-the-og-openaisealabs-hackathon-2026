@@ -14,30 +14,33 @@ import {
   Flame
 } from "lucide-react";
 import { useApp } from "@/context/AppContext";
-import { useUser } from "@clerk/nextjs";
+import { useUser, useAuth } from "@clerk/nextjs";
+import { API_BASE_URL, responseJson } from "@/lib/api";
 
 export default function SeaBankModal() {
   const { isSeaBankOpen, setIsSeaBankOpen } = useApp();
   const { user } = useUser();
-  const [cashbackAmount, setCashbackAmount] = useState<number>(45000);
-  const [orderCount, setOrderCount] = useState<number>(9);
+  const { getToken } = useAuth();
+  const [cashbackAmount, setCashbackAmount] = useState<number>(0);
+  const [orderCount, setOrderCount] = useState<number>(0);
 
   useEffect(() => {
     if (!isSeaBankOpen) return;
-    const userId = user?.id || "CORP_LILY_SCBD";
-    fetch(`http://127.0.0.1:8000/api/users/${userId}/rewards`)
-      .then((res) => res.json())
-      .then((data) => {
-        if (typeof data.total_reward_idr === "number") {
-          // If user has orders in DB, show base + earned rewards
-          const earned = data.total_reward_idr;
-          setCashbackAmount(45000 + earned);
-          const historyCount = Array.isArray(data.history) ? data.history.length : 0;
-          setOrderCount(9 + historyCount);
-        }
-      })
-      .catch((err) => console.warn("Failed to fetch SeaBank rewards from PostgreSQL:", err));
-  }, [isSeaBankOpen, user?.id]);
+    setCashbackAmount(0); setOrderCount(0);
+    if (!user) return;
+    const controller = new AbortController();
+    const load = async () => {
+      try {
+        const token = await getToken();
+        if (!token || controller.signal.aborted) return;
+        const data = await responseJson<{ total_reward_idr: number; history: unknown[] }>(await fetch(
+          `${API_BASE_URL}/api/users/${user.id}/rewards`, { headers: { Authorization: `Bearer ${token}` }, signal: controller.signal }));
+        if (!controller.signal.aborted) { setCashbackAmount(data.total_reward_idr); setOrderCount(data.history?.length || 0); }
+      } catch { /* Keep an unavailable balance empty. */ }
+    };
+    void load();
+    return () => controller.abort();
+  }, [isSeaBankOpen, user, getToken]);
 
   if (!isSeaBankOpen) return null;
 

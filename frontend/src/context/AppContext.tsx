@@ -3,8 +3,9 @@
 import React, { createContext, useContext, useState, useMemo, useEffect, useCallback } from "react";
 import { DishItem } from "@/data/menu";
 import { useAuth } from "@clerk/nextjs";
-import { API_BASE_URL, responseJson } from "@/lib/api";
-import type { IngredientAccess } from "@/services/ingredient-types";
+import { sessionAccess } from "@/services/session-access";
+import { CART_STORAGE_KEY, CART_OWNER_KEY, restoreAccountCart } from "@/services/shopping-cart";
+import { useAccountSession } from "@/context/AccountSessionContext";
 
 export interface CartItem {
   dish: DishItem;
@@ -61,46 +62,37 @@ interface AppContextType {
   setSearchQuery: (query: string) => void;
 
   activeUserId: string;
-  setActiveUserId: (id: string) => void;
   logUserAction: (actionType: string, payload: Record<string, any>) => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
-  const [accessRevision, setAccessRevision] = useState(0);
-  const refreshAccountAccess = useCallback(() => setAccessRevision(current => current + 1), []);
+  const { account } = useAccountSession();
+  const { getToken, userId, sessionId, sessionClaims, isLoaded, isSignedIn } = useAuth();
+  const [refreshError, setRefreshError] = useState<{ sessionId: string; message: string } | null>(null);
+  const refreshAccountAccess = useCallback(() => {
+    if (!isSignedIn || !sessionId) return;
+    void getToken({ skipCache: true }).then(() => setRefreshError(null)).catch(() => {
+      setRefreshError({ sessionId, message: "Pembaruan sesi Clerk gagal. Silakan coba kembali." });
+    });
+  }, [getToken, isSignedIn, sessionId]);
   useEffect(() => {
     window.addEventListener("focus", refreshAccountAccess);
     return () => window.removeEventListener("focus", refreshAccountAccess);
   }, [refreshAccountAccess]);
-  const { getToken, userId, isLoaded, isSignedIn } = useAuth();
-  const [account, setAccount] = useState<{ userId: string; access?: IngredientAccess; error?: string } | null>(null);
-  useEffect(() => {
-    if (!isLoaded || !isSignedIn || !userId) return;
-    const controller = new AbortController();
-    const load = async () => {
-      try {
-        const token = await getToken();
-        if (!token) throw new Error("Silakan masuk kembali.");
-        const access = await responseJson<IngredientAccess>(await fetch(`${API_BASE_URL}/api/ingredients/access`, {
-          headers: { Authorization: `Bearer ${token}` }, signal: controller.signal, cache: "no-store",
-        }));
-        if (!controller.signal.aborted) setAccount({ userId, access });
-      } catch (error) {
-        if (!controller.signal.aborted) setAccount({ userId, error: error instanceof Error ? error.message : "Pemeriksaan akses gagal." });
-      }
-    };
-    void load();
-    return () => controller.abort();
-  }, [getToken, userId, isLoaded, isSignedIn, accessRevision]);
-  const access = account?.userId === userId ? account?.access : undefined;
+  const sessionAccessResult = useMemo(() => {
+    if (!isSignedIn) return {};
+    try { return { access: sessionAccess(sessionClaims) }; }
+    catch (error) { return { error: error instanceof Error ? error.message : "Pemeriksaan sesi gagal." }; }
+  }, [isSignedIn, sessionClaims]);
+  const access = sessionAccessResult.access;
   const availableRoles = useMemo<UserAppRole[]>(() => [
     "CONSUMER", ...(access?.can_edit_menus ? ["MERCHANT" as const] : []),
     ...(access?.is_admin ? ["SHOPEE_ADMIN" as const] : []),
   ], [access]);
-  const roleAccessLoaded = !!isLoaded && (!isSignedIn || account?.userId === userId);
-  const roleAccessError = account?.userId === userId ? account?.error || null : null;
+  const roleAccessLoaded = !!isLoaded;
+  const roleAccessError = sessionAccessResult.error || (refreshError?.sessionId === sessionId ? refreshError?.message : null) || null;
   const [activeRole, setActiveRoleState] = useState<UserAppRole>("CONSUMER");
   useEffect(() => {
     if (roleAccessLoaded && !availableRoles.includes(activeRole)) {
@@ -126,6 +118,22 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   };
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
+  const [cartRestored, setCartRestored] = useState(false);
+  useEffect(() => {
+    if (!isLoaded) return;
+    try {
+      const owner = userId || "guest";
+      setCartItems(restoreAccountCart(sessionStorage.getItem(CART_STORAGE_KEY), sessionStorage.getItem(CART_OWNER_KEY), owner));
+      sessionStorage.setItem(CART_OWNER_KEY, owner);
+    }
+    catch { /* Browsing still works when browser storage is unavailable. */ }
+    setCartRestored(true);
+  }, [isLoaded, userId]);
+  useEffect(() => {
+    if (!cartRestored) return;
+    try { sessionStorage.setItem(CART_STORAGE_KEY, JSON.stringify(cartItems)); }
+    catch { /* Keep the in-memory cart usable. */ }
+  }, [cartItems, cartRestored]);
   const [heightCm, setHeightCm] = useState<number>(160); // Lily SCBD default
   const [weightKg, setWeightKg] = useState<number>(52);  // Lily SCBD default
   const [activityGoal, setActivityGoal] = useState<"turun" | "ideal" | "otot">("ideal");
@@ -134,23 +142,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [isSeaBankOpen, setIsSeaBankOpen] = useState<boolean>(false);
   const [merchantDemoTrigger, setMerchantDemoTrigger] = useState<boolean>(false);
   const [searchQuery, setSearchQuery] = useState<string>("");
-  const [activeUserId, setActiveUserIdState] = useState<string>("user_3LdSuzBP84WASHC2BC7vliRK52R");
-
+  const activeUserId = isSignedIn ? userId : "";
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      const savedUser = localStorage.getItem("nutrisea_user_id");
-      if (savedUser) setActiveUserIdState(savedUser);
-    }
-  }, []);
-
-  const setActiveUserId = (id: string) => {
-    setActiveUserIdState(id);
-    if (typeof window !== "undefined") {
-      localStorage.setItem("nutrisea_user_id", id);
-    }
-  };
+    setHeightCm(account?.profile?.height_cm ?? 160);
+    setWeightKg(account?.profile?.weight_kg ?? 52);
+    setActivityGoal(account?.profile?.goal === "LOSE_WEIGHT" ? "turun" : account?.profile?.goal === "GAIN_MUSCLE" ? "otot" : "ideal");
+  }, [account]);
 
   const logUserAction = async (actionType: string, payload: Record<string, any>) => {
+    if (!activeUserId) return;
     try {
       const actionRecord = {
         action_type: actionType,
@@ -304,7 +304,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         searchQuery,
         setSearchQuery,
         activeUserId,
-        setActiveUserId,
         logUserAction
       }}
     >

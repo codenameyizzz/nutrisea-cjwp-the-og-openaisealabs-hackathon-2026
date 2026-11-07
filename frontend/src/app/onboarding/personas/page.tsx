@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { useUser } from "@clerk/nextjs";
+import { useAuth, useUser } from "@clerk/nextjs";
 import {
   Sparkles,
   ArrowRight,
@@ -20,6 +20,9 @@ import {
 } from "lucide-react";
 import { useApp } from "@/context/AppContext";
 import { AUTH_ROUTES } from "@/domains/auth/config/auth-routes";
+import { API_BASE_URL, responseJson } from "@/lib/api";
+import { ACCOUNT_UPDATED } from "@/services/account-session";
+import { useAccountSession } from "@/context/AccountSessionContext";
 
 export interface PersonaItem {
   id: string;
@@ -328,9 +331,10 @@ const QUESTIONS = [
 ];
 
 export default function ShopeeStylePersonaOnboardingPage() {
+  const { getToken } = useAuth();
   const router = useRouter();
-  const { user, isLoaded } = useUser();
-  const { updateBmi, activeRole, availableRoles, roleAccessLoaded } = useApp();
+  const { user } = useUser();
+  const { updateBmi } = useApp();
 
   // Mode: "PROFILE" (Pre-questionnaire Biometrics) vs "QUIZ" (8 Persona Questions) vs "RESULT" (Shopee Reveal Screen) vs "MANUAL_TABLE"
   const [viewMode, setViewMode] = useState<"PROFILE" | "QUIZ" | "RESULT" | "MANUAL_TABLE">("PROFILE");
@@ -344,11 +348,11 @@ export default function ShopeeStylePersonaOnboardingPage() {
 
   // Initial Profile details (grounded in "Lengkapi profilmu")
   const [profileData, setProfileData] = useState<UserProfileData>({
-    age: "26",
+    age: "",
     gender: "laki-laki",
-    heightCm: "168",
-    weightKg: "62",
-    occupation: "Corporate Professional",
+    heightCm: "",
+    weightKg: "",
+    occupation: "",
     goal: "maintain",
     allergies: [],
     mealBudget: "35000"
@@ -381,56 +385,17 @@ export default function ShopeeStylePersonaOnboardingPage() {
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [selectedDistrict, setSelectedDistrict] = useState<string>("ALL");
 
-  // Prepopulate saved profile if present in Clerk
+  const { account } = useAccountSession();
   useEffect(() => {
-    if (!isLoaded || !user || !roleAccessLoaded) return;
-
-    if (user.unsafeMetadata?.nutriSeaProfile) {
-      const saved = user.unsafeMetadata.nutriSeaProfile as any;
-      setProfileData({
-        age: String(saved.age || "26"),
-        gender: saved.gender === "perempuan" ? "perempuan" : "laki-laki",
-        heightCm: String(saved.heightCm || "168"),
-        weightKg: String(saved.weightKg || "62"),
-        occupation: saved.occupation || "Corporate Professional",
-        goal: saved.goal === "turun-berat-badan" ? "turun-berat-badan" : "maintain",
-        allergies: Array.isArray(saved.allergies) ? saved.allergies : [],
-        mealBudget: String(saved.mealBudget || "35000")
-      });
-    }
-
-    if (typeof window !== "undefined") {
-      const params = new URLSearchParams(window.location.search);
-      if (params.get("change") === "true") return;
-    }
-
-    const checkExistingPersona = async () => {
-      try {
-        const currentRole = availableRoles.includes(activeRole) ? activeRole : "CONSUMER";
-        if (currentRole === "MERCHANT") {
-          router.replace("/merchant");
-          return;
-        }
-        if (currentRole === "SHOPEE_ADMIN") {
-          router.replace("/admin");
-          return;
-        }
-
-        const res = await fetch(`http://127.0.0.1:8000/api/personas/users/${user.id}/personas`);
-        if (res.ok) {
-          const data = await res.json();
-          const existingId = data.main_persona_id || data.main_persona?.id;
-          if (existingId) {
-            router.replace(AUTH_ROUTES.HOME);
-            return;
-          }
-        }
-      } catch (e) {
-        console.warn("Check persona warning:", e);
-      }
-    };
-    checkExistingPersona();
-  }, [isLoaded, user?.id, router, activeRole, availableRoles, roleAccessLoaded]);
+    if (!account) return;
+    const saved = account.profile;
+    if (saved) setProfileData({ age: String(saved.age), gender: saved.sex === "F" ? "perempuan" : "laki-laki",
+      heightCm: String(saved.height_cm), weightKg: String(saved.weight_kg), occupation: saved.occupation || "",
+      goal: saved.goal === "LOSE_WEIGHT" ? "turun-berat-badan" : "maintain", allergies: saved.allergies,
+      mealBudget: String(saved.meal_budget_idr) });
+    const changing = new URLSearchParams(window.location.search).get("change") === "true";
+    if (account.onboarding_complete && !changing) router.replace(AUTH_ROUTES.HOME);
+  }, [account, router]);
 
   // Background fetch of all 120 personas
   useEffect(() => {
@@ -565,35 +530,9 @@ export default function ShopeeStylePersonaOnboardingPage() {
       setManualMainId(result.main_persona.id);
       setManualSideIds(result.side_personas.map((p) => p.id));
       setViewMode("RESULT");
-    } catch (err: any) {
-      console.warn("Server match failed, using client-side fallback:", err);
-      const fallbackMain = personasList.find((p) => p.archetype_code === "CORP_OVERLOADED") || personasList[0];
-      const fallbackSides = personasList.filter((p) => p.id !== fallbackMain?.id).slice(0, 3);
-      if (fallbackMain) {
-        setMatchResult({
-          primary_archetype: {
-            code: fallbackMain.archetype_code,
-            name: fallbackMain.archetype_name,
-            score: 11.5,
-            confidence_percent: 94
-          },
-          secondary_archetype: {
-            code: "PREVENTIVE_HEALTH",
-            name: "The Preventive Health Starter",
-            score: 7.0
-          },
-          main_persona: fallbackMain,
-          side_personas: fallbackSides,
-          rationale: "This persona profile best aligns with your daily lunch routine and nutritional energy needs.",
-          dietary_safeguards: {
-            selected_restriction: activeAnswers.q3 || "None",
-            is_medical_guidance: activeAnswers.q3_followup.includes("Guidance")
-          }
-        });
-        setManualMainId(fallbackMain.id);
-        setManualSideIds(fallbackSides.map((p) => p.id));
-        setViewMode("RESULT");
-      }
+    } catch (err: unknown) {
+      setSaveError(err instanceof Error ? err.message : "Pencocokan persona gagal. Silakan coba lagi.");
+      setViewMode("QUIZ");
     } finally {
       setIsMatching(false);
     }
@@ -609,80 +548,24 @@ export default function ShopeeStylePersonaOnboardingPage() {
     setIsSaving(true);
     setSaveError(null);
 
-    const effectiveUserId = user?.id || "user_3LdSuzBP84WASHC2BC7vliRK52R";
-    const mainP = personasList.find((p) => p.id === chosenMainId) || matchResult?.main_persona;
+    const effectiveUserId = user?.id;
 
     try {
-      // 1. Sync persona assignment to PostgreSQL
-      const res = await fetch(`http://127.0.0.1:8000/api/personas/users/${effectiveUserId}/assign`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+      const token = await getToken();
+      if (!effectiveUserId || !token) throw new Error("Silakan masuk untuk menyimpan persona.");
+      await responseJson(await fetch(`${API_BASE_URL}/api/personas/users/${effectiveUserId}/assign`, {
+        method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({
-          main_persona_id: chosenMainId,
-          side_persona_ids: chosenSideIds,
-          name: user?.fullName || user?.firstName || "NutriSea User",
-          email: user?.primaryEmailAddress?.emailAddress || null,
-          role: activeRole || "CONSUMER"
+          main_persona_id: chosenMainId, side_persona_ids: chosenSideIds,
+          name: user?.fullName || user?.firstName || "NutriSea User", email: user?.primaryEmailAddress?.emailAddress || null,
+          profile: { age: Number(profileData.age), sex: profileData.gender === "laki-laki" ? "M" : "F",
+            height_cm: Number(profileData.heightCm), weight_kg: Number(profileData.weightKg), occupation: profileData.occupation,
+            activity_level: "LIGHT", goal: profileData.goal === "turun-berat-badan" ? "LOSE_WEIGHT" : "MAINTAIN",
+            allergies: profileData.allergies, meal_budget_idr: Number(profileData.mealBudget),
+            has_medical_condition: false, max_dinner_cut_pct: 25 }
         })
-      });
-
-      if (!res.ok) {
-        const errData = await res.json().catch(() => ({}));
-        throw new Error(errData.detail || "Failed to save persona to database");
-      }
-
-      // 2. Sync profile biometrics to PostgreSQL health-profile
-      try {
-        await fetch(`http://127.0.0.1:8000/api/users/${effectiveUserId}/health-profile`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            age: Number(profileData.age) || 26,
-            sex: profileData.gender === "laki-laki" ? "M" : "F",
-            height_cm: Number(profileData.heightCm) || 168,
-            weight_kg: Number(profileData.weightKg) || 62,
-            activity_level: "LIGHT",
-            goal: profileData.goal === "turun-berat-badan" ? "LOSE_WEIGHT" : "MAINTAIN",
-            allergies: profileData.allergies,
-            meal_budget_idr: Number(profileData.mealBudget) || 35000,
-            has_medical_condition: false,
-            max_dinner_cut_pct: 25
-          })
-        });
-      } catch (syncErr) {
-        console.warn("Backend health profile sync warning:", syncErr);
-      }
-
-      // 3. Save into Clerk unsafeMetadata
-      if (user) {
-        try {
-          await user.update({
-            unsafeMetadata: {
-              ...user.unsafeMetadata,
-              main_persona_id: chosenMainId,
-              side_persona_ids: chosenSideIds,
-              nutriSeaProfile: {
-                age: profileData.age,
-                gender: profileData.gender,
-                heightCm: profileData.heightCm,
-                weightKg: profileData.weightKg,
-                occupation: profileData.occupation,
-                goal: profileData.goal,
-                allergies: profileData.allergies,
-                mealBudget: profileData.mealBudget
-              }
-            }
-          });
-        } catch (clerkErr) {
-          console.warn("Clerk metadata warning:", clerkErr);
-        }
-      }
-
-      // 4. Save into LocalStorage for zero-latency instant reads
-      if (typeof window !== "undefined") {
-        localStorage.setItem("nutrisea_main_persona", chosenMainId);
-        localStorage.setItem("nutrisea_side_personas", JSON.stringify(chosenSideIds));
-      }
+      }));
+      window.dispatchEvent(new Event(ACCOUNT_UPDATED));
 
       // 5. Update AppContext BMI stats
       const height = Number(profileData.heightCm) || 168;
@@ -736,6 +619,7 @@ export default function ShopeeStylePersonaOnboardingPage() {
         fontFamily: "inherit"
       }}
     >
+      {saveError && viewMode !== "RESULT" && <p role="alert" style={{ padding: 16, color: "#B91C1C" }}>{saveError}</p>}
       {/* Global Embedded Fade Wipe Keyframes */}
       <style>{`
         @keyframes fadeWipeRight {

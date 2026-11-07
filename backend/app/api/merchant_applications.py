@@ -10,9 +10,9 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from ..core.database import get_db
-from ..core.ingredient_auth import current_principal, require_admin
+from ..core.ingredient_auth import current_principal, require_admin, grant_merchant_access
 from ..models.merchant_application import MerchantApplication
-from ..models import Merchant, Restaurant, AppUser, UserRole
+from ..models import Merchant, Restaurant
 from ..models.base import utcnow
 
 router = APIRouter(prefix="/api/merchant-applications", tags=["Merchant applications"])
@@ -103,6 +103,8 @@ def review_application(application_id: str, data: ReviewWrite, principal=Depends
         raise HTTPException(404, "Pengajuan tidak ditemukan")
     if row.status != "PENDING":
         if row.status == data.decision:
+            if row.status == "APPROVED":
+                grant_merchant_access(row.user_id, row.merchant_id)
             return {"application": serialize(row)}
         raise HTTPException(409, "Pengajuan sudah diproses; muat ulang daftar")
     def utc(value):
@@ -121,13 +123,14 @@ def review_application(application_id: str, data: ReviewWrite, principal=Depends
                           brand_name=row.business_name, area=row.area, address=row.address,
                           cuisine_type=row.cuisine_type, is_verified_hygiene=False, rating=0, rating_count=0, is_open=False))
         row.merchant_id = merchant_id
-        account = db.get(AppUser, row.user_id)
-        if account:
-            account.role = UserRole.MERCHANT_ADMIN
     row.status = data.decision
     row.review_reason = data.reason or None
     row.reviewed_by = principal.user_id
     row.reviewed_at = row.updated_at = utcnow()
     db.commit()
     db.refresh(row)
+    # Commit merchant resources before publishing access. A Clerk failure grants
+    # nothing locally; repeating this review retries the same merchant ID.
+    if row.status == "APPROVED":
+        grant_merchant_access(row.user_id, row.merchant_id)
     return {"application": serialize(row)}

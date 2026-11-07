@@ -33,17 +33,13 @@ def read_preferences(principal=Depends(current_principal), db: Session = Depends
 @router.get("/recommendation")
 def personalized_recommendation(principal=Depends(current_principal), db: Session = Depends(get_db)):
     excluded = preferences(db, principal.user_id)
-    user = crud.get_user(db, principal.user_id)
-    persona = crud.get_persona(db, user.main_persona_id) if user and user.main_persona_id else None
     health = crud.get_health_profile(db, principal.user_id)
-    persona_allergens = (persona.allergens or "") if persona else ""
-    if isinstance(persona_allergens, str):
-        persona_allergens = [x.strip() for x in persona_allergens.split(",") if x.strip().upper() != "NONE"]
+    # Reference personas describe examples, not this account's medical facts.
     profile = {
-        "allergens": list(set((health.allergies or [] if health else []) + persona_allergens)),
-        "medical_conditions": persona.medical_conditions if persona else [],
+        "allergens": health.allergies or [] if health else [],
+        "medical_conditions": [],
     }
-    budget = health.meal_budget_idr if health else (persona.target_lunch_budget_idr if persona else None)
+    budget = health.meal_budget_idr if health else None
     items = db.query(MenuItem).filter(MenuItem.is_available.is_(True)).order_by(MenuItem.id).all()
     candidates = [serialize_dish(item, item.restaurant, item.merchant) for item in items
                   if item.merchant and item.merchant.is_open

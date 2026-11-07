@@ -1,0 +1,7 @@
+{
+  "session": {
+    "claims": {
+      "metadata": "{{user.public_metadata}}"
+    }
+  }
+}

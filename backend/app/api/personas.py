@@ -6,7 +6,10 @@ from sqlalchemy import or_
 import uuid
 
 from ..core.database import get_db
+from ..core.ingredient_auth import current_principal
 from ..models import Persona, AppUser, UserMemoryItem, HealthProfile, UserRole
+from .users import HealthProfilePayload
+from ..db import crud
 
 router = APIRouter(prefix="/api/personas", tags=["Personas & Dual-Tier Memory"])
 
@@ -18,7 +21,8 @@ class UserPersonasPayload(BaseModel):
     side_persona_ids: List[str] = Field(default_factory=list, description="IDs of 3 Side Personas (Persona Pendamping)")
     name: Optional[str] = Field(None, description="Full name from Clerk auth")
     email: Optional[str] = Field(None, description="Email address from Clerk auth")
-    role: Optional[str] = Field("CONSUMER", description="User role ('CONSUMER', 'MERCHANT', 'SHOPEE_ADMIN')")
+    role: Optional[str] = Field(None, description="Legacy input, ignored; permissions come from the Clerk session")
+    profile: Optional[HealthProfilePayload] = None
 
 class OnboardingAnswersPayload(BaseModel):
     q1_goal: Optional[str] = Field(None, description="Q1: Main goal when choosing food")
@@ -76,7 +80,7 @@ def get_all_personas(
     district: Optional[str] = Query(None, description="Filter by district (e.g. SCBD, Menteng, Kuningan)"),
     archetype: Optional[str] = Query(None, description="Filter by archetype code (e.g. BUDGET_FITNESS, CORP_OVERLOADED)"),
     limit: int = Query(120, ge=1, le=200),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """
     Returns actual persona records from PostgreSQL 'persona' table.
@@ -146,20 +150,28 @@ def get_persona_detail(persona_id: str, db: Session = Depends(get_db)):
 def assign_user_personas(
     user_id: str,
     payload: UserPersonasPayload,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    principal=Depends(current_principal),
 ):
     """
     Sets user's Main Persona and 3 Side Personas, and initializes Odysseus Long-Term Memory (LTM).
     """
-    role_enum = UserRole.CONSUMER
-    if payload.role:
-        cleaned_role = payload.role.upper().strip()
-        if cleaned_role in ("MERCHANT", "MERCHANT_ADMIN", "RESTO"):
-            role_enum = UserRole.MERCHANT_ADMIN
-        elif cleaned_role in ("SHOPEE_ADMIN", "ADMIN", "SUPERADMIN"):
-            role_enum = UserRole.SHOPEE_ADMIN
-        elif cleaned_role in ("CONSUMER", "USER", "CUSTOMER"):
-            role_enum = UserRole.CONSUMER
+    if user_id != principal.user_id:
+        raise HTTPException(403, "Tidak dapat mengubah persona pengguna lain")
+    role_enum = UserRole(principal.role)
+
+    # Validate the selected reference personas before changing any account data.
+    main_p = db.get(Persona, payload.main_persona_id)
+    if not main_p:
+        raise HTTPException(400, "Persona utama tidak ditemukan")
+    sides = payload.side_persona_ids
+    if len(sides) > 3 or len(set(sides)) != len(sides) or payload.main_persona_id in sides:
+        raise HTTPException(422, "Pilih maksimal tiga persona pendamping yang berbeda")
+    if any(db.get(Persona, side_id) is None for side_id in sides):
+        raise HTTPException(422, "Persona pendamping tidak ditemukan")
+    hp = crud.get_health_profile(db, user_id)
+    if payload.profile is None and hp is None:
+        raise HTTPException(422, "Lengkapi data diri sebelum menyimpan persona")
 
     user = db.query(AppUser).filter(AppUser.id == user_id).first()
     if not user:
@@ -178,51 +190,15 @@ def assign_user_personas(
             user.name = payload.name
         if payload.email:
             user.email = payload.email
-        if payload.role:
-            user.role = role_enum
+        user.role = role_enum  # Display mirror only; never an authorization source.
         user.main_persona_id = payload.main_persona_id
         user.side_persona_ids = payload.side_persona_ids
 
-    # Validate main persona exists
-    main_p = db.query(Persona).filter(Persona.id == payload.main_persona_id).first()
-    if not main_p:
-        raise HTTPException(status_code=400, detail=f"Main persona '{payload.main_persona_id}' does not exist")
-
-    # Sync into HealthProfile if missing or update baseline
-    hp = db.query(HealthProfile).filter(HealthProfile.user_id == user_id).first()
-    if not hp:
-        from ..models import UserSex, ActivityLevel, HealthGoal
-        sex_enum = UserSex.F if main_p.gender.lower() in ("perempuan", "female", "f", "wanita") else UserSex.M
-        act_enum = getattr(ActivityLevel, main_p.activity_level.upper(), ActivityLevel.LIGHT)
-        
-        goal_str = main_p.health_goal.upper()
-        if "TURUN" in goal_str or "LOSE" in goal_str:
-            goal_enum = HealthGoal.LOSE_WEIGHT
-        elif "OTOT" in goal_str or "MUSCLE" in goal_str:
-            goal_enum = HealthGoal.GAIN_MUSCLE
-        else:
-            goal_enum = HealthGoal.MAINTAIN
-
-        hp = HealthProfile(
-            user_id=user_id,
-            age=main_p.age,
-            sex=sex_enum,
-            height_cm=main_p.height_cm,
-            weight_kg=main_p.weight_kg,
-            occupation=main_p.occupation,
-            activity_level=act_enum,
-            goal=goal_enum,
-            allergies=[a.strip() for a in main_p.allergens.split(",") if a.strip() and a.strip() != "NONE"],
-            meal_budget_idr=main_p.target_lunch_budget_idr,
-            has_medical_condition=(main_p.medical_conditions != "NONE"),
-            bmr_kcal=main_p.bmr_kcal,
-            tdee_kcal=main_p.tdee_kcal,
-            kcal_target=main_p.daily_caloric_target_kcal,
-            kcal_floor=1200 if sex_enum == UserSex.F else 1500,
-            target_protein_g=round(float(main_p.weight_kg) * 1.4),
-            target_carbs_g=round((main_p.daily_caloric_target_kcal * 0.5) / 4)
-        )
-        db.add(hp)
+    # Account, entered biometrics, assignment and memories share one transaction.
+    # Reference persona biometrics/medical conditions never become user facts.
+    db.flush()
+    if payload.profile is not None:
+        hp = crud.upsert_health_profile(db, user_id, payload.profile.model_dump(), commit=False)
 
     # Initialize Odysseus Long-Term Memory (LTM) facts for this user
     # 1. Clear old auto-generated persona baseline facts
@@ -237,7 +213,7 @@ def assign_user_personas(
             id=str(uuid.uuid4()),
             user_id=user_id,
             category="goal",
-            fact_text=f"Target kalori makan siang: {main_p.target_lunch_kcal} kcal dengan budget maksimal Rp {main_p.target_lunch_budget_idr:,}".replace(",", "."),
+            fact_text=f"Target kalori harian: {hp.kcal_target} kcal dengan budget makan Rp {hp.meal_budget_idr:,}".replace(",", "."),
             confidence=0.95,
             source="onboarding_persona"
         ),
@@ -251,22 +227,22 @@ def assign_user_personas(
         )
     ]
 
-    if main_p.medical_conditions != "NONE":
+    if hp.has_medical_condition:
         memories.append(UserMemoryItem(
             id=str(uuid.uuid4()),
             user_id=user_id,
             category="restriction",
-            fact_text=f"Kondisi medis: {main_p.medical_conditions}. Batasi natrium berlebih dan makanan pemicu.",
+            fact_text="Pengguna menyatakan memiliki kondisi medis; ikuti batasan yang dikonfirmasi pengguna.",
             confidence=0.98,
             source="onboarding_persona"
         ))
 
-    if main_p.allergens != "NONE":
+    if hp.allergies:
         memories.append(UserMemoryItem(
             id=str(uuid.uuid4()),
             user_id=user_id,
             category="restriction",
-            fact_text=f"Alergen makanan mutlak: {main_p.allergens}.",
+            fact_text=f"Alergen yang dimasukkan pengguna: {', '.join(hp.allergies)}.",
             confidence=1.00,
             source="onboarding_persona"
         ))
@@ -306,10 +282,12 @@ def assign_user_personas(
 
 
 @router.get("/users/{user_id}/personas")
-def get_user_personas(user_id: str, db: Session = Depends(get_db)):
+def get_user_personas(user_id: str, db: Session = Depends(get_db), principal=Depends(current_principal)):
     """
     Fetches the user's active Main Persona, Side Personas, and Long-Term Memory (LTM).
     """
+    if user_id != principal.user_id:
+        raise HTTPException(403, "Tidak dapat membaca persona pengguna lain")
     user = db.query(AppUser).filter(AppUser.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")

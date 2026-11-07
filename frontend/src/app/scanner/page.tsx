@@ -16,7 +16,8 @@ import {
   Utensils
 } from "lucide-react";
 import { useApp } from "@/context/AppContext";
-import { useUser } from "@clerk/nextjs";
+import { useUser, useAuth } from "@clerk/nextjs";
+import { API_BASE_URL, responseJson } from "@/lib/api";
 
 interface VisionResult {
   detected_dish?: string;
@@ -59,6 +60,7 @@ export default function ScannerPage() {
   const router = useRouter();
   const { logSnack } = useApp();
   const { user } = useUser();
+  const { getToken } = useAuth();
 
   const [selectedSample, setSelectedSample] = useState(SAMPLE_SNACKS[0]);
   const [customImageBase64, setCustomImageBase64] = useState<string | null>(null);
@@ -126,12 +128,14 @@ export default function ScannerPage() {
     }
   };
 
-  const handleApplyRebalance = () => {
-    logSnack();
-    const userId = user?.id || "CORP_LILY_SCBD";
-    fetch(`http://127.0.0.1:8000/api/users/${userId}/meal-logs`, {
+  const handleApplyRebalance = async () => {
+    if (!user) { router.push("/sign-in?redirect_url=%2Fscanner"); return; }
+    try {
+    const token = await getToken();
+    if (!token) throw new Error("Silakan masuk kembali.");
+    await responseJson(await fetch(`${API_BASE_URL}/api/users/${user.id}/meal-logs`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
       body: JSON.stringify({
         source: "PHOTO",
         meal_type: "SNACK",
@@ -145,7 +149,9 @@ export default function ScannerPage() {
         portion_factor: 1.0,
         confidence: 0.95
       })
-    }).catch((err) => console.warn("Failed to persist photo meal log to PostgreSQL:", err));
+    }));
+    logSnack();
+    } catch (error) { showToast(error instanceof Error ? error.message : "Catatan makan gagal disimpan."); return; }
 
     showToast("Penyesuaian gizi diterapkan ke Menu Sehat!");
     setTimeout(() => {

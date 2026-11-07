@@ -30,8 +30,10 @@ import NutriGraphVisualizer from "@/components/NutriGraphVisualizer";
 import { DishItem, fetchDishById } from "@/data/menu";
 import { scoreMenuItem, UserRecommendationProfile, RecommendationScoreBreakdown } from "@/services/recommendationScorer";
 import { useApp } from "@/context/AppContext";
+import { useAccountSession } from "@/context/AccountSessionContext";
 
 function MenuDetailContent() {
+  const { account } = useAccountSession();
   const params = useParams();
   const router = useRouter();
   const { addToCart, bmiStats, activeUserId, logUserAction } = useApp();
@@ -62,29 +64,15 @@ function MenuDetailContent() {
     }
   }, [dish]);
 
-  // Compute recommendation score for active user persona
+  // Personalization always belongs to the current signed-in account.
   useEffect(() => {
-    if (!dish) return;
-    if (typeof window !== "undefined") {
-      const personaId = localStorage.getItem("nutrisea_main_persona");
-      if (personaId) {
-        const savedSides = localStorage.getItem("nutrisea_side_personas");
-        let sideIds: string[] = [];
-        if (savedSides) {
-          try { sideIds = JSON.parse(savedSides); } catch {}
-        }
-        const profile: UserRecommendationProfile = {
-          primaryPersonaId: personaId,
-          secondaryPersonaIds: sideIds,
-          healthGoal: bmiStats?.badgeClass === "ideal" ? "ideal" : undefined,
-          targetLunchKcal: bmiStats?.targetCalories ? Math.round(bmiStats.targetCalories * 0.4) : undefined
-        };
-        const breakdown = scoreMenuItem(dish, profile);
-        setRecommendationScore(breakdown.finalScore);
-        setScoreBreakdown(breakdown);
-      }
-    }
-  }, [dish, bmiStats]);
+    if (!dish || !account?.main_persona_id) { setRecommendationScore(null); setScoreBreakdown(null); return; }
+    const breakdown = scoreMenuItem(dish, {
+      primaryPersonaId: account.main_persona_id, secondaryPersonaIds: account.side_persona_ids,
+      targetLunchKcal: Math.round((bmiStats?.targetCalories || 0) * 0.4),
+    });
+    setRecommendationScore(breakdown.finalScore); setScoreBreakdown(breakdown);
+  }, [dish, account, bmiStats]);
 
   // AI Consultation State
   const [aiQuestion, setAiQuestion] = useState("");
@@ -98,12 +86,8 @@ function MenuDetailContent() {
 
   useEffect(() => {
     if (!dish) return;
-    let effectivePersona = "BUDG_FACHRI_MENTENG_115";
-    if (typeof window !== "undefined") {
-      const stored = localStorage.getItem("nutrisea_main_persona");
-      if (stored) effectivePersona = stored;
-      else if (activeUserId) effectivePersona = activeUserId;
-    }
+    const effectivePersona = account?.main_persona_id;
+    if (!effectivePersona) { setGraphVerification(null); return; }
     setIsLoadingGraph(true);
     fetch(`http://127.0.0.1:8000/api/graph/explain/${encodeURIComponent(effectivePersona)}/${encodeURIComponent(dish.id)}`)
       .then((res) => (res.ok ? res.json() : null))
@@ -112,7 +96,7 @@ function MenuDetailContent() {
       })
       .catch((err) => console.warn("Could not fetch NutriGraph verification:", err))
       .finally(() => setIsLoadingGraph(false));
-  }, [dish, activeUserId]);
+  }, [dish, account]);
 
   useEffect(() => {
     if (!id) return;

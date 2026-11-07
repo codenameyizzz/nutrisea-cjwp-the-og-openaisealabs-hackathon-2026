@@ -32,8 +32,11 @@ export default function MerchantRegistrationPanel({ application, hasAccess, busy
     <p className={styles.muted}>Satu akun untuk berbelanja dan mengelola usaha. Tim NutriSea memeriksa pengajuan sebelum akses Merchant diaktifkan.</p>
     {error && <div role="alert" className={styles.notice}>{error} <button onClick={onReload}>Coba muat status lagi</button></div>}
     {(hasAccess || application?.status === "APPROVED") ? <div className={styles.notice}>
-      <h2>Pendaftaran disetujui</h2><p>Akses Merchant sudah aktif. Anda tetap dapat berbelanja sebagai Customer.</p>
-      <Link href="/merchant" className="btn-shopee-primary">Buka Dashboard Merchant</Link>
+      <h2>Pendaftaran disetujui</h2>
+      {hasAccess ? <><p>Akses Merchant sudah aktif. Anda tetap dapat berbelanja sebagai Customer.</p>
+        <Link href="/merchant" className="btn-shopee-primary">Buka Dashboard Merchant</Link></> : <>
+        <p>Akses Merchant belum tersedia pada sesi ini. Perbarui sesi; jika tetap belum aktif, hubungi admin.</p>
+        <button onClick={onReload}>Perbarui sesi dan akses</button></>}
     </div> : application?.status === "PENDING" ? <div className={styles.notice} role="status">
       <h2>Menunggu verifikasi</h2><p>Pengajuan <strong>{application.business_name}</strong> sudah diterima. Anda tetap bisa berbelanja selama pengajuan diperiksa.</p>
       <p>Status diperbarui otomatis. Akses Merchant aktif setelah disetujui admin.</p>

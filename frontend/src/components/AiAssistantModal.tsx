@@ -94,7 +94,7 @@ export default function AiAssistantModal() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           message: textToSend,
-          user_id: user?.id || activeUserId || "user_3LdSuzBP84WASHC2BC7vliRK52R",
+          user_id: user?.id || activeUserId || null,
           history: historyPayload,
           user_bmi_stats: bmiStats
         })

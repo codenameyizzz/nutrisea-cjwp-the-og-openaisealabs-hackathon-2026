@@ -19,10 +19,14 @@ import {
   Store
 } from "lucide-react";
 import { useApp } from "@/context/AppContext";
-import { useUser } from "@clerk/nextjs";
+import { useAuth } from "@clerk/nextjs";
+import { API_BASE_URL, ApiError, responseJson } from "@/lib/api";
+import { useAccountSession } from "@/context/AccountSessionContext";
 
 export default function CartPage() {
   const router = useRouter();
+  const { userId, isLoaded, isSignedIn, getToken } = useAuth();
+  const { account } = useAccountSession();
   const { cartItems, removeFromCart, clearCart, cartTotal, cartCount, addToCart } = useApp();
 
   const [paymentMethod, setPaymentMethod] = useState<"shopeepay" | "seabank">("seabank");
@@ -51,15 +55,26 @@ export default function CartPage() {
     }
   };
 
-  const { user } = useUser();
-
   const handleCheckout = async () => {
+    if (!isLoaded || isCheckingOut || !cartItems.length) return;
+    if (!isSignedIn || !userId) {
+      router.push("/sign-in?redirect_url=%2Fcart");
+      return;
+    }
+    if (!account?.onboarding_complete) {
+      router.push("/onboarding/personas");
+      return;
+    }
     setIsCheckingOut(true);
-    const userId = user?.id || "CORP_LILY_SCBD";
     try {
-      await fetch(`http://127.0.0.1:8000/api/users/${userId}/orders`, {
+      const token = await getToken();
+      if (!token) {
+        router.push("/sign-in?redirect_url=%2Fcart");
+        return;
+      }
+      await responseJson(await fetch(`${API_BASE_URL}/api/users/${userId}/orders`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({
           merchant_id: "MTR-WBM-01",
           total_idr: finalTotal,
@@ -69,18 +84,17 @@ export default function CartPage() {
             price_idr: item.dish.discountedPrice
           })),
           kitchen_notes: "Nasi setengah porsi, kuah santan dipisah, minim garam",
-          recommendation_id: "REC-AI-01",
           is_healthy_pick: true
         })
-      });
+      }));
+      setOrderSuccess(true);
+      clearCart();
     } catch (err) {
-      console.warn("Backend order persistence error:", err);
+      if (err instanceof ApiError && err.status === 401) router.push("/sign-in?redirect_url=%2Fcart");
+      else if (err instanceof ApiError && err.status === 409) router.push("/onboarding/personas");
+      else showToast(err instanceof Error ? err.message : "Pesanan gagal dibuat. Silakan coba lagi.");
     } finally {
-      setTimeout(() => {
-        setIsCheckingOut(false);
-        setOrderSuccess(true);
-        clearCart();
-      }, 1000);
+      setIsCheckingOut(false);
     }
   };
 
@@ -473,11 +487,11 @@ export default function CartPage() {
             <button
               type="button"
               className="btn-shopee-primary"
-              disabled={isCheckingOut}
+              disabled={!isLoaded || isCheckingOut}
               style={{ width: "100%", height: 44, fontSize: "13.5px", fontWeight: 600, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}
               onClick={handleCheckout}
             >
-              {isCheckingOut ? "Memproses Pesanan..." : "Pesan Sekarang (1-Klik Checkout)"}
+              {isCheckingOut ? "Memproses Pesanan..." : isSignedIn ? "Pesan Sekarang (1-Klik Checkout)" : "Masuk untuk Memesan"}
             </button>
           </div>
         </div>

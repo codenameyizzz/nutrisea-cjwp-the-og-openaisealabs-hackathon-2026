@@ -1,19 +1,23 @@
-import { auth, currentUser } from "@clerk/nextjs/server";
+import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import HomePage from "../page";
 import { AUTH_ROUTES } from "@/domains/auth/config/auth-routes";
+import { sessionAccess } from "@/services/session-access";
 
 export default async function DashboardPage() {
-  const { userId } = await auth();
+  const { userId, sessionClaims } = await auth();
   if (!userId) {
     redirect(AUTH_ROUTES.SIGN_IN);
   }
 
-  const user = await currentUser();
-  const mainPersona = user?.unsafeMetadata?.main_persona_id;
-  if (!mainPersona) {
-    redirect(AUTH_ROUTES.PERSONA_SELECTION);
-  }
+  // The session gate provisions missing roles and refreshes this server route.
+  if (!sessionClaims?.metadata?.role) return <HomePage />;
+
+  let access;
+  try { access = sessionAccess(sessionClaims); }
+  catch (error) { return <p role="alert">{error instanceof Error ? error.message : "Pemeriksaan sesi gagal."}</p>; }
+  if (access.is_admin) redirect("/admin");
+  if (access.can_edit_menus) redirect("/merchant");
 
   return <HomePage />;
 }

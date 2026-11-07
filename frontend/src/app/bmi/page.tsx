@@ -15,12 +15,16 @@ import {
   Wallet
 } from "lucide-react";
 import { useApp } from "@/context/AppContext";
-import { useUser } from "@clerk/nextjs";
+import { useAuth } from "@clerk/nextjs";
+import { useAccountSession } from "@/context/AccountSessionContext";
+import { ACCOUNT_UPDATED } from "@/services/account-session";
+import { API_BASE_URL, responseJson } from "@/lib/api";
 
 export default function BmiPage() {
   const router = useRouter();
   const { heightCm, weightKg, activityGoal, updateBmi, bmiStats } = useApp();
-  const { user } = useUser();
+  const { userId, getToken } = useAuth();
+  const { account } = useAccountSession();
 
   const [localHeight, setLocalHeight] = useState(heightCm);
   const [localWeight, setLocalWeight] = useState(weightKg);
@@ -47,45 +51,31 @@ export default function BmiPage() {
   };
 
   useEffect(() => {
-    const userId = user?.id || "CORP_LILY_SCBD";
-    fetch(`http://127.0.0.1:8000/api/users/${userId}/health-profile`)
-      .then((res) => res.json())
-      .then((data) => {
-        if (data && data.height_cm) {
-          setLocalHeight(Number(data.height_cm));
-          setLocalWeight(Number(data.weight_kg));
-          setLocalAge(Number(data.age) || 26);
-          setLocalGender(data.sex === "M" ? "pria" : "wanita");
-          setLocalGoal(data.goal === "LOSE_WEIGHT" ? "turun" : data.goal === "GAIN_MUSCLE" ? "otot" : "ideal");
-        }
-      })
-      .catch((err) => console.warn("Failed to load clinical profile from PostgreSQL:", err));
-  }, [user?.id]);
+    const data = account?.profile;
+    if (!data) return;
+    setLocalHeight(data.height_cm); setLocalWeight(data.weight_kg); setLocalAge(data.age);
+    setLocalGender(data.sex === "M" ? "pria" : "wanita");
+    setLocalGoal(data.goal === "LOSE_WEIGHT" ? "turun" : data.goal === "GAIN_MUSCLE" ? "otot" : "ideal");
+  }, [account]);
 
-  const handleSave = () => {
-    updateBmi(localHeight, localWeight, localGoal);
-    const userId = user?.id || "CORP_LILY_SCBD";
-    fetch(`http://127.0.0.1:8000/api/users/${userId}/health-profile`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        age: localAge,
-        sex: localGender === "pria" ? "M" : "F",
-        height_cm: localHeight,
-        weight_kg: localWeight,
-        activity_level: localActivity.toUpperCase(),
-        goal: localGoal === "turun" ? "LOSE_WEIGHT" : localGoal === "otot" ? "GAIN_MUSCLE" : "MAINTAIN",
-        allergies: ["kacang"],
-        meal_budget_idr: 35000,
-        has_medical_condition: false,
-        max_dinner_cut_pct: 25
-      })
-    }).catch((err) => console.warn("Failed to save health profile to PostgreSQL:", err));
-
-    showToast("Target gizi dan kalori berhasil diperbarui!");
-    setTimeout(() => {
+  const handleSave = async () => {
+    if (!userId) { router.push("/sign-in?redirect_url=%2Fbmi"); return; }
+    try {
+      const token = await getToken();
+      if (!token) throw new Error("Silakan masuk kembali.");
+      await responseJson(await fetch(`${API_BASE_URL}/api/users/${userId}/health-profile`, {
+        method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ age: localAge, sex: localGender === "pria" ? "M" : "F", height_cm: localHeight,
+          weight_kg: localWeight, activity_level: localActivity.toUpperCase(),
+          goal: localGoal === "turun" ? "LOSE_WEIGHT" : localGoal === "otot" ? "GAIN_MUSCLE" : "MAINTAIN",
+          allergies: account?.profile?.allergies || [], meal_budget_idr: account?.profile?.meal_budget_idr || 35000,
+          has_medical_condition: account?.profile?.has_medical_condition || false, max_dinner_cut_pct: 25 })
+      }));
+      updateBmi(localHeight, localWeight, localGoal);
+      window.dispatchEvent(new Event(ACCOUNT_UPDATED));
+      showToast("Target gizi dan kalori berhasil diperbarui!");
       router.push("/");
-    }, 800);
+    } catch (error) { showToast(error instanceof Error ? error.message : "Profil gagal disimpan."); }
   };
 
   // Calculate live preview metrics

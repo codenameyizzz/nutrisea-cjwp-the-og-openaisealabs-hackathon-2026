@@ -1,5 +1,14 @@
 export type Goal = "turun-berat-badan" | "maintain";
 export type Allergy = "kacang" | "seafood";
+import type { AccountProfile } from "../../services/account-session";
+
+export function profileFormValue(profile: AccountProfile): NutriSeaProfile {
+  return { age: String(profile.age), gender: profile.sex === "M" ? "laki-laki" : "perempuan",
+    heightCm: String(profile.height_cm), weightKg: String(profile.weight_kg), occupation: profile.occupation || "",
+    goal: profile.goal === "LOSE_WEIGHT" ? "turun-berat-badan" : "maintain",
+    allergies: profile.allergies.filter((value): value is Allergy => value === "kacang" || value === "seafood"),
+    mealBudget: String(profile.meal_budget_idr) };
+}
 
 export interface NutriSeaProfile {
   age: string;

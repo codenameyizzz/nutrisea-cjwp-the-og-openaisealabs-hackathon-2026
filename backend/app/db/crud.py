@@ -49,7 +49,7 @@ def upsert_user(
     role: Optional[UserRole] = None,
     is_demo: bool = False,
     consent_health_data: bool = True,
-    streak_days: int = 5
+    streak_days: Optional[int] = None
 ) -> AppUser:
     user = get_user(db, user_id)
     if not user:
@@ -60,7 +60,7 @@ def upsert_user(
             role=role or UserRole.CONSUMER,
             is_demo=is_demo,
             consent_health_data=consent_health_data,
-            streak_days=streak_days
+            streak_days=streak_days if streak_days is not None else 0
         )
         db.add(user)
     else:
@@ -70,7 +70,8 @@ def upsert_user(
         if role is not None:
             user.role = role
         user.consent_health_data = consent_health_data
-        user.streak_days = streak_days
+        if streak_days is not None:
+            user.streak_days = streak_days
     db.commit()
     db.refresh(user)
     return user
@@ -151,7 +152,7 @@ def get_health_profile(db: Session, user_id: str) -> Optional[HealthProfile]:
     return db.query(HealthProfile).filter(HealthProfile.user_id == user_id).first()
 
 
-def upsert_health_profile(db: Session, user_id: str, data: Dict[str, Any]) -> HealthProfile:
+def upsert_health_profile(db: Session, user_id: str, data: Dict[str, Any], *, commit: bool = True) -> HealthProfile:
     profile = get_health_profile(db, user_id)
 
     age = int(data.get("age", 25))
@@ -225,8 +226,11 @@ def upsert_health_profile(db: Session, user_id: str, data: Dict[str, Any]) -> He
         if "learned_palate" in data:
             profile.learned_palate = data["learned_palate"]
 
-    db.commit()
-    db.refresh(profile)
+    if commit:
+        db.commit()
+        db.refresh(profile)
+    else:
+        db.flush()
     return profile
 
 

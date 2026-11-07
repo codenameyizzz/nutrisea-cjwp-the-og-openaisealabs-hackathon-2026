@@ -8,7 +8,7 @@ import IngredientGuard from "@/components/ingredients/IngredientGuard";
 import { useIngredientApi } from "@/services/ingredient-api";
 import { EMPTY_RECIPE_VERSION, recipePayload } from "@/services/ingredient-types";
 import type { MenuRecipe } from "@/services/ingredient-types";
-import { API_BASE_URL, responseJson } from "@/lib/api";
+import { responseJson } from "@/lib/api";
 import {
   Store,
   ArrowLeft,
@@ -199,7 +199,7 @@ function MerchantContent() {
   const fetchDemandInsights = async () => {
     setIsLoadingInsight(true);
     try {
-      const res = await fetch(`${API_BASE_URL}/api/merchant/demand-insights?district=Kuningan`);
+      const res = await authenticatedFetch("/api/merchant/demand-insights?district=Kuningan");
       if (res.ok) {
         const data = await res.json();
         setInsight(data);
@@ -274,7 +274,7 @@ function MerchantContent() {
     setAiRationale(null);
 
     try {
-      const res = await fetch(`${API_BASE_URL}/api/merchant/estimate-nutrition`, {
+      const res = await authenticatedFetch("/api/merchant/estimate-nutrition", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

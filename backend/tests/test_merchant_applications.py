@@ -22,6 +22,9 @@ class MerchantApplicationTests(unittest.TestCase):
         Base.metadata.create_all(self.engine)
         self.sessions = sessionmaker(self.engine)
         self.principal = IngredientPrincipal("applicant", "CONSUMER")
+        self.grant = patch("backend.app.api.merchant_applications.grant_merchant_access")
+        self.grant_mock = self.grant.start()
+        self.addCleanup(self.grant.stop)
         self.app = FastAPI()
         for router in (merchant_applications.router, merchant_applications.admin_router, ingredients.router, merchant.router):
             self.app.include_router(router)
@@ -74,28 +77,47 @@ class MerchantApplicationTests(unittest.TestCase):
             self.assertEqual(db.get(MerchantApplication, application["id"]).reviewed_by, "reviewer")
         self.assertEqual(self.review(application, "REJECTED", "Changed mind").status_code, 409)
 
-    def test_approved_assignment_enriches_session_and_scopes_dashboard(self):
+    def test_approved_database_assignment_cannot_enrich_consumer_session(self):
         application = self.submit()
         merchant_id = self.review(application).json()["application"]["merchant_id"]
         self.app.dependency_overrides.pop(current_principal)
         with patch("backend.app.core.ingredient_auth.verify_session", return_value=IngredientPrincipal("applicant", "CONSUMER")):
             headers = {"Authorization": "Bearer test-token"}
             access = self.client.get("/api/ingredients/access", headers=headers).json()
-            self.assertEqual(access["role"], "MERCHANT_ADMIN")
-            self.assertEqual(access["merchant_ids"], [merchant_id])
-            self.assertTrue(access["can_edit_menus"])
+            self.assertEqual(access["role"], "CONSUMER")
+            self.assertEqual(access["merchant_ids"], [])
+            self.assertFalse(access["can_edit_menus"])
             outlets = self.client.get("/api/merchant/outlets", headers=headers)
-            self.assertEqual(outlets.status_code, 200)
+            self.assertEqual(outlets.status_code, 403)
+        with patch("backend.app.core.ingredient_auth.verify_session", return_value=IngredientPrincipal("applicant", "MERCHANT_ADMIN", (merchant_id,))):
+            self.assertEqual(self.client.get("/api/merchant/outlets", headers=headers).status_code, 200)
         with patch("backend.app.core.ingredient_auth.verify_session", return_value=IngredientPrincipal("other", "CONSUMER")):
             self.assertFalse(self.client.get("/api/ingredients/access", headers=headers).json()["can_edit_menus"])
 
-    def test_approval_updates_legacy_role_mirror_in_same_transaction(self):
+    def test_approval_publishes_access_to_clerk_without_assigning_database_role(self):
         with self.sessions() as db:
             db.add(AppUser(id="applicant", name="Applicant", role=UserRole.CONSUMER))
             db.commit()
         self.assertEqual(self.review(self.submit()).status_code, 200)
         with self.sessions() as db:
-            self.assertEqual(db.get(AppUser, "applicant").role, UserRole.MERCHANT_ADMIN)
+            self.assertEqual(db.get(AppUser, "applicant").role, UserRole.CONSUMER)
+            merchant_id = db.scalar(select(MerchantApplication.merchant_id))
+        self.grant_mock.assert_called_once_with("applicant", merchant_id)
+
+    def test_clerk_failure_is_retryable_without_creating_another_merchant(self):
+        from fastapi import HTTPException
+        application = self.submit()
+        self.grant_mock.side_effect = HTTPException(503, "Clerk unavailable")
+        self.assertEqual(self.review(application).status_code, 503)
+        with self.sessions() as db:
+            row = db.get(MerchantApplication, application["id"])
+            self.assertEqual(row.status, "APPROVED")
+            merchant_id = row.merchant_id
+        self.grant_mock.side_effect = None
+        self.assertEqual(self.review(application).status_code, 200)
+        self.grant_mock.assert_called_with("applicant", merchant_id)
+        with self.sessions() as db:
+            self.assertEqual(db.scalar(select(func.count()).select_from(Merchant)), 1)
 
     def test_only_admin_can_list_and_review(self):
         application = self.submit()

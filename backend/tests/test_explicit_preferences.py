@@ -1,4 +1,5 @@
 import unittest
+from types import SimpleNamespace
 from unittest.mock import patch
 from fastapi.testclient import TestClient
 from backend.app.main import app
@@ -102,6 +103,15 @@ class ExplicitPreferenceTests(unittest.TestCase):
         self.assertEqual(result["source"], "openai")
         self.assertEqual(result["dish"]["id"], "PREF-B")
         self.assertEqual(result["dish"]["discountedPrice"], 20000)
+
+    def test_account_profile_not_reference_persona_controls_constraints(self):
+        with patch("backend.app.api.preferences.crud.get_persona", side_effect=AssertionError("Must not copy reference facts")), patch(
+            "backend.app.api.preferences.crud.get_health_profile",
+            return_value=SimpleNamespace(allergies=[], meal_budget_idr=19000),
+        ):
+            result = self.recommendation()
+        self.assertNotIn("PREF-A", result["candidate_ids"])
+        self.assertNotIn("PREF-B", result["candidate_ids"])
 
     def test_only_explicit_durable_preferences(self):
         for text in ["Hari ini saya tidak suka ayam", "Saya tidak suka ayam hari ini",

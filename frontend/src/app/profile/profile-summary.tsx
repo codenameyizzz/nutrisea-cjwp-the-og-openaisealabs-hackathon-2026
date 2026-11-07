@@ -6,19 +6,20 @@ import Link from "next/link";
 import { PencilLine } from "lucide-react";
 import { AUTH_ROUTES } from "@/domains/auth/config/auth-routes";
 import styles from "./profile.module.css";
-import { isNutriSeaProfile } from "./profile-types";
+import { profileFormValue } from "./profile-types";
+import { useAccountSession } from "@/context/AccountSessionContext";
 
 export default function ProfileSummary() {
   const { isLoaded, user } = useUser();
   const { availableRoles } = useApp();
+  const { account } = useAccountSession();
 
   if (!isLoaded || !user) {
     return <p className={styles.loading}>Memuat profil...</p>;
   }
 
   const fullName = [user.firstName, user.lastName].filter(Boolean).join(" ");
-  const profileValue = user.unsafeMetadata.nutriSeaProfile;
-  const profile = isNutriSeaProfile(profileValue) ? profileValue : null;
+  const profile = account?.profile ? profileFormValue(account.profile) : null;
   const allergies = profile?.allergies.length
     ? profile.allergies.map((allergy) =>
         allergy === "kacang" ? "Kacang" : "Seafood",

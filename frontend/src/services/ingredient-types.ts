@@ -9,7 +9,7 @@ export interface Ingredient {
   aliases: string[];
 }
 export interface IngredientPage { items: Ingredient[]; total: number; page: number; limit: number; has_more: boolean }
-export interface IngredientAccess { is_admin: boolean; can_edit_menus: boolean; merchant_ids: string[] }
+export interface IngredientAccess { role?: "CONSUMER" | "MERCHANT_ADMIN" | "SHOPEE_ADMIN"; is_admin: boolean; can_edit_menus: boolean; merchant_ids: string[] }
 export interface IngredientSelection {
   ingredient_id: string;
   name: string;

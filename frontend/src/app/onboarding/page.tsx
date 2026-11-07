@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { useApp, UserAppRole } from "@/context/AppContext";
 import { AUTH_ROUTES } from "@/domains/auth/config/auth-routes";
+import { useAccountSession } from "@/context/AccountSessionContext";
 
 interface RoleOption {
   id: UserAppRole;
@@ -85,6 +86,7 @@ const ROLES: RoleOption[] = [
 ];
 
 export default function OnboardingRolePage() {
+  const { account } = useAccountSession();
   const router = useRouter();
   const { user, isLoaded } = useUser();
   const { activeRole, setActiveRole, availableRoles, roleAccessLoaded, roleAccessError } = useApp();
@@ -110,36 +112,9 @@ export default function OnboardingRolePage() {
       }
     }
 
-    const checkExistingPersona = async () => {
-      try {
-        const currentRole = availableRoles.includes(activeRole) ? activeRole : "CONSUMER";
-        if (currentRole === "MERCHANT") {
-          router.replace("/merchant");
-          return;
-        }
-        if (currentRole === "SHOPEE_ADMIN") {
-          router.replace("/admin");
-          return;
-        }
-
-        const res = await fetch(`http://127.0.0.1:8000/api/personas/users/${user.id}/personas`);
-        if (res.ok) {
-          const data = await res.json();
-          const existingId = data.main_persona_id || data.main_persona?.id;
-          if (existingId) {
-            router.replace(AUTH_ROUTES.HOME);
-            return;
-          }
-        }
-        setIsCheckingPersona(false);
-      } catch (e) {
-        console.warn("Check existing persona notice:", e);
-        setIsCheckingPersona(false);
-      }
-    };
-
-    checkExistingPersona();
-  }, [isLoaded, user?.id, router, activeRole, roleAccessLoaded, availableRoles]);
+    if (account?.onboarding_complete) router.replace(AUTH_ROUTES.HOME);
+    else setIsCheckingPersona(false);
+  }, [isLoaded, user?.id, router, roleAccessLoaded, account]);
 
   useEffect(() => {
     if (roleAccessLoaded && !availableRoles.includes(selectedRole)) setSelectedRole("CONSUMER");

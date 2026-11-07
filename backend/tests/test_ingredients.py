@@ -243,14 +243,13 @@ class ClerkVerificationTests(unittest.TestCase):
             get_signing_key_from_jwt=lambda _: SimpleNamespace(key=self.key.public_key())))
         self.jwks.start()
         self.addCleanup(self.issuer.stop); self.addCleanup(self.jwks.stop)
-        self.metadata = patch("backend.app.core.ingredient_auth.public_metadata", return_value={
-            "role": "MERCHANT_ADMIN", "merchant_ids": ["TEST-MERCHANT-A"]})
+        self.metadata = patch("backend.app.core.ingredient_auth.public_metadata", side_effect=AssertionError("Authorization must not call Clerk's user API"))
         self.metadata_mock = self.metadata.start()
         self.addCleanup(self.metadata.stop)
 
     def token(self, **changes):
         now = int(time.time())
-        data = {"iss": settings.CLERK_ISSUER, "sub": "test-user", "iat": now, "nbf": now - 1,
+        data = {"iss": settings.CLERK_ISSUER, "sub": "test-user", "sid": "sess_test", "iat": now, "nbf": now - 1,
                 "exp": now + 60, "azp": "http://localhost:3000", "metadata": {"role": "MERCHANT_ADMIN", "merchant_ids": ["TEST-MERCHANT-A"]}}
         data.update(changes)
         return jwt.encode(data, self.key, algorithm="RS256", headers={"kid": "test"})
@@ -259,28 +258,32 @@ class ClerkVerificationTests(unittest.TestCase):
         result = verify_session(self.token())
         self.assertEqual(result.merchant_ids, ("TEST-MERCHANT-A",))
         self.assertFalse(result.is_admin)
-        self.assertFalse(verify_session(self.token(metadata={"role": "SHOPEE_ADMIN"})).is_admin)
-        self.metadata_mock.return_value = {"role": "SHOPEE_ADMIN"}
-        self.assertTrue(verify_session(self.token()).is_admin)
+        self.assertTrue(verify_session(self.token(metadata={"role": "SHOPEE_ADMIN"})).is_admin)
+        self.metadata_mock.assert_not_called()
 
-    def test_missing_session_metadata_is_valid_consumer(self):
-        self.metadata_mock.return_value = {}
-        principal = verify_session(self.token(metadata=None))
+    def test_empty_public_metadata_is_valid_consumer(self):
+        principal = verify_session(self.token(metadata={}))
         self.assertEqual(principal.role, "CONSUMER")
         self.assertEqual(principal.merchant_ids, ())
+
+    def test_missing_metadata_and_unsafe_role_cannot_grant_access(self):
+        from fastapi import HTTPException
+        with self.assertRaises(HTTPException) as error:
+            verify_session(self.token(metadata=None, unsafe_metadata={"role": "SHOPEE_ADMIN"}))
+        self.assertEqual(error.exception.status_code, 401)
+        self.assertFalse(verify_session(self.token(metadata={}, unsafe_metadata={"role": "SHOPEE_ADMIN"})).is_admin)
 
     def test_malformed_assignment_is_configuration_error(self):
         from fastapi import HTTPException
         for metadata in [{"role": "MERCHANT"}, {"role": "MERCHANT_ADMIN", "merchant_ids": "ALL"}]:
-            self.metadata_mock.return_value = metadata
             with self.assertRaises(HTTPException) as err:
-                verify_session(self.token())
-            self.assertEqual(err.exception.status_code, 503)
+                verify_session(self.token(metadata=metadata))
+            self.assertEqual(err.exception.status_code, 401)
 
     def test_invalid_signature_expired_issuer_party_and_claims(self):
         from fastapi import HTTPException
         for token in [self.token(exp=int(time.time()) - 60), self.token(iss="https://wrong.invalid"),
-                      self.token(azp="https://evil.invalid"), self.token(sts="pending"),
+                      self.token(azp="https://evil.invalid"), self.token(sts="pending"), self.token(sid=None),
                       jwt.encode({"sub": "test"}, "test-key-that-is-long-enough-for-hs256", algorithm="HS256")]:
             with self.assertRaises(HTTPException) as err: verify_session(token)
             self.assertEqual(err.exception.status_code, 401)

@@ -1,13 +1,21 @@
 from typing import Optional, List, Dict, Any
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 from ..core.database import get_db
 from ..core.ingredient_auth import current_principal, IngredientPrincipal
 from ..db import crud
 from ..db.models import AppUser, HealthProfile, MealLog, RewardLedger, UserRole
+from ..models import Persona
 
-router = APIRouter(prefix="/api/users", tags=["Users & Clinical Profiles (PostgreSQL)"])
+def require_own_account(request: Request, principal: IngredientPrincipal = Depends(current_principal)):
+    user_id = request.path_params.get("user_id")
+    if user_id is not None and user_id != principal.user_id:
+        raise HTTPException(403, "Tidak dapat mengakses akun pengguna lain")
+
+
+router = APIRouter(prefix="/api/users", tags=["Users & Clinical Profiles (PostgreSQL)"],
+                   dependencies=[Depends(require_own_account)])
 
 # ---------------------------------------------------------------------
 # Pydantic Schemas
@@ -27,6 +35,7 @@ class HealthProfilePayload(BaseModel):
     sex: str = Field("F", description="'F' / 'M' / 'perempuan' / 'laki-laki'")
     height_cm: float = Field(160.0, ge=120.0, le=230.0)
     weight_kg: float = Field(52.0, ge=30.0, le=250.0)
+    occupation: Optional[str] = Field(None, max_length=100)
     activity_level: str = Field("LIGHT", description="'SEDENTARY', 'LIGHT', 'MODERATE', 'ACTIVE'")
     goal: str = Field("MAINTAIN", description="'LOSE_WEIGHT', 'MAINTAIN', 'GAIN_MUSCLE'")
     allergies: List[str] = Field(default_factory=list)
@@ -76,6 +85,21 @@ def normalize_role(role_str: Optional[str]) -> Optional[UserRole]:
 # ---------------------------------------------------------------------
 # Endpoints
 # ---------------------------------------------------------------------
+def serialize_health_profile(profile):
+    if profile is None:
+        return None
+    return {
+        "user_id": profile.user_id, "age": profile.age, "sex": profile.sex.value,
+        "height_cm": float(profile.height_cm), "weight_kg": float(profile.weight_kg),
+        "occupation": profile.occupation, "activity_level": profile.activity_level.value,
+        "goal": profile.goal.value, "allergies": profile.allergies,
+        "meal_budget_idr": profile.meal_budget_idr, "has_medical_condition": profile.has_medical_condition,
+        "bmr_kcal": profile.bmr_kcal, "tdee_kcal": profile.tdee_kcal,
+        "kcal_target": profile.kcal_target, "kcal_floor": profile.kcal_floor,
+        "max_dinner_cut_pct": profile.max_dinner_cut_pct,
+    }
+
+
 @router.post("/sync")
 def sync_user(payload: UserSyncPayload, db: Session = Depends(get_db), principal: IngredientPrincipal = Depends(current_principal)):
     """
@@ -93,8 +117,15 @@ def sync_user(payload: UserSyncPayload, db: Session = Depends(get_db), principal
         role=role_enum,
         consent_health_data=payload.consent_health_data
     )
+    persona = db.get(Persona, user.main_persona_id) if user.main_persona_id else None
+    profile = crud.get_health_profile(db, user.id)
     return {
         "status": "synchronized",
+        "onboarding_complete": persona is not None and profile is not None,
+        "main_persona_id": persona.id if persona else None,
+        "main_persona": persona,
+        "side_persona_ids": user.side_persona_ids or [],
+        "profile": serialize_health_profile(profile),
         "user": {
             "id": user.id,
             "name": user.name,
@@ -184,7 +215,9 @@ def get_user_dashboard(user_id: str, db: Session = Depends(get_db)):
 
 
 @router.get("/{user_id}/health-profile")
-def get_profile(user_id: str, db: Session = Depends(get_db)):
+def get_profile(user_id: str, db: Session = Depends(get_db), principal=Depends(current_principal)):
+    if user_id != principal.user_id:
+        raise HTTPException(403, "Tidak dapat membaca profil pengguna lain")
     profile = crud.get_health_profile(db, user_id)
     if not profile:
         raise HTTPException(status_code=404, detail="Health profile not found for user")
@@ -208,10 +241,12 @@ def get_profile(user_id: str, db: Session = Depends(get_db)):
 
 
 @router.post("/{user_id}/health-profile")
-def save_profile(user_id: str, payload: HealthProfilePayload, db: Session = Depends(get_db)):
+def save_profile(user_id: str, payload: HealthProfilePayload, db: Session = Depends(get_db), principal=Depends(current_principal)):
     """
     Saves or updates clinical health profile and computes Mifflin-St Jeor metabolic guardrails.
     """
+    if user_id != principal.user_id:
+        raise HTTPException(403, "Tidak dapat mengubah profil pengguna lain")
     # Ensure user exists first
     user = crud.get_user(db, user_id)
     if not user:
@@ -307,10 +342,16 @@ def get_user_rewards(user_id: str, db: Session = Depends(get_db)):
 
 
 @router.post("/{user_id}/orders")
-def place_order(user_id: str, payload: OrderCreatePayload, db: Session = Depends(get_db)):
+def place_order(user_id: str, payload: OrderCreatePayload, db: Session = Depends(get_db),
+                principal: IngredientPrincipal = Depends(current_principal)):
     """
     Persists order in PostgreSQL. If healthy pick, automatically credits SeaBank Wellness reward!
     """
+    if user_id != principal.user_id:
+        raise HTTPException(403, "Tidak dapat memesan menggunakan akun pengguna lain")
+    account = crud.get_user(db, user_id)
+    if not account or not account.main_persona_id or not db.get(Persona, account.main_persona_id) or not crud.get_health_profile(db, user_id):
+        raise HTTPException(409, "Lengkapi profil dan persona sebelum memesan")
     order = crud.create_order(
         db=db,
         user_id=user_id,

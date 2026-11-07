@@ -58,7 +58,7 @@ export default function ShopeeHeader() {
     setSignOutError(null);
 
     try {
-      await signOut({ redirectUrl: "/sign-in" });
+      await signOut({ redirectUrl: "/" });
     } catch (error) {
       console.error("Clerk sign-out failed:", error);
       setSignOutError("Keluar gagal. Silakan coba lagi.");
@@ -169,7 +169,7 @@ export default function ShopeeHeader() {
             </Link>
           </nav>
 
-          <div className="desktop-nav-profile" ref={profileRef}>
+          {user ? <div className="desktop-nav-profile" ref={profileRef}>
             <button
               type="button"
               className="desktop-nav-profile-trigger"
@@ -222,7 +222,7 @@ export default function ShopeeHeader() {
                 </button>
               </section>
             )}
-          </div>
+          </div> : <Link href={AUTH_ROUTES.SIGN_IN} className="desktop-nav-profile-trigger">Masuk</Link>}
         </div>
       </div>
 

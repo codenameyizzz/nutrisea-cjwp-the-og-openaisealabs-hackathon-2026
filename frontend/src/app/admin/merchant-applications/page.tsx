@@ -75,6 +75,8 @@ function ApplicationCard({ application, busy, onReview }: { application: Merchan
       <label style={{ display: "flex", alignItems: "start" }}><input type="checkbox" checked={confirmed} disabled={busy} onChange={event => setConfirmed(event.target.checked)} style={{ width: "auto", marginTop: 4 }} />Saya sudah memverifikasi data usaha dan kewenangan pemohon.</label>
       <div className={styles.actions}><button className={styles.primary} disabled={busy || !confirmed} onClick={() => void onReview(application, "APPROVED", reason)}>Setujui & Aktifkan Merchant</button>
         <button disabled={busy || !reason.trim()} onClick={() => void onReview(application, "REJECTED", reason)}>Tolak Pengajuan</button></div>
-    </> : <p>{application.status === "APPROVED" ? "Disetujui" : "Ditolak"}{application.review_reason ? ` — ${application.review_reason}` : ""}</p>}
+    </> : <><p>{application.status === "APPROVED" ? "Disetujui" : "Ditolak"}{application.review_reason ? ` — ${application.review_reason}` : ""}</p>
+      {application.status === "APPROVED" && <button disabled={busy} onClick={() => void onReview(application, "APPROVED", application.review_reason || "")}>Sinkronkan ulang akses Merchant</button>}
+    </>}
   </article>;
 }
