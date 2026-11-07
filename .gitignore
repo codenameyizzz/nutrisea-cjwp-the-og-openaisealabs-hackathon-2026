@@ -55,3 +55,11 @@ docs/ingredient-import-*.json.pending
 legacy/sql_example.txt
 backend/sql_example.txt
 *sql_example.txt
+
+# Local database backups and browser review artifacts
+/data/backup db/
+/output/
+/frontend/output/
+.playwright-cli/
+playwright-report/
+test-results/
