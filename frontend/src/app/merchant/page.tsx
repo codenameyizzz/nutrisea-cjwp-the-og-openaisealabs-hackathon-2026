@@ -130,6 +130,8 @@ function MerchantContent() {
   const [formTags, setFormTags] = useState<string[]>(["MINYAK_BARU", "TINGGI_PROTEIN"]);
   const [formCookingNotes, setFormCookingNotes] = useState("Standar Higienis NutriSea (Minyak Baru)");
 
+  const [isGeneratingDescription, setIsGeneratingDescription] = useState(false);
+
   // AI Estimation state
   const [isEstimatingAi, setIsEstimatingAi] = useState(false);
   const [aiRationale, setAiRationale] = useState<string | null>(null);
@@ -140,6 +142,29 @@ function MerchantContent() {
   const showToast = (msg: string) => {
     setToast(msg);
     setTimeout(() => setToast(null), 3000);
+  };
+
+  const handleGenerateDescription = async () => {
+    if (!formName.trim() || isGeneratingDescription) return;
+    setIsGeneratingDescription(true);
+    try {
+      const response = await authenticatedFetch("/api/merchant/generate-description", {
+        method: "POST",
+        body: JSON.stringify({
+          dish_name: formName,
+          category: formCategory,
+          ingredients: recipe?.items.map(item => `${item.quantity} ${item.unit} ${item.name}`) || [],
+          cooking_notes: formCookingNotes,
+        }),
+      });
+      const data = await responseJson<{ description: string }>(response);
+      setFormDescription(data.description);
+      showToast("Deskripsi menu berhasil dibuat. Anda bisa mengeditnya sebelum menyimpan.");
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : "Gagal membuat deskripsi menu.");
+    } finally {
+      setIsGeneratingDescription(false);
+    }
   };
 
   useEffect(() => {
@@ -929,6 +954,15 @@ function MerchantContent() {
                     resize: "none"
                   }}
                 />
+                <button
+                  type="button"
+                  onClick={handleGenerateDescription}
+                  disabled={isGeneratingDescription || !formName.trim()}
+                  style={{ marginTop: 8, background: isGeneratingDescription ? "#CCC" : "#EE4D2D", color: "#FFF", border: 0, borderRadius: 4, padding: "9px 12px", fontSize: 12.5, fontWeight: 600, cursor: isGeneratingDescription || !formName.trim() ? "not-allowed" : "pointer", display: "inline-flex", alignItems: "center", gap: 6 }}
+                >
+                  {isGeneratingDescription ? <RefreshCw size={14} className="spin-icon" /> : <Sparkles size={14} />}
+                  {isGeneratingDescription ? "AI sedang membuat deskripsi..." : "Generate Deskripsi dengan AI"}
+                </button>
               </div>
 
               {/* ========================================================

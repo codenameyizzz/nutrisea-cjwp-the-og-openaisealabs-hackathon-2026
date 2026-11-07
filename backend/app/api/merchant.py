@@ -25,6 +25,19 @@ class NutritionEstimateRequest(BaseModel):
     description: Optional[str] = ""
     category: Optional[str] = "protein"
 
+class DishDescriptionRequest(BaseModel):
+    dish_name: str = Field(min_length=1, max_length=200)
+    category: Optional[str] = Field("", max_length=30)
+    ingredients: Optional[List[str]] = Field(default_factory=list, max_length=50)
+    cooking_notes: Optional[str] = Field("", max_length=255)
+
+    @field_validator("dish_name")
+    @classmethod
+    def validate_dish_name(cls, value):
+        if not value.strip():
+            raise ValueError("Nama menu wajib diisi")
+        return value.strip()
+
 class DishItemPayload(BaseModel):
     id: Optional[str] = Field(None, max_length=32)
     name: str = Field(min_length=1, max_length=200)
@@ -185,6 +198,40 @@ def delete_dish(dish_id: str, principal=Depends(require_merchant), db: Session =
     item.is_available = False  # Preserve recipe and historical order/recommendation FKs.
     db.commit()
     return {"status": "deleted", "deleted_id": dish_id}
+
+
+@router.post("/generate-description")
+def generate_dish_description(req: DishDescriptionRequest):
+    """Generate editable Indonesian storefront copy from the menu details."""
+    name = req.dish_name.strip()
+    ingredients = [value.strip() for value in (req.ingredients or []) if value.strip()]
+    details = ", ".join(ingredients) if ingredients else "bahan khas menu tersebut"
+    cooking = (req.cooking_notes or "").strip()
+    try:
+        client = get_openai_client()
+        response = client.chat.completions.create(
+            model=settings.OPENAI_MODEL,
+            messages=[
+                {"role": "system", "content": "Anda penulis deskripsi menu ShopeeFood berbahasa Indonesia. Buat satu deskripsi menarik, jelas, faktual, maksimal 500 karakter. Jangan mengarang klaim kesehatan, gizi, atau bahan yang tidak diberikan. Balas hanya deskripsinya."},
+                {"role": "user", "content": f"Nama menu: {name}\nKategori: {req.category or 'menu makanan'}\nBahan/komposisi: {details}\nCatatan memasak: {cooking or 'tidak ada'}"},
+            ],
+            temperature=0.7,
+            max_tokens=180,
+        )
+        description = (response.choices[0].message.content or "").strip().strip('"')
+        if description.startswith("```"):
+            description = description.replace("```", "").strip()
+        if description:
+            return {"description": description[:500]}
+    except Exception as error:
+        logger.warning("AI dish description generation fallback used: %s", error)
+
+    description = f"{name} dengan {details}. "
+    if cooking:
+        description += cooking.rstrip(".") + "."
+    else:
+        description += "Disiapkan segar dengan racikan bumbu pilihan."
+    return {"description": description[:500]}
 
 
 @router.post("/estimate-nutrition")
