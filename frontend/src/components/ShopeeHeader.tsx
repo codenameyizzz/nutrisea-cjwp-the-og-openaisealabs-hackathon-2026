@@ -24,7 +24,7 @@ import { AUTH_ROUTES } from "@/domains/auth/config/auth-routes";
 export default function ShopeeHeader() {
   const pathname = usePathname();
   const router = useRouter();
-  const { cartCount, setIsSeaBankOpen, searchQuery, setSearchQuery, logUserAction, availableRoles, setActiveRole } = useApp();
+  const { cartCount, setIsSeaBankOpen, searchQuery, setSearchQuery, logUserAction, availableRoles, setActiveRole, merchantNavigation } = useApp();
   const { signOut } = useClerk();
   const { user } = useUser();
   const [isSigningOut, setIsSigningOut] = useState(false);
@@ -147,8 +147,8 @@ export default function ShopeeHeader() {
             </Link>
 
             <Link
-              href={availableRoles.includes("MERCHANT") ? "/merchant" : "/merchant/register"}
-              className={`desktop-nav-link ${pathname === "/merchant" ? "active" : ""}`}
+              href={merchantNavigation.href}
+              className={`desktop-nav-link ${pathname?.startsWith("/merchant") ? "active" : ""}`}
               style={{
                 backgroundColor: pathname === "/merchant" ? "#FFFFFF" : "rgba(255,255,255,0.18)",
                 color: pathname === "/merchant" ? "#EE4D2D" : "#FFFFFF",
@@ -157,10 +157,10 @@ export default function ShopeeHeader() {
                 fontWeight: 600
               }}
             >
-              <Store size={14} /> {availableRoles.includes("MERCHANT") ? "Merchant portal" : "Become a merchant"}
+              <Store size={14} /> {merchantNavigation.label}
             </Link>
 
-            <Link
+            {availableRoles.includes("SHOPEE_ADMIN") && <Link
               href="/admin"
               className={`desktop-nav-link ${pathname === "/admin" ? "active" : ""}`}
               style={{
@@ -173,7 +173,7 @@ export default function ShopeeHeader() {
               }}
             >
               <ShieldCheck size={14} /> Shopee Admin
-            </Link>
+            </Link>}
           </nav>
 
           {user ? <div className="desktop-nav-profile" ref={profileRef}>
@@ -213,14 +213,14 @@ export default function ShopeeHeader() {
                   View profile
                 </Link>
 
-                <Link
+                {availableRoles.length > 1 && <Link
                   href="/onboarding?change=true"
                   className="desktop-nav-profile-detail"
                   onClick={() => setIsProfileOpen(false)}
                 >
                   <UserRound size={14} />
                   Switch role
-                </Link>
+                </Link>}
 
                 {signOutError && (
                   <p className="desktop-nav-signout-error" role="alert">

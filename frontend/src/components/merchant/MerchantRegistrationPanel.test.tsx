@@ -22,7 +22,7 @@ afterEach(async () => { if (root) await act(async () => root!.unmount()); root =
 
 test("customer sees merchant registration form with required business fields", async () => {
   await mount();
-  assert.match(host.textContent!, /Register as a merchant/);
+  assert.equal(host.querySelector("h1")?.textContent, "Daftar Merchant");
   for (const key of Object.keys(data)) assert.equal(host.querySelector<HTMLInputElement>(`input[name=${key}]`)?.required, true);
   assert.equal(host.querySelector<HTMLInputElement>('input[type=checkbox]')?.required, true);
   assert.match(host.querySelector('button[type=submit]')!.textContent!, /Submit merchant application/);
@@ -39,6 +39,7 @@ test("form submits applicant business data without role or user identity fields"
 
 test("pending applicant sees status and can keep shopping without duplicate form", async () => {
   await mount({ application });
+  assert.equal(host.querySelector("h1")?.textContent, "Manage Merchant");
   assert.match(host.textContent!, /Awaiting review/);
   assert.equal(host.querySelector("form"), null);
   assert.equal(host.querySelector('a[href="/"]')?.textContent, "Continue shopping");

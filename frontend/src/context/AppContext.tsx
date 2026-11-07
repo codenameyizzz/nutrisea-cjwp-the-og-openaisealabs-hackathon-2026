@@ -6,6 +6,7 @@ import { useAuth } from "@clerk/nextjs";
 import { sessionAccess } from "@/services/session-access";
 import { CART_STORAGE_KEY, CART_OWNER_KEY, restoreAccountCart } from "@/services/shopping-cart";
 import { useAccountSession } from "@/context/AccountSessionContext";
+import { useMerchantNavigation } from "@/services/merchant-navigation";
 
 export interface CartItem {
   dish: DishItem;
@@ -25,6 +26,7 @@ export interface BmiStats {
 export type UserAppRole = "CONSUMER" | "MERCHANT" | "SHOPEE_ADMIN";
 
 interface AppContextType {
+  merchantNavigation: ReturnType<typeof useMerchantNavigation>;
   refreshAccountAccess: () => void;
   availableRoles: UserAppRole[];
   roleAccessLoaded: boolean;
@@ -92,6 +94,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     ...(access?.is_admin ? ["SHOPEE_ADMIN" as const] : []),
   ], [access]);
   const roleAccessLoaded = !!isLoaded;
+  const merchantNavigation = useMerchantNavigation({
+    userId: isLoaded && isSignedIn ? userId ?? null : null,
+    sessionId: isLoaded && isSignedIn ? sessionId ?? null : null,
+    getToken,
+    hasAccess: availableRoles.includes("MERCHANT"),
+  });
   const roleAccessError = sessionAccessResult.error || (refreshError?.sessionId === sessionId ? refreshError?.message : null) || null;
   const [activeRole, setActiveRoleState] = useState<UserAppRole>("CONSUMER");
   useEffect(() => {
@@ -265,6 +273,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   return (
     <AppContext.Provider
       value={{
+        merchantNavigation,
         availableRoles, roleAccessLoaded, roleAccessError, refreshAccountAccess,
         activeRole,
         setActiveRole,

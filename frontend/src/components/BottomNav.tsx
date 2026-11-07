@@ -8,7 +8,7 @@ import { useApp } from "@/context/AppContext";
 
 export default function BottomNav() {
   const pathname = usePathname();
-  const { cartCount, activeRole, availableRoles, setActiveRole } = useApp();
+  const { cartCount, activeRole, setActiveRole, merchantNavigation } = useApp();
 
   return (
     <nav className="app-bottom-nav" aria-label="Main navigation">
@@ -51,12 +51,12 @@ export default function BottomNav() {
         </Link>
       ) : (
         <Link
-          href={availableRoles.includes("MERCHANT") ? "/merchant" : "/merchant/register"}
+          href={merchantNavigation.href}
           aria-current={pathname?.startsWith("/merchant") ? "page" : undefined}
           className={`nav-item-btn ${pathname?.startsWith("/merchant") ? "active" : ""}`}
         >
           <Store size={17} />
-          <span>{availableRoles.includes("MERCHANT") ? "Merchant" : "Sell food"}</span>
+          <span>{merchantNavigation.label}</span>
         </Link>
       )}
 

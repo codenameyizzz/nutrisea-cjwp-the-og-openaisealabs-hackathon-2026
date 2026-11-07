@@ -28,7 +28,7 @@ export default function MerchantRegistrationPanel({ application, hasAccess, busy
       area: application.area, address: application.address, cuisine_type: application.cuisine_type });
   }, [application]);
   return <section className={styles.page} style={{ maxWidth: 700 }}>
-    <div className={styles.heading}><h1>Register as a merchant</h1><Link href="/profile">Back to profile</Link></div>
+    <div className={styles.heading}><h1>{hasAccess || application ? "Manage Merchant" : "Daftar Merchant"}</h1><Link href="/profile">Back to profile</Link></div>
     <p className={styles.muted}>Use one account to shop and manage your business. NutriSea reviews applications before enabling merchant access.</p>
     {error && <div role="alert" className={styles.notice}>{error} <button onClick={onReload}>Try loading the status again</button></div>}
     {(hasAccess || application?.status === "APPROVED") ? <div className={styles.notice}>

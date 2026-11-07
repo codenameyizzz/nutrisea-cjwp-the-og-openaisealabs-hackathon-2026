@@ -11,7 +11,7 @@ import { useAccountSession } from "@/context/AccountSessionContext";
 
 export default function ProfileSummary() {
   const { isLoaded, user } = useUser();
-  const { availableRoles } = useApp();
+  const { merchantNavigation } = useApp();
   const { account } = useAccountSession();
 
   if (!isLoaded || !user) {
@@ -35,8 +35,8 @@ export default function ProfileSummary() {
         <div style={{ padding: "20px 0" }}>
           <h2>Business and merchant access</h2>
           <p>Manage your business with the same account. You can still shop as a customer.</p>
-          <Link href={availableRoles.includes("MERCHANT") ? "/merchant" : "/merchant/register"} className="btn-shopee-primary" style={{ display: "inline-block", marginTop: 12 }}>
-            {availableRoles.includes("MERCHANT") ? "Open merchant dashboard" : "Register as a merchant / check application"}
+          <Link href={merchantNavigation.href} className="btn-shopee-primary" style={{ display: "inline-block", marginTop: 12 }}>
+            {merchantNavigation.label}
           </Link>
         </div>
         <dl className={styles.summary}>

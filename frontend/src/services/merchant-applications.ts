@@ -3,6 +3,7 @@
 import { useCallback, useMemo } from "react";
 import { useIngredientApi } from "./ingredient-api";
 import { responseJson } from "@/lib/api";
+import { publishMerchantApplication } from "./merchant-navigation";
 
 export type ApplicationStatus = "PENDING" | "APPROVED" | "REJECTED";
 export interface MerchantApplicationInput {
@@ -22,10 +23,18 @@ export function useMerchantApplications() {
     responseJson<T>(await authenticatedFetch(path, init)), [authenticatedFetch]);
   return useMemo(() => ({
     isLoaded, isSignedIn, userId,
-    own: (signal?: AbortSignal) => request<ApplicationResult>("/api/merchant-applications/me", { signal }),
-    submit: (data: MerchantApplicationInput) => request<ApplicationResult>("/api/merchant-applications/me", {
-      method: "POST", body: JSON.stringify(data),
-    }),
+    own: async (signal?: AbortSignal) => {
+      const result = await request<ApplicationResult>("/api/merchant-applications/me", { signal });
+      if (!signal?.aborted) publishMerchantApplication(userId, result.application);
+      return result;
+    },
+    submit: async (data: MerchantApplicationInput) => {
+      const result = await request<ApplicationResult>("/api/merchant-applications/me", {
+        method: "POST", body: JSON.stringify(data),
+      });
+      publishMerchantApplication(userId, result.application);
+      return result;
+    },
     list: (status: ApplicationStatus, page: number, signal?: AbortSignal) => request<ApplicationList>(
       `/api/admin/merchant-applications?${new URLSearchParams({ status, page: String(page) })}`, { signal }),
     review: (application: MerchantApplication, decision: "APPROVED" | "REJECTED", reason: string) => request<ApplicationResult>(

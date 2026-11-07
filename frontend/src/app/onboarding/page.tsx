@@ -396,7 +396,9 @@ export default function OnboardingRolePage() {
         {/* Footer Note */}
         <div style={{ textAlign: "center", display: "flex", flexDirection: "column", gap: 4, fontSize: 11.5, color: "#64748B" }}>
           <p>
-            You can switch using <strong>Switch role in the profile menu</strong> according to your account permissions.
+            {availableRoles.length > 1
+              ? <>You can switch using <strong>Switch role in the profile menu</strong> according to your account permissions.</>
+              : <>Use <strong>Daftar Merchant</strong> to register your business with this account.</>}
           </p>
           <p style={{ color: "#94A3B8" }}>
             NutriSea by ShopeeFood • Sea Labs food recommendation system

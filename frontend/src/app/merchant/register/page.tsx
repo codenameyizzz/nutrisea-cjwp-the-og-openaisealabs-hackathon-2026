@@ -11,7 +11,7 @@ import styles from "@/components/ingredients/ingredients.module.css";
 export default function MerchantRegistrationPage() {
   const { isLoaded, isSignedIn, userId } = useAuth();
   if (!isLoaded) return <p role="status">Loading session...</p>;
-  if (!isSignedIn) return <section className={styles.page}><h1>Register as a merchant</h1><p>Sign in with your customer account to register a business. You can continue shopping with the same account.</p><Link href="/sign-in?redirect_url=%2Fmerchant%2Fregister">Sign in to register</Link></section>;
+  if (!isSignedIn) return <section className={styles.page}><h1>Daftar Merchant</h1><p>Sign in with your customer account to register a business. You can continue shopping with the same account.</p><Link href="/sign-in?redirect_url=%2Fmerchant%2Fregister">Sign in to register</Link></section>;
   return <RegistrationContent key={userId} />;
 }
 
@@ -59,7 +59,7 @@ function RegistrationContent() {
     } finally { setBusy(false); }
   };
   if (!api.isLoaded) return <p role="status">Loading session...</p>;
-  if (!api.isSignedIn) return <section className={styles.page}><h1>Register as a merchant</h1><p>Sign in with your customer account to register a business. You can continue shopping with the same account.</p><Link href="/sign-in?redirect_url=%2Fmerchant%2Fregister">Sign in to register</Link></section>;
+  if (!api.isSignedIn) return <section className={styles.page}><h1>Daftar Merchant</h1><p>Sign in with your customer account to register a business. You can continue shopping with the same account.</p><Link href="/sign-in?redirect_url=%2Fmerchant%2Fregister">Sign in to register</Link></section>;
   if (loading) return <p role="status">Loading application status...</p>;
   const hasAccess = availableRoles.includes("MERCHANT");
   return <MerchantRegistrationPanel application={application} hasAccess={hasAccess} busy={busy} error={error}
