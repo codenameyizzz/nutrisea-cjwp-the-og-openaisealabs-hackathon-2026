@@ -1,6 +1,8 @@
 from typing import Dict, Any, List, Optional, Tuple
 import math
 import random
+import re
+from .allergens import normalize_allergens
 
 FALLBACK_NEUTRAL_VALUE = 0.50
 VARIANCE_MIN = 0.85
@@ -21,16 +23,12 @@ def passes_hard_filters(item: Dict[str, Any], profile: Optional[Dict[str, Any]] 
 
     # 1. Allergen Hard Filter
     raw_allergens = profile.get("allergens") or []
-    user_allergens = []
-    if isinstance(raw_allergens, list):
-        user_allergens = [str(a).lower().strip() for a in raw_allergens if a and str(a).upper() != "NONE"]
-    elif isinstance(raw_allergens, str) and raw_allergens.upper() != "NONE":
-        user_allergens = [a.lower().strip() for a in raw_allergens.split(",") if a.strip()]
+    user_allergens = normalize_allergens(raw_allergens)
 
     if user_allergens:
         if item.get("allergenCoverage") != "complete":
             return False
-        item_allergens = [str(a).lower().strip() for a in (item.get("allergens") or [])]
+        item_allergens = normalize_allergens(item.get("allergens"))
         item_name = str(item.get("name") or item.get("item_name") or "").lower()
         for allergen in user_allergens:
             if allergen in item_allergens:
@@ -41,7 +39,7 @@ def passes_hard_filters(item: Dict[str, Any], profile: Optional[Dict[str, Any]] 
                 return False
             if allergen == "seafood" and any(x in item_name for x in ["udang", "cumi", "kepiting"]):
                 return False
-            if allergen == "telur" and "telur" in item_name:
+            if allergen == "telur" and re.search(r"\b(?:egg|eggs|telur)\b", item_name):
                 return False
 
     # 2. Medical condition guardrails (e.g. Hypertension sodium cap)

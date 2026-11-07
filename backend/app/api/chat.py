@@ -1,6 +1,7 @@
 """One authenticated conversation per account, with server-owned context and actions."""
 import json
 import logging
+import re
 from typing import Optional, Literal
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
@@ -13,10 +14,57 @@ from ..models.chat_message import ChatMessage
 from ..models.user_action import UserActionLog
 from ..db import crud
 from ..services import profile_actions as actions
+from ..services.allergens import normalize_allergens
 from .preferences import personalized_recommendation
 
 router = APIRouter(prefix="/api/ai", tags=["AI Co-Pilot"])
 logger = logging.getLogger(__name__)
+
+REACTION_GUIDANCE = (
+    "A possible reaction needs medical assessment; I cannot diagnose an allergy. "
+    "If you have breathing difficulty, throat swelling, faintness, or rapidly worsening symptoms, "
+    "seek urgent medical care now or contact local emergency services."
+)
+
+
+def is_health_concern(message):
+    return bool(re.search(r"\b(?:allerg\w*|alerg\w*|reaction|reaksi|symptom\w*|health|medical|sick|pain|ache|rash|breath\w*|throat|faint\w*|swelling|swollen|worsen\w*|sesak|bengkak|pingsan|sakit)\b", message, re.I))
+
+
+def is_profile_question(message):
+    return bool(re.search(r"\b(?:profile|profil|information\w*|setting\w*|budget|anggaran|saved|updated|remember\w*)\b", message, re.I))
+
+
+def is_food_request(message):
+    if is_health_concern(message) or is_profile_question(message):
+        return False
+    return bool(re.search(
+        r"\b(?:recommend|suggest|recommendation|suggestion|rekomendasi|sarankan|carikan)\b.*\b(?:food|meal|dish|lunch|dinner|breakfast|eat|menu|makan\w*)\b"
+        r"|\b(?:what|where)\s+(?:(?:can|should|could)\s+i\s+(?:eat|order)|(?:to|for)\s+(?:eat|lunch|dinner|breakfast))\b"
+        r"|\b(?:makan apa|menu apa|food suggestions?|meal recommendations?)\b", message, re.I))
+
+
+def profile_status_reply(db, uid, message, state):
+    pending = actions.pending(db, uid)
+    if is_health_concern(message):
+        profile = crud.get_health_profile(db, uid)
+        saved = normalize_allergens(profile.allergies if profile else [])
+        temporary = sorted(set(state["allergies"]) - set(saved))
+        reply = ("Saved allergy restrictions in your permanent profile: " + ", ".join(saved) + "."
+                 if saved else "No allergy has been saved in your permanent profile.")
+        if temporary:
+            reply += " Temporary precaution until midnight in Jakarta: " + ", ".join(temporary) + "."
+        if any(p["field"].startswith("allergy:") for p in pending):
+            reply += " Pending confirmation: use Update permanently, Just for today, or Keep existing."
+        reply += " Incomplete recipe information is UNKNOWN, not proof of allergen safety."
+        return reply
+    budget = state["meal_budget_idr"]
+    reply = f"Your effective meal budget is Rp{budget:,}." if budget is not None else "No meal budget is set."
+    if state["temporary_until"]:
+        reply += " Temporary settings may apply until midnight in Jakarta."
+    if pending:
+        reply += " You have a change pending confirmation; it has not been saved permanently."
+    return reply
 
 class ChatConsultRequest(BaseModel):
     message: str = Field(min_length=1, max_length=2000)
@@ -72,20 +120,37 @@ def consult_ai_copilot(req: ChatConsultRequest, principal=Depends(current_princi
         changed = True
     elif decision and outstanding:
         reply = "There are several proposals. Please choose a button on the setting you want to change."
+    elif decision:
+        reply = "There is no pending change to confirm. Your permanent profile is unchanged."
     elif change:
-        action = actions.propose(db, uid, *change)
+        allergy = actions.parse_allergy_statement(req.message)
+        action = actions.propose(db, uid, *change, certainty=allergy["certainty"] if allergy else None)
         old, new = action["old_value"], action["proposed_value"]
         if action["field"] == "meal_budget_idr":
             reply = f"Your current lunch budget is Rp{old:,}. Change it to Rp{new:,} permanently, just for today, or keep the existing budget?"
         elif action["field"].startswith("allergy:"):
-            reply = "I have applied a precautionary restriction for today. Dishes with unknown recipe composition will not be recommended. Would you like to save this allergy?"
+            description = "possible reaction" if allergy and allergy["certainty"] == "possible" else "reported allergy"
+            reply = (f"I have applied a temporary precaution for your {description} until midnight in Jakarta. "
+                     "Your permanent profile is unchanged; saving this allergy restriction is pending confirmation. "
+                     "Dishes with unknown recipe composition will not be recommended. "
+                     "Choose Update permanently, Just for today, or Keep existing. " + REACTION_GUIDANCE)
         else:
             reply = f"Proposed setting {action['field']}: {old} to {new}. Save permanently or just for today?"
         changed = True
     if reply is None:
-        rec = personalized_recommendation(principal=principal, db=db)
-        recommendation = rec["dish"]
         state = actions.effective_profile(db, uid)
+        if is_profile_question(req.message):
+            reply = profile_status_reply(db, uid, req.message, state)
+        elif is_health_concern(req.message):
+            reply = ("I have not changed your permanent profile or added a new allergy restriction from this message. "
+                     "If you are reporting your own possible food reaction, tell me which food so I can offer a precaution and confirmation. "
+                     + REACTION_GUIDANCE)
+        if reply is not None:
+            model = "deterministic"
+    if reply is None:
+        shopping = is_food_request(req.message)
+        rec = personalized_recommendation(principal=principal, db=db) if shopping else None
+        recommendation = rec["dish"] if rec else None
         # The model explains the profile, not dish eligibility. Recommendations are server-rendered.
         fallback = "I can help with your budget and food preferences. Try: My lunch budget is now Rp60,000."
         reply = fallback; model = "deterministic"
@@ -101,11 +166,13 @@ def consult_ai_copilot(req: ChatConsultRequest, principal=Depends(current_princi
             reply = "Your allergy restrictions are active. Incomplete recipe information is UNKNOWN, so I cannot describe those dishes as allergen-free."
         if model == "deterministic" and not state["allergies"]:
             reply += " AI generation is unavailable; this is a rules-based response."
-        if rec["dish"] and state["advice_style"] != "quiet":
+        if rec and rec["dish"] and state["advice_style"] != "quiet":
             dish = rec["dish"]
-            reply += f"\nCatalog suggestion: {dish['name']} - Rp{dish['discountedPrice']:,}. Nutrition source: {dish.get('nutritionSource') or 'unavailable'}."
-        elif not rec["dish"]:
+            reply += f"\nCatalog suggestion: {dish['name']} - Rp{dish['discountedPrice']:,}."
+        elif rec and not rec["dish"]:
             reply += "\nNo catalog dishes currently meet your restrictions."
+    if re.search(r"\b(?:breath\w*|throat|faint\w*|rapidly worsening|sesak|pingsan)\b", req.message, re.I) and REACTION_GUIDANCE not in reply:
+        reply = REACTION_GUIDANCE + " " + reply
     assistant = ChatMessage(user_id=uid, role="assistant", content=reply, model_used=model)
     db.add(assistant); db.commit()
     logger.info("chat_complete model=%s pending=%d", model, len(actions.pending(db, uid)))

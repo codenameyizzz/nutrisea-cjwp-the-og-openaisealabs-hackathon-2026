@@ -6,10 +6,10 @@ from ..models.user_action import UserActionLog
 from ..models.health_profile import HealthProfile
 from ..models.user_memory import UserMemoryItem
 from .explicit_preferences import parse_preference, preferences, SOURCE
+from .allergens import normalize_allergen, normalize_allergens
 
 KIND = "PROFILE_CHANGE"
 JAKARTA = timezone(timedelta(hours=7))
-ALLERGENS = {"shrimp": "udang", "prawn": "udang", "peanut": "kacang", "peanuts": "kacang", "egg": "telur", "milk": "susu"}
 
 def now():
     return datetime.now(timezone.utc)
@@ -36,9 +36,31 @@ def validate(field, value):
     else:
         raise HTTPException(422, "Unsupported setting.")
 
+def parse_allergy_statement(message):
+    text = " ".join(message.lower().replace("’", "'").strip().rstrip(".!").split())
+    text = re.sub(r"\bim\b", "i'm", text)
+    text = re.sub(r"\bive\b", "i've", text)
+    # Only complete first-person statements qualify; questions and quoted or
+    # third-party statements must not create restrictions on this account.
+    uncertain = text.startswith("i think ")
+    if uncertain:
+        text = text[len("i think "):]
+    assertion = re.fullmatch(r"i(?: am|'m| may be| might be| could be) al{1,2}ergic to ([a-z ]{2,40})", text)
+    reaction = re.fullmatch(r"i(?:(?: have|'ve) (?:developed|had)|(?: am|'m) having) (?:an? )?al{1,2}ergic reaction (?:to|after eating) ([a-z ]{2,40})", text)
+    indonesian = re.fullmatch(r"(?:saya|aku) (mungkin )?alergi(?: terhadap)? ([a-z ]{2,40})", text)
+    match = assertion or reaction or indonesian
+    if not match:
+        return None
+    food = indonesian[2] if indonesian else match[1]
+    if any(word in food.split() for word in ("today", "hari", "not", "no", "tidak", "bukan", "dan", "and", "or", "if", "but")):
+        return None
+    possible = uncertain or reaction is not None or bool(indonesian and indonesian[1]) or bool(re.search(r"\b(?:may|might|could)\b", text))
+    return {"allergen": normalize_allergen(food), "certainty": "possible" if possible else "self_reported"}
+
+
 def parse_change(message):
     text = message.strip().rstrip(".!")
-    budget = re.fullmatch(r"(?:my (?:usual |lunch |meal )?budget (?:is(?: now)?|=)|(?:budget|anggaran)(?: makan siang| makan)?(?: saya)?(?: sekarang| kini)?(?: adalah| jadi| menjadi)?)[ :]*rp?\s*([0-9][0-9.,]*)(?:\s*(rb|ribu|k))?", text, re.I)
+    budget = re.fullmatch(r"(?:my (?:usual )?(?:lunch |meal )?budget (?:is(?: now)?|=)|(?:budget|anggaran)(?: makan siang| makan)?(?: saya)?(?: sekarang| kini)?(?: adalah| jadi| menjadi)?)[ :]*rp?\s*([0-9][0-9.,]*)(?:\s*(rb|ribu|k))?", text, re.I)
     if budget:
         raw = budget[1].replace(",", "").replace(".", "")
         value = int(raw) * (1000 if budget[2] else 1)
@@ -53,12 +75,9 @@ def parse_change(message):
     if pref: return "excluded_food:" + pref[0], pref[1]
     if re.fullmatch(r"(?:I(?: am|'m) trying to eat less fried food|I want to eat less fried food|saya (?:ingin|mau|sedang mencoba) (?:mengurangi|kurangi) (?:gorengan|makanan goreng))", text, re.I):
         return "reduce_fried_food", True
-    # Full first-person assertions only; negation, questions and third parties do not match.
-    allergy = re.fullmatch(r"(?:saya|aku|I(?: am|'m)) (?:alergi(?: terhadap)?|allergic to) ([a-z ]{2,40})", text, re.I)
+    allergy = parse_allergy_statement(message)
     if allergy:
-        value = allergy[1].lower()
-        if any(word in value.split() for word in ("today", "hari", "not", "tidak", "dan", "and")): return None
-        return "allergy:" + ALLERGENS.get(value, value), True
+        return "allergy:" + allergy["allergen"], True
     birth = re.fullmatch(r"(?:my (?:birth date|date of birth) is|tanggal lahir saya(?: adalah)?) (\d{4}-\d{2}-\d{2})", text, re.I)
     if birth:
         validate("birth_date", birth[1]); return "birth_date", birth[1]
@@ -66,7 +85,7 @@ def parse_change(message):
 
 def canonical_value(db, uid, profile, field):
     if field == "meal_budget_idr": return profile.meal_budget_idr
-    if field.startswith("allergy:"): return field[8:] in [str(a).lower() for a in (profile.allergies or [])]
+    if field.startswith("allergy:"): return normalize_allergen(field[8:]) in normalize_allergens(profile.allergies)
     if field.startswith("excluded_food:"): return field[14:] in preferences(db, uid)
     return (profile.learned_palate or {}).get(field, False if field == "reduce_fried_food" else None)
 
@@ -79,7 +98,9 @@ def public(row):
 def pending(db, uid):
     return [public(r) for r in records(db, uid) if r.payload.get("status") == "pending" and datetime.fromisoformat(r.payload["expires_at"]) > now()]
 
-def propose(db, uid, field, value):
+def propose(db, uid, field, value, *, certainty=None):
+    if field.startswith("allergy:"):
+        field = "allergy:" + normalize_allergen(field[8:])
     validate(field, value)
     from ..db import crud
     user = crud.get_user(db, uid)
@@ -95,6 +116,7 @@ def propose(db, uid, field, value):
         "scope": "pending_confirmation", "today_only": field == "excluded_food:nasi", "status": "pending", "source": "explicit_statement",
         "expires_at": (now() + timedelta(minutes=15)).isoformat(),
         "temporary_until": day_end().isoformat(),
+        **({"certainty": certainty if certainty in ("possible", "self_reported") else "self_reported"} if field.startswith("allergy:") else {}),
     })
     db.add(row); db.flush()
     return public(row)
@@ -102,7 +124,7 @@ def propose(db, uid, field, value):
 def effective_profile(db, uid):
     profile = db.query(HealthProfile).filter_by(user_id=uid).first()
     state = {"meal_budget_idr": profile.meal_budget_idr if profile else None,
-             "allergies": list(profile.allergies or []) if profile else [],
+             "allergies": normalize_allergens(profile.allergies) if profile else [],
              "excluded_foods": preferences(db, uid),
              "reduce_fried_food": bool((profile.learned_palate or {}).get("reduce_fried_food")) if profile else False,
              "goal": profile.goal.value if profile else None,
@@ -116,7 +138,7 @@ def effective_profile(db, uid):
         if not (active_today or precaution) or datetime.fromisoformat(p["temporary_until"]) <= now(): continue
         value = p["proposed_value"]
         if field.startswith("allergy:") and value:
-            state["allergies"] = sorted(set(state["allergies"] + [field[8:]]))
+            state["allergies"] = normalize_allergens(state["allergies"] + [field[8:]])
         elif field.startswith("excluded_food:"):
             food = field[14:]; state["excluded_foods"] = [x for x in state["excluded_foods"] if x != food] + ([food] if value else [])
         elif field in ("meal_budget_idr", "reduce_fried_food"):
@@ -153,7 +175,7 @@ def decide(db, uid, action_id, choice):
         if choice == "permanent":
             if field == "meal_budget_idr": profile.meal_budget_idr = value
             elif field.startswith("allergy:"):
-                profile.allergies = sorted(set(profile.allergies or []) | {field[8:]})
+                profile.allergies = normalize_allergens([*(profile.allergies or []), field[8:]])
             elif field.startswith("excluded_food:"):
                 food = field[14:]
                 db.query(UserMemoryItem).filter(UserMemoryItem.user_id == uid, UserMemoryItem.source == SOURCE,
