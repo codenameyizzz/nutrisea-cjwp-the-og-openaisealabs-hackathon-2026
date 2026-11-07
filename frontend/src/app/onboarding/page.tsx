@@ -33,16 +33,16 @@ interface RoleOption {
 const ROLES: RoleOption[] = [
   {
     id: "CONSUMER",
-    title: "Customer (Konsumen ShopeeFood)",
-    badge: "Rekomendasi Cerdas & Cashback",
+    title: "Pelanggan ShopeeFood",
+    badge: "Rekomendasi cerdas dan uang kembali",
     subtitle: "Untuk Pelanggan & Pencari Makanan Sehat",
-    description: "Pesan menu sehat yang disesuaikan dengan BMR/TDEE harianmu dari Warteg & Resto terdekat, nikmati cashback SeaBank 10% di setiap transaksi.",
+    description: "Pesan menu sehat yang disesuaikan dengan BMR/TDEE harianmu dari Warteg & Resto terdekat, nikmati uang kembali SeaBank 10% di setiap transaksi.",
     icon: <User size={24} color="#EE4D2D" />,
     iconBg: { background: "#FFF0EB", border: "#FFD0C0" },
     benefits: [
-      "Menu disesuaikan target kalori (Mifflin-St Jeor Formula)",
-      "Deteksi otomatis kalori menu Warteg & barcode makanan",
-      "Cashback SeaBank 10% langsung cair ke dompet digital",
+      "Menu disesuaikan target kalori (Rumus Mifflin-St Jeor)",
+      "Deteksi otomatis kalori menu Warteg & kode batang makanan",
+      "Uang kembali SeaBank 10% langsung cair ke dompet digital",
       "Filter alergi, batas natrium, dan preferensi diet",
     ],
     destination: AUTH_ROUTES.PERSONA_SELECTION,
@@ -50,37 +50,37 @@ const ROLES: RoleOption[] = [
   },
   {
     id: "MERCHANT",
-    title: "Merchant (Mitra Warteg & Resto)",
+    title: "Mitra warteg dan restoran",
     badge: "Komisi Spesial 5% & AI Gizi",
     subtitle: "Untuk Pemilik Warteg, Depot & Restoran",
-    description: "Kelola gerai multi-outlet, estimasi gizi & kalori menu masakan secara instan dengan AI, serta raih sertifikasi dapur higienis untuk potongan komisi.",
+    description: "Kelola gerai di berbagai lokasi, estimasi gizi & kalori menu masakan secara instan dengan AI, serta raih sertifikasi dapur higienis untuk potongan komisi.",
     icon: <Store size={24} color="#00B14F" />,
     iconBg: { background: "#EBF9F1", border: "#C2EFD7" },
     benefits: [
       "Manajemen cabang & inventaris menu masakan harian",
-      "AI Nutrition Tagger otomatis (Terkalibrasi FatSecret)",
+      "Penandaan gizi otomatis dengan AI (terkalibrasi FatSecret)",
       "Potongan komisi platform ke 5% (Hemat 15% dari standar)",
-      "Inspeksi & badge sertifikasi dapur higienis resmi",
+      "Inspeksi & lencana sertifikasi dapur higienis resmi",
     ],
     destination: "/merchant",
     destLabel: "Masuk Portal Mitra Warteg",
   },
   {
     id: "SHOPEE_ADMIN",
-    title: "Admin (Shopee SuperAdmin)",
+    title: "Administrator Shopee",
     badge: "Tata Kelola & Pengawasan Ekosistem",
     subtitle: "Untuk Tim Internal Operasional & Audit",
-    description: "Akses pusat kendali makro: verifikasi sertifikasi dapur higienis merchant, pantau pertumbuhan GMV makanan sehat, dan analisis peta defisit gizi per kecamatan.",
+    description: "Akses pusat kendali makro: verifikasi sertifikasi dapur higienis mitra, pantau pertumbuhan GMV makanan sehat, dan analisis peta defisit gizi per kecamatan.",
     icon: <ShieldCheck size={24} color="#2563EB" />,
     iconBg: { background: "#EFF6FF", border: "#BFDBFE" },
     benefits: [
-      "Executive KPI: GMV, cashback SeaBank, & kepatuhan dapur",
+      "Indikator kinerja utama: GMV, uang kembali SeaBank, & kepatuhan dapur",
       "Audit & persetujuan sertifikasi higienis 1-klik",
-      "Heatmap gizi intervensi stunting Kemenkes & BKKBN",
-      "Monitoring performa merchant & tren kuliner sehat",
+      "Peta sebaran gizi intervensi stunting Kemenkes & BKKBN",
+      "Pemantauan kinerja mitra & tren kuliner sehat",
     ],
     destination: "/admin",
-    destLabel: "Buka Shopee SuperAdmin Portal",
+    destLabel: "Buka portal administrator Shopee",
   },
 ];
 
@@ -177,7 +177,7 @@ export default function OnboardingRolePage() {
 
   if (isCheckingPersona) {
     return (
-      <div className="onboarding-page-container" style={{ justifyContent: "center", minHeight: "80vh", display: "flex", alignItems: "center" }}>
+      <div lang="id" className="onboarding-page-container" style={{ justifyContent: "center", minHeight: "80vh", display: "flex", alignItems: "center" }}>
         <div style={{ textAlign: "center", color: "#64748B" }}>
           <div style={{
             width: 32,
@@ -195,7 +195,7 @@ export default function OnboardingRolePage() {
   }
 
   return (
-    <div className="onboarding-page-container">
+    <div lang="id" className="onboarding-page-container">
       <div className="onboarding-wrapper">
         {/* Top Branding & Progress */}
         <div style={{ textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", gap: 12 }}>
@@ -228,14 +228,14 @@ export default function OnboardingRolePage() {
             Pilih Peran Anda di Ekosistem NutriSea
           </h1>
           <p style={{ fontSize: 13.5, color: "#64748B", maxWidth: 620, margin: 0, lineHeight: 1.55 }}>
-            Selamat datang, <strong style={{ color: "#0F172A" }}>{userName}</strong>! Tentukan profil penggunaan Anda untuk membuka dashboard, fitur AI, dan hak akses yang disesuaikan.
+            Selamat datang, <strong style={{ color: "#0F172A" }}>{userName}</strong>! Tentukan profil penggunaan Anda untuk membuka dasbor, fitur AI, dan hak akses yang disesuaikan.
           </p>
         </div>
 
         {/* 3 Role Selection Cards */}
         {roleAccessError && <p role="alert">{roleAccessError}</p>}
-        <p>Akun baru mendapat akses Customer. Akses Merchant dan Admin ditetapkan oleh pengelola setelah verifikasi.</p>
-        {!availableRoles.includes("MERCHANT") && <p style={{ marginBottom: 20 }}><Link href="/merchant/register" className="btn-shopee-primary">Daftar sebagai Merchant / Cek Pengajuan</Link></p>}
+        <p>Akun baru mendapat akses pelanggan. Akses mitra dan administrator ditetapkan oleh pengelola setelah verifikasi.</p>
+        {!availableRoles.includes("MERCHANT") && <p style={{ marginBottom: 20 }}><Link href="/merchant/register" className="btn-shopee-primary">Daftar sebagai mitra / cek pengajuan</Link></p>}
         <div className="onboarding-roles-grid">
           {ROLES.filter((role) => availableRoles.includes(role.id)).map((role) => {
             const isSelected = selectedRole === role.id;
@@ -378,7 +378,7 @@ export default function OnboardingRolePage() {
             <div style={{ fontSize: 16, fontWeight: 800, color: "#0F172A", display: "flex", alignItems: "center", gap: 8 }}>
               <span>{selectedConfig.title}</span>
               <span style={{ fontSize: 10, fontWeight: 700, backgroundColor: "#FFF0EB", color: "#EE4D2D", padding: "2px 8px", borderRadius: 9999 }}>
-                {selectedRole}
+                {selectedRole === "CONSUMER" ? "Pelanggan" : selectedRole === "MERCHANT" ? "Mitra" : "Administrator"}
               </span>
             </div>
             <p style={{ fontSize: 11.5, color: "#64748B", margin: 0 }}>
@@ -419,7 +419,7 @@ export default function OnboardingRolePage() {
             Anda dapat berpindah peran kapan saja melalui <strong>Bilah Peran</strong> di bagian atas layar untuk demonstrasi hackathon.
           </p>
           <p style={{ color: "#94A3B8" }}>
-            NutriSea by ShopeeFood • Sea Labs AI & Nutrition Engine
+            NutriSea by ShopeeFood • Sistem AI dan gizi Sea Labs
           </p>
         </div>
       </div>

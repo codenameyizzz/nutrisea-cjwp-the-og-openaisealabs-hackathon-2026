@@ -54,3 +54,30 @@ Thumbs.db
 legacy/sql_example.txt
 backend/sql_example.txt
 *sql_example.txt
+
+# Local captures, browser sessions, and generated review bundles
+/output/
+.playwright-cli/
+playwright-report/
+test-results/
+/chatgpt-context/
+/chatgpt-context.zip
+
+# Working notes, research, and prompts (not submission documentation)
+/ANALYSIS_SUMMARY.md
+/BLUEPRINT.md
+/nutrisea_master_blueprint.md
+/docs/AI_INTEGRATION_REPORT.md
+/docs/CHATGPT_*_PROMPT.md
+/docs/consumer_research*.md
+/docs/full-database-analysis.md
+/docs/implement-ingredient-system.md
+/docs/nutrisea_master_blueprint.md
+/docs/persona_framework_guide.md
+
+# Design references and mockups; application assets remain tracked
+/docs/images/
+/misc/*.png
+/misc/*.jpg
+/misc/*.jpeg
+/misc/*.webp

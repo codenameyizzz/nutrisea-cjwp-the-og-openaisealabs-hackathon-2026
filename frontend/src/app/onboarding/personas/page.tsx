@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { useApp } from "@/context/AppContext";
 import { AUTH_ROUTES } from "@/domains/auth/config/auth-routes";
+import { personaLabel, personaRationale } from "./indonesian-labels";
 
 export interface PersonaItem {
   id: string;
@@ -88,109 +89,109 @@ const QUESTIONS = [
   {
     id: "q1",
     num: 1,
-    categoryBadge: "Nutrition Goals",
-    title: "What is your main goal when choosing food?",
+    categoryBadge: "Tujuan gizi",
+    title: "Apa tujuan utama Anda saat memilih makanan?",
     options: [
       {
         value: "Keep my energy steady and choose a balanced meal.",
-        label: "Keep my energy steady and choose a balanced meal."
+        label: "Menjaga energi tetap stabil dan memilih makanan bergizi seimbang."
       },
       {
         value: "Eat healthier and reduce my risk of future health problems.",
-        label: "Eat healthier and reduce my risk of future health problems."
+        label: "Makan lebih sehat dan mengurangi risiko masalah kesehatan di masa depan."
       },
       {
         value: "Build muscle or support my fitness progress.",
-        label: "Build muscle or support my fitness progress."
+        label: "Membangun otot atau mendukung peningkatan kebugaran."
       },
       {
         value: "Choose food that is gentle on my stomach.",
-        label: "Choose food that is gentle on my stomach."
+        label: "Memilih makanan yang ramah lambung."
       },
       {
         value: "I'm not sure yet.",
-        label: "I'm not sure yet."
+        label: "Saya belum yakin."
       }
     ]
   },
   {
     id: "q2",
     num: 2,
-    categoryBadge: "Dietary Concerns",
-    title: "Which best describes your current food-related concern?",
+    categoryBadge: "Kendala pola makan",
+    title: "Apa kendala utama Anda terkait makanan saat ini?",
     options: [
       {
         value: "I often feel sleepy, sluggish, or too full after lunch.",
-        label: "I often feel sleepy, sluggish, or too full after lunch."
+        label: "Saya sering mengantuk, lesu, atau terlalu kenyang setelah makan siang."
       },
       {
         value: "I want to be more careful about things like salt, sugar, or fat.",
-        label: "I want to be more careful about things like salt, sugar, or fat."
+        label: "Saya ingin lebih memperhatikan asupan garam, gula, atau lemak."
       },
       {
         value: "I want enough protein without spending too much.",
-        label: "I want enough protein without spending too much."
+        label: "Saya ingin mencukupi kebutuhan protein dengan biaya terjangkau."
       },
       {
         value: "Some foods can trigger stomach discomfort, acidity, or heartburn.",
-        label: "Some foods can trigger stomach discomfort, acidity, or heartburn."
+        label: "Makanan tertentu bisa memicu perut tidak nyaman, asam lambung naik, atau rasa panas di dada."
       },
       {
         value: "None of these.",
-        label: "None of these."
+        label: "Tidak ada yang sesuai."
       }
     ]
   },
   {
     id: "q3",
     num: 3,
-    categoryBadge: "Dietary & Medical Needs",
-    title: "Do you have any dietary needs or restrictions we should consider?",
+    categoryBadge: "Kebutuhan makan dan kesehatan",
+    title: "Apakah ada kebutuhan atau pantangan makan yang perlu kami pertimbangkan?",
     options: [
       {
         value: "I need to limit salt.",
-        label: "I need to limit salt."
+        label: "Saya perlu membatasi garam."
       },
       {
         value: "I need to be mindful of sugar or blood glucose.",
-        label: "I need to be mindful of sugar or blood glucose."
+        label: "Saya perlu memperhatikan asupan gula atau kadar gula darah."
       },
       {
         value: "I need to be mindful of cholesterol or saturated fat.",
-        label: "I need to be mindful of cholesterol or saturated fat."
+        label: "Saya perlu memperhatikan kolesterol atau lemak jenuh."
       },
       {
         value: "I need food that is gentle on my stomach.",
-        label: "I need food that is gentle on my stomach."
+        label: "Saya membutuhkan makanan yang ramah lambung."
       },
       {
         value: "I have a food allergy or intolerance.",
-        label: "I have a food allergy or intolerance."
+        label: "Saya memiliki alergi atau intoleransi makanan."
       },
       {
         value: "I don't have any specific dietary restrictions.",
-        label: "I don't have any specific dietary restrictions."
+        label: "Saya tidak memiliki pantangan makan khusus."
       },
       {
         value: "Prefer not to say.",
-        label: "Prefer not to say."
+        label: "Saya memilih untuk tidak menjawab."
       }
     ],
     followUp: {
-      categoryBadge: "Clinical Context",
-      title: "Is this based on guidance from a healthcare professional, or personal preference?",
+      categoryBadge: "Dasar kebutuhan kesehatan",
+      title: "Apakah kebutuhan ini berdasarkan anjuran tenaga kesehatan atau pilihan pribadi?",
       options: [
         {
           value: "Guidance from a healthcare professional",
-          label: "Guidance from a healthcare professional"
+          label: "Anjuran tenaga kesehatan"
         },
         {
           value: "Personal preference",
-          label: "Personal preference"
+          label: "Pilihan pribadi"
         },
         {
           value: "Prefer not to say",
-          label: "Prefer not to say"
+          label: "Saya memilih untuk tidak menjawab"
         }
       ]
     }
@@ -198,130 +199,130 @@ const QUESTIONS = [
   {
     id: "q4",
     num: 4,
-    categoryBadge: "Lunch Priorities",
-    title: "What matters most when choosing your lunch?",
+    categoryBadge: "Prioritas makan siang",
+    title: "Apa yang paling penting saat Anda memilih makan siang?",
     options: [
       {
         value: "I want a quick recommendation so I don't have to browse many options.",
-        label: "I want a quick recommendation so I don't have to browse many options."
+        label: "Saya ingin rekomendasi cepat agar tidak perlu melihat banyak pilihan."
       },
       {
         value: "I want a meal that supports my long-term health.",
-        label: "I want a meal that supports my long-term health."
+        label: "Saya ingin makanan yang mendukung kesehatan jangka panjang."
       },
       {
         value: "I want good nutrition and enough protein at an affordable price.",
-        label: "I want good nutrition and enough protein at an affordable price."
+        label: "Saya ingin makanan bergizi dengan protein yang cukup dan harga terjangkau."
       },
       {
         value: "I want to avoid ingredients or preparation styles that may upset my stomach.",
-        label: "I want to avoid ingredients or preparation styles that may upset my stomach."
+        label: "Saya ingin menghindari bahan atau cara memasak yang bisa membuat perut tidak nyaman."
       },
       {
         value: "I mainly want to choose based on taste.",
-        label: "I mainly want to choose based on taste."
+        label: "Saya lebih mengutamakan rasa."
       }
     ]
   },
   {
     id: "q5",
     num: 5,
-    categoryBadge: "Budget Allocation",
-    title: "What is your usual budget for one lunch?",
+    categoryBadge: "Anggaran makan",
+    title: "Berapa anggaran Anda biasanya untuk sekali makan siang?",
     options: [
       {
         value: "Under Rp25,000",
-        label: "Under Rp25,000"
+        label: "Di bawah Rp25.000"
       },
       {
         value: "Rp25,000–Rp35,000",
-        label: "Rp25,000–Rp35,000"
+        label: "Rp25.000 sampai Rp35.000"
       },
       {
         value: "Rp35,001–Rp45,000",
-        label: "Rp35,001–Rp45,000"
+        label: "Rp35.001 sampai Rp45.000"
       },
       {
         value: "More than Rp45,000",
-        label: "More than Rp45,000"
+        label: "Lebih dari Rp45.000"
       },
       {
         value: "It depends on the day",
-        label: "It depends on the day"
+        label: "Tergantung harinya"
       }
     ]
   },
   {
     id: "q6",
     num: 6,
-    categoryBadge: "Activity Level",
-    title: "How active is your usual day?",
+    categoryBadge: "Tingkat aktivitas",
+    title: "Seberapa aktif kegiatan Anda sehari-hari?",
     options: [
       {
         value: "Mostly sitting; little planned exercise",
-        label: "Mostly sitting; little planned exercise"
+        label: "Lebih banyak duduk dan jarang berolahraga"
       },
       {
         value: "Light activity or occasional exercise",
-        label: "Light activity or occasional exercise"
+        label: "Aktivitas ringan atau sesekali berolahraga"
       },
       {
         value: "Moderate activity or regular exercise",
-        label: "Moderate activity or regular exercise"
+        label: "Aktivitas sedang atau rutin berolahraga"
       },
       {
         value: "Very active or frequent intense exercise",
-        label: "Very active or frequent intense exercise"
+        label: "Sangat aktif atau sering berolahraga berat"
       },
       {
         value: "Not sure",
-        label: "Not sure"
+        label: "Belum yakin"
       }
     ]
   },
   {
     id: "q7",
     num: 7,
-    categoryBadge: "Demographics (Optional)",
-    title: "Which age range are you in?",
+    categoryBadge: "Kelompok usia (opsional)",
+    title: "Berapa rentang usia Anda?",
     options: [
-      { value: "Under 21", label: "Under 21" },
-      { value: "21–27", label: "21–27" },
-      { value: "28–33", label: "28–33" },
-      { value: "34–48", label: "34–48" },
-      { value: "49 or older", label: "49 or older" },
-      { value: "Prefer not to say", label: "Prefer not to say" }
+      { value: "Under 21", label: "Di bawah 21 tahun" },
+      { value: "21–27", label: "21 sampai 27 tahun" },
+      { value: "28–33", label: "28 sampai 33 tahun" },
+      { value: "34–48", label: "34 sampai 48 tahun" },
+      { value: "49 or older", label: "49 tahun atau lebih" },
+      { value: "Prefer not to say", label: "Saya memilih untuk tidak menjawab" }
     ]
   },
   {
     id: "q8",
     num: 8,
-    categoryBadge: "Decision Friction",
-    title: "What usually makes choosing lunch difficult for you?",
+    categoryBadge: "Kesulitan memilih makanan",
+    title: "Apa yang biasanya membuat Anda kesulitan memilih makan siang?",
     options: [
       {
         value: "Too many options; I spend too much time deciding.",
-        label: "Too many options; I spend too much time deciding."
+        label: "Pilihannya terlalu banyak, sehingga saya terlalu lama memutuskan."
       },
       {
         value: "I'm unsure whether a meal is balanced or healthy.",
-        label: "I'm unsure whether a meal is balanced or healthy."
+        label: "Saya tidak yakin apakah makanan tersebut bergizi seimbang atau sehat."
       },
       {
         value: "Healthy food often costs more than I want to spend.",
-        label: "Healthy food often costs more than I want to spend."
+        label: "Makanan sehat sering melebihi anggaran saya."
       },
       {
         value: "I'm worried a meal may trigger stomach discomfort.",
-        label: "I'm worried a meal may trigger stomach discomfort."
+        label: "Saya khawatir makanan akan membuat perut tidak nyaman."
       },
       {
         value: "I find it difficult to estimate nutrition information.",
-        label: "I find it difficult to estimate nutrition information."
+        label: "Saya kesulitan memperkirakan kandungan gizi makanan."
       },
       {
         value: "None of these.",
-        label: "None of these."
+        label: "Tidak ada yang sesuai."
       }
     ]
   }
@@ -456,7 +457,7 @@ export default function ShopeeStylePersonaOnboardingPage() {
   const handleProfileSubmit = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     if (!profileData.age || !profileData.heightCm || !profileData.weightKg) {
-      setProfileError("Please provide your age, height, and weight to continue.");
+      setProfileError("Isi usia, tinggi badan, dan berat badan Anda untuk melanjutkan.");
       return;
     }
     setProfileError(null);
@@ -559,7 +560,7 @@ export default function ShopeeStylePersonaOnboardingPage() {
         body: JSON.stringify(payload)
       });
 
-      if (!res.ok) throw new Error("Failed to calculate persona match");
+      if (!res.ok) throw new Error("Gagal mencocokkan persona");
       const result: MatchResult = await res.json();
       setMatchResult(result);
       setManualMainId(result.main_persona.id);
@@ -584,7 +585,7 @@ export default function ShopeeStylePersonaOnboardingPage() {
           },
           main_persona: fallbackMain,
           side_personas: fallbackSides,
-          rationale: "This persona profile best aligns with your daily lunch routine and nutritional energy needs.",
+          rationale: "Profil persona ini paling sesuai dengan rutinitas makan siang dan kebutuhan energi Anda.",
           dietary_safeguards: {
             selected_restriction: activeAnswers.q3 || "None",
             is_medical_guidance: activeAnswers.q3_followup.includes("Guidance")
@@ -628,7 +629,7 @@ export default function ShopeeStylePersonaOnboardingPage() {
 
       if (!res.ok) {
         const errData = await res.json().catch(() => ({}));
-        throw new Error(errData.detail || "Failed to save persona to database");
+        throw new Error(errData.detail || "Gagal menyimpan persona");
       }
 
       // 2. Sync profile biometrics to PostgreSQL health-profile
@@ -695,7 +696,7 @@ export default function ShopeeStylePersonaOnboardingPage() {
       router.push(AUTH_ROUTES.HOME);
     } catch (err: any) {
       console.error("Save persona error:", err);
-      setSaveError(err.message || "Failed to save persona. Please try again.");
+      setSaveError("Gagal menyimpan persona. Silakan coba lagi.");
     } finally {
       setIsSaving(false);
     }
@@ -708,8 +709,10 @@ export default function ShopeeStylePersonaOnboardingPage() {
         searchQuery === "" ||
         p.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         p.occupation.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        personaLabel(p.occupation).toLowerCase().includes(searchQuery.toLowerCase()) ||
         p.work_district.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        p.archetype_name.toLowerCase().includes(searchQuery.toLowerCase());
+        p.archetype_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        personaLabel(p.archetype_name).toLowerCase().includes(searchQuery.toLowerCase());
 
       const matchDistrict =
         selectedDistrict === "ALL" ||
@@ -721,6 +724,7 @@ export default function ShopeeStylePersonaOnboardingPage() {
 
   return (
     <div
+      lang="id"
       style={{
         position: "fixed",
         inset: 0,
@@ -813,7 +817,7 @@ export default function ShopeeStylePersonaOnboardingPage() {
       />
 
       {/* =================================================================== */}
-      {/* 1. TOP PROGRESS BAR (Unifies Profile Setup + 8 Questions)           */}
+      {/* 1. TOP PROGRESS BAR (Unifies Pengaturan profil + 8 Questions)           */}
       {/* =================================================================== */}
       {(viewMode === "PROFILE" || viewMode === "QUIZ") && (
         <div
@@ -895,7 +899,7 @@ export default function ShopeeStylePersonaOnboardingPage() {
                 boxShadow: "0 1px 3px rgba(0, 0, 0, 0.05)",
                 transition: "all 0.15s ease"
               }}
-              aria-label="Back"
+              aria-label="Kembali"
             >
               <ArrowLeft size={16} />
             </button>
@@ -918,7 +922,7 @@ export default function ShopeeStylePersonaOnboardingPage() {
               <Sparkles size={12} color="#EE4D2D" />
               <span>
                 {viewMode === "PROFILE"
-                  ? "STEP 1: PERSONAL PROFILE SETUP"
+                  ? "LANGKAH 1: LENGKAPI PROFIL"
                   : isQ3FollowUp
                   ? currentQ.followUp?.categoryBadge.toUpperCase()
                   : currentQ?.categoryBadge.toUpperCase()}
@@ -927,7 +931,7 @@ export default function ShopeeStylePersonaOnboardingPage() {
 
             <div style={{ fontSize: "12.5px", fontWeight: 700, color: "#6B7280", fontFamily: "monospace" }}>
               {viewMode === "PROFILE"
-                ? "Profile Setup"
+                ? "Pengaturan profil"
                 : `${String(currentStepIndex + 1).padStart(2, "0")} / ${String(QUESTIONS.length).padStart(2, "0")}`}
             </div>
           </div>
@@ -991,7 +995,7 @@ export default function ShopeeStylePersonaOnboardingPage() {
                     marginBottom: "8px"
                   }}
                 >
-                  <User size={12} /> PERSONAL PROFILE
+                  <User size={12} /> PROFIL PRIBADI
                 </div>
                 <h1
                   style={{
@@ -1002,10 +1006,10 @@ export default function ShopeeStylePersonaOnboardingPage() {
                     letterSpacing: "-0.5px"
                   }}
                 >
-                  Complete Your Profile
+                  Lengkapi profil Anda
                 </h1>
                 <p style={{ fontSize: "13px", color: "#6B7280", margin: 0 }}>
-                  Enter your biometric baseline so NutriSea can tailor portion sizes, calories, and budget.
+                  Masukkan data tubuh Anda agar NutriSea dapat menyesuaikan porsi, kalori, dan anggaran makan.
                 </p>
               </div>
 
@@ -1033,7 +1037,7 @@ export default function ShopeeStylePersonaOnboardingPage() {
                   {/* Age */}
                   <div>
                     <label style={{ display: "block", fontSize: "12px", fontWeight: 700, color: "#374151", marginBottom: "6px" }}>
-                      Age (years)
+                      Usia (tahun)
                     </label>
                     <div style={{ position: "relative" }}>
                       <input
@@ -1055,15 +1059,15 @@ export default function ShopeeStylePersonaOnboardingPage() {
                         }}
                       />
                       <span style={{ position: "absolute", right: 14, top: "50%", transform: "translateY(-50%)", fontSize: "12px", color: "#9CA3AF" }}>
-                        yrs
+                        tahun
                       </span>
                     </div>
                   </div>
 
-                  {/* Gender */}
+                  {/* Jenis kelamin */}
                   <div>
                     <label style={{ display: "block", fontSize: "12px", fontWeight: 700, color: "#374151", marginBottom: "6px" }}>
-                      Gender
+                      Jenis kelamin
                     </label>
                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
                       <button
@@ -1080,7 +1084,7 @@ export default function ShopeeStylePersonaOnboardingPage() {
                           cursor: "pointer"
                         }}
                       >
-                        Male
+                        Laki-laki
                       </button>
                       <button
                         type="button"
@@ -1096,7 +1100,7 @@ export default function ShopeeStylePersonaOnboardingPage() {
                           cursor: "pointer"
                         }}
                       >
-                        Female
+                        Perempuan
                       </button>
                     </div>
                   </div>
@@ -1104,7 +1108,7 @@ export default function ShopeeStylePersonaOnboardingPage() {
                   {/* Height */}
                   <div>
                     <label style={{ display: "block", fontSize: "12px", fontWeight: 700, color: "#374151", marginBottom: "6px" }}>
-                      Height (cm)
+                      Tinggi badan (cm)
                     </label>
                     <div style={{ position: "relative" }}>
                       <input
@@ -1134,7 +1138,7 @@ export default function ShopeeStylePersonaOnboardingPage() {
                   {/* Weight */}
                   <div>
                     <label style={{ display: "block", fontSize: "12px", fontWeight: 700, color: "#374151", marginBottom: "6px" }}>
-                      Weight (kg)
+                      Berat badan (kg)
                     </label>
                     <div style={{ position: "relative" }}>
                       <input
@@ -1165,13 +1169,13 @@ export default function ShopeeStylePersonaOnboardingPage() {
                 {/* Occupation */}
                 <div>
                   <label style={{ display: "block", fontSize: "12px", fontWeight: 700, color: "#374151", marginBottom: "6px" }}>
-                    Occupation / Daily Role
+                    Pekerjaan / kegiatan sehari-hari
                   </label>
                   <input
                     type="text"
                     required
-                    placeholder="e.g. Corporate Professional, Software Engineer, Student"
-                    value={profileData.occupation}
+                    placeholder="Contoh: Karyawan kantor, pengembang perangkat lunak, mahasiswa"
+                    value={personaLabel(profileData.occupation)}
                     onChange={(e) => setProfileData((p) => ({ ...p, occupation: e.target.value }))}
                     style={{
                       width: "100%",
@@ -1189,7 +1193,7 @@ export default function ShopeeStylePersonaOnboardingPage() {
                 {/* Health Goal */}
                 <div>
                   <label style={{ display: "block", fontSize: "12px", fontWeight: 700, color: "#374151", marginBottom: "6px" }}>
-                    Primary Health Goal
+                    Tujuan kesehatan utama
                   </label>
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
                     <button
@@ -1207,7 +1211,7 @@ export default function ShopeeStylePersonaOnboardingPage() {
                         cursor: "pointer"
                       }}
                     >
-                      Maintain Ideal Weight
+                      Menjaga berat badan ideal
                     </button>
                     <button
                       type="button"
@@ -1224,7 +1228,7 @@ export default function ShopeeStylePersonaOnboardingPage() {
                         cursor: "pointer"
                       }}
                     >
-                      Weight Loss & Deficit
+                      Menurunkan berat badan dengan defisit kalori
                     </button>
                   </div>
                 </div>
@@ -1232,7 +1236,7 @@ export default function ShopeeStylePersonaOnboardingPage() {
                 {/* Lunch Budget */}
                 <div>
                   <label style={{ display: "block", fontSize: "12px", fontWeight: 700, color: "#374151", marginBottom: "6px" }}>
-                    Target Lunch Budget (IDR per portion)
+                    Anggaran makan siang (rupiah per porsi)
                   </label>
                   <div style={{ position: "relative", marginBottom: "8px" }}>
                     <span style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", fontSize: "13px", fontWeight: 700, color: "#6B7280" }}>
@@ -1283,16 +1287,16 @@ export default function ShopeeStylePersonaOnboardingPage() {
                 {/* Allergies Chips */}
                 <div>
                   <label style={{ display: "block", fontSize: "12px", fontWeight: 700, color: "#374151", marginBottom: "6px" }}>
-                    Known Food Allergies (Optional)
+                    Alergi makanan yang diketahui (opsional)
                   </label>
                   <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
                     {["kacang", "seafood", "dairy", "egg"].map((allergyKey) => {
                       const isChecked = profileData.allergies.includes(allergyKey);
                       const displayNames: Record<string, string> = {
-                        kacang: "Peanuts",
-                        seafood: "Seafood",
-                        dairy: "Dairy / Milk",
-                        egg: "Eggs"
+                        kacang: "Kacang tanah",
+                        seafood: "Makanan laut",
+                        dairy: "Susu dan produk olahannya",
+                        egg: "Telur"
                       };
                       return (
                         <button
@@ -1350,7 +1354,7 @@ export default function ShopeeStylePersonaOnboardingPage() {
                       transition: "all 0.2s ease"
                     }}
                   >
-                    Continue to Persona Questionnaire <ArrowRight size={17} />
+                    Lanjut ke kuesioner persona <ArrowRight size={17} />
                   </button>
                 </div>
               </form>
@@ -1386,7 +1390,7 @@ export default function ShopeeStylePersonaOnboardingPage() {
                       marginBottom: "6px"
                     }}
                   >
-                    Regarding: {answers.q3}
+                    Terkait: {QUESTIONS[2].options.find((option) => option.value === answers.q3)?.label || answers.q3}
                   </div>
                   <h1
                     style={{
@@ -1585,7 +1589,7 @@ export default function ShopeeStylePersonaOnboardingPage() {
                     gap: "5px"
                   }}
                 >
-                  <Sparkles size={12} /> VERIFIED PROFILE
+                  <Sparkles size={12} /> PROFIL TERVERIFIKASI
                 </span>
 
                 <div
@@ -1603,7 +1607,7 @@ export default function ShopeeStylePersonaOnboardingPage() {
                   }}
                 >
                   <CheckCircle2 size={13} color="#059669" />
-                  <span>{matchResult.primary_archetype.confidence_percent}% MATCH</span>
+                  <span>{matchResult.primary_archetype.confidence_percent}% KECOCOKAN</span>
                 </div>
               </div>
 
@@ -1618,10 +1622,10 @@ export default function ShopeeStylePersonaOnboardingPage() {
                   lineHeight: 1.2
                 }}
               >
-                {matchResult.primary_archetype.name}
+                {personaLabel(matchResult.primary_archetype.name)}
               </h2>
               <p style={{ fontSize: "13.5px", color: "#4B5563", margin: "0 0 20px 0", lineHeight: 1.5 }}>
-                {matchResult.rationale}
+                {personaRationale(matchResult.rationale)}
               </p>
 
               {/* Main Persona Hero Badge */}
@@ -1657,13 +1661,13 @@ export default function ShopeeStylePersonaOnboardingPage() {
                   </div>
                   <div>
                     <span style={{ fontSize: "10.5px", fontWeight: 700, color: "#EE4D2D", textTransform: "uppercase" }}>
-                      Your Primary Persona
+                      Persona utama Anda
                     </span>
                     <h3 style={{ fontSize: "17px", fontWeight: 800, color: "#111827", margin: "2px 0 0 0" }}>
                       {matchResult.main_persona.full_name}
                     </h3>
                     <div style={{ fontSize: "12px", color: "#6B7280", display: "flex", alignItems: "center", gap: "6px" }}>
-                      <span>{profileData.occupation || matchResult.main_persona.occupation}</span>
+                      <span>{personaLabel(profileData.occupation || matchResult.main_persona.occupation)}</span>
                       <span>•</span>
                       <span style={{ display: "inline-flex", alignItems: "center", gap: "3px" }}>
                         <MapPin size={11} /> {matchResult.main_persona.work_district}
@@ -1682,28 +1686,28 @@ export default function ShopeeStylePersonaOnboardingPage() {
                     borderRadius: "6px"
                   }}
                 >
-                  Selected Persona
+                  Persona terpilih
                 </span>
               </div>
 
               {/* Key 3 Stat Pillars */}
               <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "8px", marginBottom: "16px" }}>
                 <div style={{ backgroundColor: "#F9FAFB", border: "1px solid #E5E7EB", borderRadius: "10px", padding: "10px 12px" }}>
-                  <div style={{ fontSize: "10.5px", color: "#6B7280" }}>Lunch Calorie Target</div>
+                  <div style={{ fontSize: "10.5px", color: "#6B7280" }}>Target kalori makan siang</div>
                   <div style={{ fontSize: "15px", fontWeight: 800, color: "#EE4D2D", marginTop: "2px" }}>
-                    ~{matchResult.main_persona.target_lunch_kcal} kcal
+                    ~{matchResult.main_persona.target_lunch_kcal} kkal
                   </div>
                 </div>
                 <div style={{ backgroundColor: "#F9FAFB", border: "1px solid #E5E7EB", borderRadius: "10px", padding: "10px 12px" }}>
-                  <div style={{ fontSize: "10.5px", color: "#6B7280" }}>Lunch Budget Cap</div>
+                  <div style={{ fontSize: "10.5px", color: "#6B7280" }}>Batas anggaran makan siang</div>
                   <div style={{ fontSize: "15px", fontWeight: 800, color: "#008A3D", marginTop: "2px" }}>
                     Rp {Number(profileData.mealBudget || matchResult.main_persona.target_lunch_budget_idr).toLocaleString("id-ID")}
                   </div>
                 </div>
                 <div style={{ backgroundColor: "#F9FAFB", border: "1px solid #E5E7EB", borderRadius: "10px", padding: "10px 12px" }}>
-                  <div style={{ fontSize: "10.5px", color: "#6B7280" }}>Medical Guardrails</div>
+                  <div style={{ fontSize: "10.5px", color: "#6B7280" }}>Batasan terkait kesehatan</div>
                   <div style={{ fontSize: "12px", fontWeight: 700, color: "#1F2937", marginTop: "4px" }}>
-                    {matchResult.main_persona.medical_conditions === "NONE" ? "None reported" : matchResult.main_persona.medical_conditions}
+                    {personaLabel(matchResult.main_persona.medical_conditions)}
                   </div>
                 </div>
               </div>
@@ -1711,7 +1715,7 @@ export default function ShopeeStylePersonaOnboardingPage() {
               {/* 3 Adaptive Side Personas */}
               <div style={{ marginBottom: "10px" }}>
                 <div style={{ fontSize: "11px", fontWeight: 700, color: "#6B7280", textTransform: "uppercase", marginBottom: "8px" }}>
-                  3 Adaptive Companion Personas (Activated based on context):
+                  3 persona pendamping adaptif (diaktifkan sesuai konteks):
                 </div>
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "8px" }}>
                   {matchResult.side_personas.map((sp) => (
@@ -1729,7 +1733,7 @@ export default function ShopeeStylePersonaOnboardingPage() {
                         <span style={{ fontSize: "12px", fontWeight: 700, color: "#111827" }}>{sp.full_name}</span>
                       </div>
                       <div style={{ fontSize: "10.5px", color: "#6B7280", marginTop: "2px" }}>
-                        {sp.archetype_name}
+                        {personaLabel(sp.archetype_name)}
                       </div>
                     </div>
                   ))}
@@ -1783,11 +1787,11 @@ export default function ShopeeStylePersonaOnboardingPage() {
               >
                 {isSaving ? (
                   <>
-                    <RefreshCw size={17} className="spin-slow" /> Activating NutriSea Profile...
+                    <RefreshCw size={17} className="spin-slow" /> Mengaktifkan profil NutriSea...
                   </>
                 ) : (
                   <>
-                    Continue to ShopeeFood & Start Eating Well <ArrowRight size={17} />
+                    Lanjut ke ShopeeFood dan mulai makan sehat <ArrowRight size={17} />
                   </>
                 )}
               </button>
@@ -1808,7 +1812,7 @@ export default function ShopeeStylePersonaOnboardingPage() {
                   padding: "6px"
                 }}
               >
-                Edit Profile & Retake Questionnaire
+                Ubah profil dan isi ulang kuesioner
               </button>
             </div>
           </div>
@@ -1830,10 +1834,10 @@ export default function ShopeeStylePersonaOnboardingPage() {
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "14px" }}>
               <div>
                 <h3 style={{ fontSize: "16px", fontWeight: 800, color: "#111827", margin: 0 }}>
-                  Catalog of 120 Urban Personas
+                  Katalog 120 persona perkotaan
                 </h3>
                 <p style={{ fontSize: "12px", color: "#6B7280", margin: "2px 0 0 0" }}>
-                  Manually select 1 Primary Persona and up to 3 Companion Personas.
+                  Pilih secara manual 1 persona utama dan hingga 3 persona pendamping.
                 </p>
               </div>
 
@@ -1851,7 +1855,7 @@ export default function ShopeeStylePersonaOnboardingPage() {
                   cursor: "pointer"
                 }}
               >
-                Back to Slideshow
+                Kembali ke kuesioner
               </button>
             </div>
 
@@ -1861,7 +1865,7 @@ export default function ShopeeStylePersonaOnboardingPage() {
                 <Search size={14} color="#9CA3AF" style={{ position: "absolute", left: 10, top: 10 }} />
                 <input
                   type="text"
-                  placeholder="Search by name, occupation, district..."
+                  placeholder="Cari berdasarkan nama, pekerjaan, atau kawasan..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   style={{
@@ -1889,7 +1893,7 @@ export default function ShopeeStylePersonaOnboardingPage() {
                   color: "#111827"
                 }}
               >
-                <option value="ALL">All Districts</option>
+                <option value="ALL">Semua kawasan</option>
                 <option value="SCBD">SCBD</option>
                 <option value="Menteng">Menteng</option>
                 <option value="Kuningan">Kuningan</option>
@@ -1927,11 +1931,11 @@ export default function ShopeeStylePersonaOnboardingPage() {
                           {p.full_name}
                         </span>
                         <span style={{ fontSize: "10px", backgroundColor: "#F3F4F6", color: "#4B5563", padding: "1px 6px", borderRadius: "3px" }}>
-                          {p.archetype_name}
+                          {personaLabel(p.archetype_name)}
                         </span>
                       </div>
                       <div style={{ fontSize: "11px", color: "#6B7280", marginTop: "2px" }}>
-                        {p.occupation} • {p.work_district} • ~{p.target_lunch_kcal} kcal • Rp {p.target_lunch_budget_idr.toLocaleString("id-ID")}
+                        {personaLabel(p.occupation)} • {p.work_district} • ~{p.target_lunch_kcal} kkal • Rp {p.target_lunch_budget_idr.toLocaleString("id-ID")}
                       </div>
                     </div>
 
@@ -1953,7 +1957,7 @@ export default function ShopeeStylePersonaOnboardingPage() {
                           cursor: "pointer"
                         }}
                       >
-                        {isMain ? "Primary" : "Select Primary"}
+                        {isMain ? "Utama" : "Pilih sebagai utama"}
                       </button>
 
                       <button
@@ -1981,7 +1985,7 @@ export default function ShopeeStylePersonaOnboardingPage() {
                           cursor: isMain ? "not-allowed" : "pointer"
                         }}
                       >
-                        {isSide ? "Companion" : "+ Companion"}
+                        {isSide ? "Pendamping" : "+ Pendamping"}
                       </button>
                     </div>
                   </div>
@@ -2008,7 +2012,7 @@ export default function ShopeeStylePersonaOnboardingPage() {
                   gap: "6px"
                 }}
               >
-                {isSaving ? "Saving..." : "Confirm Manual Selection"} <ArrowRight size={14} />
+                {isSaving ? "Menyimpan..." : "Konfirmasi pilihan manual"} <ArrowRight size={14} />
               </button>
             </div>
           </div>
@@ -2057,7 +2061,7 @@ export default function ShopeeStylePersonaOnboardingPage() {
                 gap: "6px"
               }}
             >
-              <ArrowLeft size={16} /> Previous
+              <ArrowLeft size={16} /> Sebelumnya
             </button>
 
             {isMatching ? (
@@ -2071,11 +2075,11 @@ export default function ShopeeStylePersonaOnboardingPage() {
                   fontWeight: 700
                 }}
               >
-                <RefreshCw size={15} className="spin-slow" /> Analyzing Profile...
+                <RefreshCw size={15} className="spin-slow" /> Menganalisis profil...
               </div>
             ) : (
               <span style={{ fontSize: "12px", color: "#9CA3AF", fontStyle: "italic" }}>
-                Select an option to advance
+                Pilih jawaban untuk melanjutkan
               </span>
             )}
           </div>
@@ -2094,7 +2098,7 @@ export default function ShopeeStylePersonaOnboardingPage() {
                 textDecoration: "underline"
               }}
             >
-              Or view the complete 120-persona catalog table? Click here
+              Ingin melihat katalog lengkap 120 persona? Klik di sini
             </button>
           </div>
         </div>
