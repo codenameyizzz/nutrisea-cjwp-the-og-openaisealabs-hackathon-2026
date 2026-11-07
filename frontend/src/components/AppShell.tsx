@@ -1,7 +1,7 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { Suspense, useState } from "react";
+import { Suspense } from "react";
 import AiAssistantModal from "@/components/AiAssistantModal";
 import BottomNav from "@/components/BottomNav";
 import DemoBar from "@/components/DemoBar";
@@ -12,8 +12,6 @@ import ShopeeHeader from "@/components/ShopeeHeader";
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const [showDemoGuide, setShowDemoGuide] = useState(false);
-  const isOperationsPage = pathname?.startsWith("/admin") || (pathname?.startsWith("/merchant") && pathname !== "/merchant/register");
   const isAuthPage =
     pathname?.startsWith("/sign-in") ||
     pathname?.startsWith("/sign-up") ||
@@ -38,32 +36,35 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className={`app-wrapper commerce-shell${isOperationsPage ? " operations-shell" : ""}${pathname === "/cart" ? " cart-shell" : ""}`}>
-      <a className="skip-to-content" href="#main-content">Skip to content</a>
+    <div className="app-wrapper">
+      {/* Role Switcher Bar across all screens */}
+      <Suspense fallback={null}>
+        <RoleTabsBar />
+      </Suspense>
 
       <Suspense fallback={null}>
         <ShopeeHeader />
       </Suspense>
 
-      <main id="main-content" className="main-content">
+      <main className="main-content">
         <div className="site-container">{children}</div>
       </main>
 
       <Suspense fallback={null}>
-        <ShopeeFooter showDemoGuide={showDemoGuide} onToggleDemo={() => setShowDemoGuide(value => !value)} showDemoToggle={!isOperationsPage} />
+        <ShopeeFooter />
       </Suspense>
 
-      {!isOperationsPage && <Suspense fallback={null}>
-        <AiAssistantModal inlineTrigger={pathname === "/cart"} />
-      </Suspense>}
+      <Suspense fallback={null}>
+        <AiAssistantModal />
+      </Suspense>
 
       <Suspense fallback={null}>
         <SeaBankModal />
       </Suspense>
 
-      {showDemoGuide && !isOperationsPage && <Suspense fallback={null}>
+      <Suspense fallback={null}>
         <DemoBar />
-      </Suspense>}
+      </Suspense>
 
       <Suspense fallback={null}>
         <BottomNav />

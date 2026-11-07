@@ -13,6 +13,7 @@ import {
   Store,
   ArrowLeft,
   Sparkles,
+  TrendingUp,
   CheckCircle2,
   Check,
   Plus,
@@ -60,6 +61,15 @@ interface DishItem {
   cookingNotes?: string;
 }
 
+interface DemandInsight {
+  district: string;
+  radius_km: number;
+  unmet_demand_count: number;
+  opportunity_detected: string;
+  actionable_suggestion: string;
+  suggested_healthy_tags: string[];
+}
+
 export default function MerchantPage() {
   return <IngredientGuard mode="merchant"><MerchantContent /></IngredientGuard>;
 }
@@ -79,6 +89,7 @@ function MerchantContent() {
   const [merchantPartner, setMerchantPartner] = useState<{ name: string; seabank_account_no?: string } | null>(null);
   const [outletError, setOutletError] = useState("");
   const [menuError, setMenuError] = useState("");
+  const [insight, setInsight] = useState<DemandInsight | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [togglingOutletId, setTogglingOutletId] = useState<string | null>(null);
 
@@ -215,6 +226,10 @@ function MerchantContent() {
     setActiveRole("MERCHANT");
     fetchOutlets();
     fetchDishes();
+    void authenticatedFetch("/api/merchant/demand-insights?district=Kuningan")
+      .then(response => responseJson<DemandInsight>(response))
+      .then(setInsight)
+      .catch(() => setInsight(null));
   }, []);
 
   // Open Modal for Create
@@ -520,6 +535,62 @@ function MerchantContent() {
             </div>
           ))}
         </div>
+      </div>
+
+      {/* Metrics Row */}
+      <div className="merchant-metrics-grid">
+        <div className="merchant-metric-card">
+          <div className="merchant-metric-title">Today&apos;s orders</div>
+          <div className="merchant-metric-val" style={{ color: "#222" }}>Not available</div>
+          <div className="merchant-metric-trend" style={{ color: "#00B14F" }}>
+            <TrendingUp size={12} /> Order reporting is not connected
+          </div>
+        </div>
+
+        <div className="merchant-metric-card">
+          <div className="merchant-metric-title">Kitchen rating</div>
+          <div className="merchant-metric-val" style={{ color: "#EE4D2D" }}>Not available</div>
+          <div className="merchant-metric-sub">Customer reviews are not connected</div>
+        </div>
+
+        <div className="merchant-metric-card">
+          <div className="merchant-metric-title">Revenue change</div>
+          <div className="merchant-metric-val" style={{ color: "#00B14F" }}>Not available</div>
+          <div className="merchant-metric-sub">Revenue reporting is not connected</div>
+        </div>
+
+        <div className="merchant-metric-card">
+          <div className="merchant-metric-title">Search boost</div>
+          <div className="merchant-metric-val" style={{ color: "#003B7A" }}>Not available</div>
+          <div className="merchant-metric-sub" style={{ color: "#003B7A" }}>Search impact has not been measured</div>
+        </div>
+      </div>
+
+      {/* AI Demand Gap Co-Pilot Banner */}
+      <div className="merchant-demand-banner">
+        <div className="merchant-demand-header">
+          <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+            <span className="merchant-demand-tag">
+              <Sparkles size={12} /> AI Demand Gap Co-Pilot
+            </span>
+            <span style={{ fontSize: "11.5px", color: "#666", fontWeight: 600 }}>
+              Meal demand in SCBD / Kuningan
+            </span>
+          </div>
+
+          <span className="merchant-demand-stat">Demonstration scenario</span>
+        </div>
+
+        <p className="merchant-demand-desc">
+          {insight?.actionable_suggestion || "Demand insights are unavailable. The suggested meal is a demo example, not a measured demand forecast."}
+        </p>
+
+        <button
+          onClick={() => setMerchantDemoTrigger(true)}
+          className="merchant-demand-btn"
+        >
+          <Plus size={13} /> Review suggested meal draft
+        </button>
       </div>
 
       {/* Main Section: Dish Management Table / Grid (CRUD) */}

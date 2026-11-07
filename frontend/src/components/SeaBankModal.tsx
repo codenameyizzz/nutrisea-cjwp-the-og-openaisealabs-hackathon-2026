@@ -86,7 +86,7 @@ function SeaBankContent() {
         aria-labelledby="seabank-title"
         tabIndex={-1}
         className="seabank-dialog"
-        style={{ width: "100%", maxWidth: 440, backgroundColor: "#FFFFFF", borderRadius: 8, overflowY: "auto", boxShadow: "0 8px 24px rgba(0,0,0,0.2)" }}
+        style={{ width: "100%", maxWidth: 520, backgroundColor: "#FFFFFF", borderRadius: 12, overflowY: "auto", boxShadow: "0 12px 36px rgba(0,0,0,0.25)" }}
         onClick={event => event.stopPropagation()}
       >
         <div style={{ backgroundColor: "#003B7A", color: "#FFFFFF", padding: "16px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
@@ -94,12 +94,13 @@ function SeaBankContent() {
             <Wallet size={24} aria-hidden="true" />
             <div>
               <h2 id="seabank-title" style={{ fontSize: 18 }}>SeaBank rewards simulation</h2>
+              <p style={{ fontSize: 13 }}>NutriSea demo feature</p>
             </div>
           </div>
           <button type="button" aria-label="Close rewards simulation" onClick={() => setIsSeaBankOpen(false)} style={{ background: "transparent", border: 0, color: "inherit", cursor: "pointer" }}><X size={22} /></button>
         </div>
         <div style={{ padding: 20, display: "flex", flexDirection: "column", gap: 18, fontSize: 14, lineHeight: 1.6 }}>
-          <p>Demo records only. NutriSea has no official SeaBank integration, bank balance, or payout.</p>
+          <p>These rewards are records in the prototype. They are not a SeaBank account balance and do not transfer money to a bank.</p>
           {!user && <p role="status">Sign in to view your simulated reward records.</p>}
           {isLoading && <p role="status"><RefreshCw size={16} className="spin-slow" /> Loading reward records...</p>}
           {error && <div><p role="alert">{error}</p><button type="button" className="btn-shopee-primary" onClick={() => { setError(null); setIsLoading(true); setAttempt(value => value + 1); }}>Try again</button></div>}

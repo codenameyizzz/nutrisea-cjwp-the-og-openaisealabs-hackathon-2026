@@ -17,6 +17,8 @@ export default function SignInPage() {
             priority
           />
         </Link>
+        <h1>Welcome back</h1>
+        <p>Sign in to find food that fits your preferences.</p>
         <SignIn
           routing="path"
           path={AUTH_ROUTES.SIGN_IN}
@@ -29,7 +31,6 @@ export default function SignInPage() {
               borderRadius: "10px",
             },
             elements: {
-              rootBox: styles.clerkRoot,
               card: styles.clerkCard,
               headerTitle: styles.clerkTitle,
               formButtonPrimary: styles.clerkButton,
@@ -39,7 +40,6 @@ export default function SignInPage() {
             },
           }}
         />
-        <Link href={AUTH_ROUTES.HOME} className={styles.shoppingLink}>Browse food without signing in</Link>
       </div>
     </section>
   );

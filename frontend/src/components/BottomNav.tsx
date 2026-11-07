@@ -3,19 +3,12 @@
 import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Utensils, Scale, Camera, ShoppingBag, Store, ShieldCheck, MessageCircle } from "lucide-react";
+import { Utensils, Scale, Camera, ShoppingBag, Store, ShieldCheck } from "lucide-react";
 import { useApp } from "@/context/AppContext";
 
 export default function BottomNav() {
   const pathname = usePathname();
   const { cartCount, activeRole, availableRoles } = useApp();
-
-  if (pathname?.startsWith("/admin")) return (
-    <nav className="app-bottom-nav" aria-label="Admin navigation">
-      {[{href:"/admin",label:"Overview"},{href:"/admin/merchant-applications",label:"Applications"},{href:"/admin/ingredients",label:"Ingredients"},{href:"/",label:"Food catalog"}].map(item =>
-        <Link key={item.href} href={item.href} aria-current={pathname === item.href ? "page" : undefined} className={`nav-item-btn ${pathname === item.href ? "active" : ""}`}>{item.label}</Link>)}
-    </nav>
-  );
 
   return (
     <nav className="app-bottom-nav" aria-label="Main navigation">
@@ -55,7 +48,7 @@ export default function BottomNav() {
           <ShieldCheck size={17} color="#3B82F6" />
           <span>Admin</span>
         </Link>
-      ) : pathname?.startsWith("/merchant") && pathname !== "/merchant/register" ? (
+      ) : (
         <Link
           href={availableRoles.includes("MERCHANT") ? "/merchant" : "/merchant/register"}
           aria-current={pathname?.startsWith("/merchant") ? "page" : undefined}
@@ -64,7 +57,7 @@ export default function BottomNav() {
           <Store size={17} />
           <span>{availableRoles.includes("MERCHANT") ? "Merchant" : "Sell food"}</span>
         </Link>
-      ) : <button type="button" className="nav-item-btn" onClick={() => window.dispatchEvent(new Event("nutrisea:open-assistant"))} aria-label="Ask NutriSea AI"><MessageCircle size={17} /><span>Ask NutriSea</span></button>}
+      )}
 
       <Link
         href="/cart"

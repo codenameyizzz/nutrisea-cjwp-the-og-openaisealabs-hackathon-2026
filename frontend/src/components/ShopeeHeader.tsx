@@ -5,8 +5,10 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useClerk, useUser } from "@clerk/nextjs";
 import {
+  MapPin,
   Utensils,
   ShoppingBag,
+  Wallet,
   Search,
   Scale,
   Camera,
@@ -21,9 +23,8 @@ import { AUTH_ROUTES } from "@/domains/auth/config/auth-routes";
 
 export default function ShopeeHeader() {
   const pathname = usePathname();
-  const isOperationsPage = pathname?.startsWith("/admin") || (pathname?.startsWith("/merchant") && pathname !== "/merchant/register");
   const router = useRouter();
-  const { cartCount, searchQuery, setSearchQuery, logUserAction, availableRoles } = useApp();
+  const { cartCount, setIsSeaBankOpen, searchQuery, setSearchQuery, logUserAction, availableRoles } = useApp();
   const { signOut } = useClerk();
   const { user } = useUser();
   const [isSigningOut, setIsSigningOut] = useState(false);
@@ -73,10 +74,10 @@ export default function ShopeeHeader() {
         <div className="navbar-top-row">
           {/* Logo: NutriSea by Shopeefood with white stroke */}
           <div className="navbar-brand-group">
-            <Link href="/" className="navbar-brand-logo" aria-label="NutriSea home">
+            <Link href="/" className="navbar-brand-logo" aria-label="NutriSea by ShopeeFood home">
               <img
                 src="/assets/NutriSea%20by%20Shopeefood.png"
-                alt="NutriSea"
+                alt="NutriSea by ShopeeFood"
                 className="navbar-brand-img"
               />
             </Link>
@@ -120,7 +121,7 @@ export default function ShopeeHeader() {
               <Utensils size={14} /> Food menu
             </Link>
 
-            {!isOperationsPage && <><Link
+            <Link
               href="/bmi"
               className={`desktop-nav-link ${pathname === "/bmi" ? "active" : ""}`}
             >
@@ -140,9 +141,9 @@ export default function ShopeeHeader() {
             >
               <ShoppingBag size={14} /> Cart
               {cartCount > 0 && <span className="desktop-cart-badge">{cartCount}</span>}
-            </Link></>}
+            </Link>
 
-            {availableRoles.includes("MERCHANT") && <Link
+            <Link
               href={availableRoles.includes("MERCHANT") ? "/merchant" : "/merchant/register"}
               className={`desktop-nav-link ${pathname === "/merchant" ? "active" : ""}`}
               style={{
@@ -154,13 +155,9 @@ export default function ShopeeHeader() {
               }}
             >
               <Store size={14} /> {availableRoles.includes("MERCHANT") ? "Merchant portal" : "Become a merchant"}
-            </Link>}
-            {pathname?.startsWith("/admin") && availableRoles.includes("SHOPEE_ADMIN") && <>
-              <Link href="/admin/merchant-applications" className="desktop-nav-link">Applications</Link>
-              <Link href="/admin/ingredients" className="desktop-nav-link">Ingredients</Link>
-            </>}
+            </Link>
 
-            {availableRoles.includes("SHOPEE_ADMIN") && <Link
+            <Link
               href="/admin"
               className={`desktop-nav-link ${pathname === "/admin" ? "active" : ""}`}
               style={{
@@ -172,8 +169,8 @@ export default function ShopeeHeader() {
                 border: "1px solid rgba(255,255,255,0.2)"
               }}
             >
-              <ShieldCheck size={14} /> Admin
-            </Link>}
+              <ShieldCheck size={14} /> Shopee Admin
+            </Link>
           </nav>
 
           {user ? <div className="desktop-nav-profile" ref={profileRef}>
@@ -234,6 +231,32 @@ export default function ShopeeHeader() {
         </div>
       </div>
 
+      {/* Sub-bar Location & Wallet */}
+      <div className="navbar-sub-bar">
+        <div className="site-container sub-bar-inner">
+          <div className="sub-bar-location">
+            <MapPin size={11} color="#FFFFFF" />
+            <span className="sub-bar-location-text">Demo area: SCBD / Kuningan, South Jakarta</span>
+            <ChevronDown size={10} color="#FFFFFF" />
+          </div>
+
+          <div className="sub-bar-wallet-items">
+            <div className="sub-bar-wallet-item">
+              <Wallet size={11} />
+              <span>Demo balance: <strong>Rp 124.500</strong></span>
+            </div>
+            <button
+              type="button"
+              className="sub-bar-wallet-item sub-bar-reward-button"
+              style={{ color: "#FFEAE4", cursor: "pointer" }}
+              onClick={() => setIsSeaBankOpen(true)}
+              title="View simulated SeaBank rewards"
+            >
+              <span>SeaBank rewards demo</span>
+            </button>
+          </div>
+        </div>
+      </div>
     </header>
   );
 }

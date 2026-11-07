@@ -73,7 +73,7 @@ export default function DemoBar() {
             backgroundColor: "#111827",
             color: "#FFFFFF",
             border: "1px solid rgba(255,255,255,0.2)",
-            borderRadius: "6px",
+            borderRadius: "20px",
             padding: "8px 14px",
             fontSize: "11.5px",
             fontWeight: 600,
@@ -81,9 +81,11 @@ export default function DemoBar() {
             display: "flex",
             alignItems: "center",
             gap: 6,
-            boxShadow: "none"
+            boxShadow: "0 4px 14px rgba(0,0,0,0.35)",
+            backdropFilter: "blur(6px)"
           }}
         >
+          <Sparkles size={13} color="#FFA439" />
           <span>Demo guide</span>
           <ChevronUp size={13} />
         </button>
@@ -105,7 +107,7 @@ export default function DemoBar() {
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid rgba(255,255,255,0.1)", paddingBottom: 6 }}>
             <div style={{ fontSize: "11.5px", fontWeight: 700, color: "#FFA439", display: "flex", alignItems: "center", gap: 5 }}>
               <Clock size={13} />
-              <span>Presenter scenarios · demo only</span>
+              <span>Judging demo scenarios</span>
             </div>
             <button
               onClick={() => setIsExpanded(false)}
@@ -117,7 +119,6 @@ export default function DemoBar() {
             </button>
           </div>
 
-          <p style={{fontSize:12,color:"#E5E7EB",lineHeight:1.5}}>Use a test account. Scenarios change local demo state or open a page; saving and ordering still require confirmation.</p>
           <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
             <button
               onClick={runScenario1}

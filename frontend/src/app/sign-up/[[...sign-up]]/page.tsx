@@ -17,6 +17,8 @@ export default function SignUpPage() {
             priority
           />
         </Link>
+        <h1>Create your NutriSea account</h1>
+        <p>Create an account, then set your budget and food preferences.</p>
         <SignUp
           routing="path"
           path={AUTH_ROUTES.SIGN_UP}
@@ -29,7 +31,6 @@ export default function SignUpPage() {
               borderRadius: "10px",
             },
             elements: {
-              rootBox: styles.clerkRoot,
               card: styles.clerkCard,
               headerTitle: styles.clerkTitle,
               formButtonPrimary: styles.clerkButton,
@@ -39,7 +40,6 @@ export default function SignUpPage() {
             },
           }}
         />
-        <Link href={AUTH_ROUTES.HOME} className={styles.shoppingLink}>Browse food without signing in</Link>
       </div>
     </section>
   );

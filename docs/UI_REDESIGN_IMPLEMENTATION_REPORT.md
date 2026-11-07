@@ -1,5 +1,19 @@
 # UI cleanup implementation report
 
+## Current status: visual redesign rolled back
+
+On 7 November 2026, the owner requested that the visual redesign be reverted. The sections below describe the earlier implementation and are retained as historical evidence, not the current visual state.
+
+Restored the pre-redesign source snapshot for the shared navigation/header/footer, home and food detail, cart, BMI/scanner, authentication and profile presentation, and merchant/admin layouts. Removed the redesign-only commerce and admin styles. English localization remains. Onboarding already matched the saved baseline and was left unchanged.
+
+Retained authentication/bootstrap fixes, backend AI work, profile allergy/goal preservation and stale-save checks, cart state and validation, image fallbacks, ingredient nutrition references, merchant description preview/Apply/Discard and cancellation, and admin confirmations. Unsupported kitchen requests still cannot overwrite catalog preparation notes. Restored merchant metric cards show unavailable values where no real metric exists; the demo draft action does not save or call a model automatically.
+
+Rollback verification: Node 24 `npm run test` **85 passed, 0 failed, 0 skipped**; `npm run typecheck` and `npm run build` passed. `npm run lint` still reports **17 errors and 23 warnings**. Ten browser assertions passed for restored navigation, real catalog loading/search, cart quantities/persistence/removal, BMI validation and rewards dismissal. Captured 24 states at 390, 768 and 1366 pixels with no document-width overflow or broken image elements observed. Authenticated merchant/profile workflows remain unverified. No backend files, migrations, or production data were changed.
+
+Local rollback evidence: `output/playwright/ui-rollback/` (ignored by Git). The rollback is a new commit; earlier pushed history is preserved.
+
+## Earlier implementation record
+
 7 November 2026. Work began on `fix/adaptive-preferences` at `95e1c04`, preserving the existing dirty working tree. The owner then requested the latest merchant feature branch: `origin/feat/new-merchant` was fast-forwarded to `1e0dc23`, including ingredient-provenance commit `667cfe7`. Local UI and other unfinished work were retained using autostash `35a3608`; the backup remains available. This task did not run a push, production database migration, ingredient import, account creation, payment, or paid AI test. A separate upstream-ref update is present in the repository reflog; local UI edits remain uncommitted.
 
 ## Visible result

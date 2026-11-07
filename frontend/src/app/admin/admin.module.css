@@ -1,6 +1,0 @@
-.page { min-width: 0; overflow-wrap: anywhere; }
-.page button, .operations a { min-height: 44px; }
-.operations { display: flex; align-items: center; flex-wrap: wrap; gap: 12px 20px; margin-bottom: 20px; }
-.operations a { display: inline-flex; align-items: center; }
-.operations a:not(:first-child) { color: #a83218; text-decoration: underline; }
-.page :is(button, a, input):focus-visible { outline: 2px solid #a83218; outline-offset: 3px; }

@@ -11,12 +11,12 @@ import {
   MapPin,
   Award,
   Activity,
-  Layers
+  Layers,
+  Wallet
 } from "lucide-react";
 import IngredientGuard from "@/components/ingredients/IngredientGuard";
 import IngredientDialog from "@/components/ingredients/IngredientDialog";
 import { responseJson } from "@/lib/api";
-import styles from "./admin.module.css";
 import { useIngredientApi } from "@/services/ingredient-api";
 import { useApp } from "@/context/AppContext";
 
@@ -174,16 +174,13 @@ function AdminContent() {
   });
 
   return (
-    <div className={styles.page} style={{ padding: "20px 0 60px", color: "#1E293B" }}>
-      <nav className={styles.operations} aria-label="Administration">
-        <Link href="/admin/merchant-applications" className="btn-shopee-primary">Review merchant applications</Link>
-        <Link href="/admin/ingredients">Manage ingredients</Link>
-        <Link href="/">Browse food</Link>
-      </nav>
+    <div style={{ padding: "20px 0 60px", color: "#1E293B" }}>
+      <Link href="/admin/ingredients" className="btn-shopee-primary" style={{ display: "inline-block", marginBottom: 16 }}>Manage ingredients</Link>
+      <Link href="/admin/merchant-applications" className="btn-shopee-primary" style={{ display: "inline-block", marginBottom: 16, marginLeft: 8 }}>Review merchant applications</Link>
       {loadError && <p role="alert">{loadError} Previously loaded data may be out of date.</p>}
       {/* Toast Alert */}
       {toastMessage && (
-        <div role="status" style={{
+        <div style={{
           position: "fixed",
           top: "24px",
           right: "24px",
@@ -226,7 +223,7 @@ function AdminContent() {
                 <ShieldCheck size={22} color="#FFFFFF" />
               </div>
               <h1 style={{ margin: 0, fontSize: "22px", fontWeight: 700, letterSpacing: "-0.01em" }}>
-                NutriSea administration
+                ShopeeFood & NutriSea SuperAdmin Portal
               </h1>
               <span style={{
                 backgroundColor: "rgba(59,130,246,0.2)",
@@ -242,7 +239,7 @@ function AdminContent() {
               </span>
             </div>
             <p style={{ margin: 0, fontSize: "13px", color: "#94A3B8", maxWidth: "680px" }}>
-              Review merchant applications, manage ingredients and inspect outlet records. Catalog flags are not independent hygiene certification.
+              Manage restaurant catalog flags, review reported district demand, and monitor simulated NutriSea rewards. Catalog flags are not independent hygiene certification.
             </p>
           </div>
 
@@ -302,7 +299,6 @@ function AdminContent() {
         gap: "6px",
         marginBottom: "20px",
         borderBottom: "1px solid #E2E8F0",
-        flexWrap: "wrap",
         paddingBottom: "8px"
       }}>
         <button
@@ -323,7 +319,7 @@ function AdminContent() {
           }}
         >
           <Activity size={15} />
-          Catalog overview
+          Platform overview and KPIs
         </button>
 
         <button
@@ -365,7 +361,7 @@ function AdminContent() {
           }}
         >
           <MapPin size={15} />
-          Demand examples
+          District demand map ({heatmap.length})
         </button>
 
         <button
@@ -454,9 +450,72 @@ function AdminContent() {
               </span>
             </div>
 
+            <div style={{
+              backgroundColor: "#FFFFFF",
+              borderRadius: "10px",
+              padding: "18px",
+              boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
+              border: "1px solid #E2E8F0"
+            }}>
+              <span style={{ fontSize: "11px", fontWeight: 700, color: "#64748B", textTransform: "uppercase" }}>
+                Reported merchant commission savings
+              </span>
+              <div style={{ fontSize: "28px", fontWeight: 800, color: "#EE4D2D", marginTop: "4px" }}>
+                {stats?.platform_commission_saved_idr != null ? `Rp ${stats.platform_commission_saved_idr.toLocaleString("en-GB")}` : "Not available"}
+              </div>
+              <span style={{ fontSize: "12px", color: "#10B981", fontWeight: 600 }}>
+                Application estimate, not a bank settlement
+              </span>
+            </div>
           </div>
 
-
+          {/* SeaBank Gamification Integration Banner */}
+          <div style={{
+            backgroundColor: "#F0FDF4",
+            border: "1px solid #BBF7D0",
+            borderRadius: "10px",
+            padding: "18px 22px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            flexWrap: "wrap",
+            gap: "12px",
+            marginBottom: "24px"
+          }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+              <div style={{
+                backgroundColor: "#16A34A",
+                color: "#FFFFFF",
+                borderRadius: "50%",
+                padding: "8px",
+                display: "flex"
+              }}>
+                <Wallet size={20} />
+              </div>
+              <div>
+                <h4 style={{ margin: "0 0 2px 0", fontSize: "15px", fontWeight: 700, color: "#166534" }}>
+                  NutriSea and SeaBank reward simulation
+                </h4>
+                <p style={{ margin: 0, fontSize: "12px", color: "#15803D" }}>
+                  Prototype rewards are recorded in NutriSea. No money is transferred to a SeaBank account.
+                </p>
+              </div>
+            </div>
+            <Link
+              href="/"
+              style={{
+                backgroundColor: "#16A34A",
+                color: "#FFFFFF",
+                padding: "7px 14px",
+                borderRadius: "6px",
+                fontSize: "12px",
+                fontWeight: 600,
+                textDecoration: "none"
+              }}
+            >
+              Open customer view
+            </Link>
+          </div>
         </div>
       )}
 
@@ -498,7 +557,7 @@ function AdminContent() {
               <input
                 type="search"
                 aria-label="Search outlets, brands, or areas"
-                placeholder="Search outlets, brands, or areas..."
+              placeholder="Search outlets, brands, or areas..."
                 value={searchFilter}
                 onChange={(e) => setSearchFilter(e.target.value)}
                 style={{
@@ -629,16 +688,16 @@ function AdminContent() {
         <div>
           <div style={{ marginBottom: "16px" }}>
             <h3 style={{ margin: "0 0 4px 0", fontSize: "16px", fontWeight: 700 }}>
-              Optional demand examples
+              Reported meal demand and supply gaps by district
             </h3>
             <p style={{ margin: 0, fontSize: "12px", color: "#64748B" }}>
-              This endpoint mixes stored records with fixed demonstration examples. Treat this content as inspiration, not verified customer demand or a sales forecast.
+              This endpoint includes fixed demonstration examples. Treat demand figures as examples, not a verified sales forecast or a measure of nutritional deficiency.
             </p>
           </div>
 
           <div style={{
             display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 320px), 1fr))",
+            gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
             gap: "18px"
           }}>
             {heatmap.map((item, idx) => (
@@ -668,7 +727,12 @@ function AdminContent() {
                       {item.opportunity_detected.replace(/_/g, " ")}
                     </h4>
                   </div>
-
+                  <div style={{ textAlign: "right" }}>
+                    <div style={{ fontSize: "20px", fontWeight: 800, color: "#EE4D2D" }}>
+                      {item.unmet_demand_count}
+                    </div>
+                    <div style={{ fontSize: "10px", color: "#64748B" }}>Example searches per day</div>
+                  </div>
                 </div>
 
                 <p style={{ fontSize: "12px", color: "#475569", lineHeight: "1.5", margin: "10px 0" }}>
@@ -699,7 +763,18 @@ function AdminContent() {
                   </div>
                 </div>
 
-
+                <div style={{
+                  marginTop: "14px",
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  fontSize: "11px",
+                  color: "#10B981",
+                  fontWeight: 600
+                }}>
+                  <span>Example order increase:</span>
+                  <span style={{ fontSize: "14px", fontWeight: 800 }}>+{item.estimated_order_boost_pct}%</span>
+                </div>
               </div>
             ))}
           </div>
@@ -802,7 +877,7 @@ function AdminContent() {
       )}
       {flagReview && <IngredientDialog title={`${flagReview.is_verified_hygiene ? "Remove" : "Enable"} catalog hygiene flag?`} busy={!!togglingId} onClose={() => setFlagReview(null)}>
         <p>{flagReview.name}: this changes an application catalog flag. It does not certify food safety or confirm an independent inspection.</p>
-        <div className={styles.operations}>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 12, marginTop: 20 }}>
           <button disabled={!!togglingId} onClick={() => setFlagReview(null)}>Cancel</button>
           <button disabled={!!togglingId} onClick={() => void handleToggleHygiene(flagReview.id, flagReview.is_verified_hygiene)}>{togglingId ? "Saving..." : "Confirm flag change"}</button>
         </div>

@@ -1,9 +1,7 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
-import { MessageCircle, X, Send, RefreshCw } from "lucide-react";
-import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { Sparkles, X, Send, Bot, RefreshCw } from "lucide-react";
 import { ACCOUNT_UPDATED } from "@/services/account-session";
 import { useUser, useAuth } from "@clerk/nextjs";
 import { API_BASE_URL, responseJson } from "@/lib/api";
@@ -24,8 +22,7 @@ const fromSaved = (m: SavedMessage): Message => ({ id: String(m.id), sender: m.r
   time: new Date(m.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) });
 const QUICK_PROMPTS = ["My lunch budget is now Rp60,000", "I'm trying to eat less fried food", "No rice today"];
 
-export default function AiAssistantModal({ inlineTrigger = false }: { inlineTrigger?: boolean }) {
-  const pathname = usePathname();
+export default function AiAssistantModal() {
   const [isOpen, setIsOpen] = useState(false);
   const [inputMessage, setInputMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -52,16 +49,10 @@ export default function AiAssistantModal({ inlineTrigger = false }: { inlineTrig
   const triggerRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
-    const open = () => setIsOpen(true);
-    window.addEventListener("nutrisea:open-assistant", open);
-    return () => window.removeEventListener("nutrisea:open-assistant", open);
-  }, []);
-
-  useEffect(() => {
     if (!isOpen) return;
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
-    const trigger = document.activeElement as HTMLElement | null;
+    const trigger = triggerRef.current;
     dialogRef.current?.querySelector<HTMLButtonElement>("button")?.focus();
     const handleKeys = (event: KeyboardEvent) => {
       if (event.key === "Escape") { setIsOpen(false); return; }
@@ -164,24 +155,24 @@ export default function AiAssistantModal({ inlineTrigger = false }: { inlineTrig
       <button
         ref={triggerRef}
         onClick={() => setIsOpen(true)}
-        className={inlineTrigger ? "ai-inline-btn" : "ai-floating-btn"}
+        className="ai-floating-btn"
         aria-label="Ask NutriSea AI"
         aria-expanded={isOpen}
         aria-controls="nutrisea-assistant"
         style={{
-          position: inlineTrigger ? "static" : "fixed",
+          position: "fixed",
           bottom: "78px",
           right: "16px",
-          backgroundColor: "#C43E20",
+          backgroundColor: "#EE4D2D",
           color: "#FFFFFF",
           border: "none",
-          borderRadius: "8px",
+          borderRadius: "50px",
           padding: "10px 16px",
           minHeight: "44px",
           display: "flex",
           alignItems: "center",
           gap: "8px",
-          boxShadow: "0 2px 6px rgba(0,0,0,.12)",
+          boxShadow: "0 4px 12px rgba(238, 77, 45, 0.3)",
           cursor: "pointer",
           zIndex: 900,
           fontSize: "13px",
@@ -189,7 +180,7 @@ export default function AiAssistantModal({ inlineTrigger = false }: { inlineTrig
           transition: "transform 0.15s ease"
         }}
       >
-        <MessageCircle size={20} aria-hidden="true" />
+        <Sparkles size={20} aria-hidden="true" />
         <span>Ask NutriSea</span>
       </button>
 
@@ -205,9 +196,7 @@ export default function AiAssistantModal({ inlineTrigger = false }: { inlineTrig
             backgroundColor: "rgba(0, 0, 0, 0.4)",
             zIndex: 9999,
             display: "flex",
-            justifyContent: user ? "flex-end" : "center",
-            alignItems: user ? "stretch" : "center",
-            padding: user ? 0 : 16
+            justifyContent: "flex-end"
           }}
           onClick={() => setIsOpen(false)}
         >
@@ -221,10 +210,7 @@ export default function AiAssistantModal({ inlineTrigger = false }: { inlineTrig
             style={{
               width: "100%",
               maxWidth: "420px",
-              height: user ? "100dvh" : "auto",
-              maxHeight: "100dvh",
-              borderRadius: user ? 0 : 8,
-              overflow: "hidden",
+              height: "100%",
               backgroundColor: "#FFFFFF",
               display: "flex",
               flexDirection: "column",
@@ -236,7 +222,7 @@ export default function AiAssistantModal({ inlineTrigger = false }: { inlineTrig
             {/* Header */}
             <div
               style={{
-                backgroundColor: "#C43E20",
+                backgroundColor: "#EE4D2D",
                 color: "#FFFFFF",
                 padding: "14px 16px",
                 display: "flex",
@@ -253,7 +239,7 @@ export default function AiAssistantModal({ inlineTrigger = false }: { inlineTrig
                     display: "flex"
                   }}
                 >
-                  <MessageCircle size={18} color="#FFFFFF" />
+                  <Bot size={18} color="#FFFFFF" />
                 </div>
                 <div>
                   <h2 id="nutrisea-assistant-title" style={{ fontSize: "18px", fontWeight: 600 }}>
@@ -281,7 +267,7 @@ export default function AiAssistantModal({ inlineTrigger = false }: { inlineTrig
             </div>
 
             {/* Quick Prompts Bar */}
-            {user && <div
+            <div
               style={{
                 padding: "10px 12px",
                 backgroundColor: "#FFF9F6",
@@ -311,13 +297,12 @@ export default function AiAssistantModal({ inlineTrigger = false }: { inlineTrig
                   {prompt}
                 </button>
               ))}
-            </div>}
+            </div>
 
             {/* Chat Messages */}
             <div ref={scrollRef} onScroll={event => { const top = event.currentTarget.scrollTop; if (top < 8 && top < lastScrollTop.current) revealOlder(); lastScrollTop.current = top; }}
               style={{
-                flex: user ? 1 : undefined,
-                minHeight: 0,
+                flex: 1,
                 overflowY: "auto",
                 padding: "16px 14px",
                 display: "flex",
@@ -326,7 +311,7 @@ export default function AiAssistantModal({ inlineTrigger = false }: { inlineTrig
                 backgroundColor: "#F8F9FA"
               }}
             >
-              {!user && <><p>Sign in to discuss your food preferences and saved budget.</p><Link className="btn-shopee-primary assistant-sign-in" href={`/sign-in?redirect_url=${encodeURIComponent(pathname || "/")}`}>Sign in to chat</Link></>}
+              {!user && <p>Please sign in to use your personal assistant.</p>}
               {user && !historyReady && !error && <p role="status">Loading your conversation...</p>}
               {visibleCount < messages.length && <button type="button" onClick={revealOlder}>Show older messages</button>}
               {messages.slice(-visibleCount).map((msg) => (
@@ -393,7 +378,7 @@ export default function AiAssistantModal({ inlineTrigger = false }: { inlineTrig
             </div>
 
             {/* Chat Input */}
-            {user && <form
+            <form
               onSubmit={(e) => {
                 e.preventDefault();
                 handleSendMessage();
@@ -443,7 +428,7 @@ export default function AiAssistantModal({ inlineTrigger = false }: { inlineTrig
               >
                 <Send size={15} />
               </button>
-            </form>}
+            </form>
           </div>
         </div>
       )}

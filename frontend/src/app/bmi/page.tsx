@@ -2,7 +2,10 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
+import {
+  ArrowLeft,
+  Wallet
+} from "lucide-react";
 import { useApp } from "@/context/AppContext";
 import { useAuth } from "@clerk/nextjs";
 import { useAccountSession } from "@/context/AccountSessionContext";
@@ -364,13 +367,12 @@ export default function BmiPage() {
               </div>
             </div>
 
-            <div className={styles.energySummary}>
-              <span>Estimated daily energy</span>
-              <strong>{tdee} kcal</strong>
-            </div>
-            <details className={styles.secondary}>
-              <summary>Nutrition details and calculation</summary>
-              <div className={`bmi-nutrients-grid ${styles.nutritionDetails}`}>
+            {/* Nutrients Grid */}
+            <div className="bmi-nutrients-grid">
+              <div className="bmi-nutrient-item">
+                <span className="bmi-nutrient-val" style={{ color: "#b43519" }}>{tdee} kcal</span>
+                <span className="bmi-nutrient-lbl">Estimated daily energy</span>
+              </div>
               <div className="bmi-nutrient-item">
                 <span className="bmi-nutrient-val" style={{ color: "#263238" }}>
                   {Math.round(localWeight * (localGoal === "otot" ? 1.6 : 1.2))}g
@@ -407,13 +409,11 @@ export default function BmiPage() {
                 </div>
               </div>
             </div>
-            <p className={styles.explanation}>Energy estimates use the Mifflin-St Jeor equation, an activity factor, and the app&apos;s goal adjustments. Portions and protein are estimates based on these settings; your needs may differ.</p>
-            </details>
           </div>}
 
-          {!account?.profile && <p className={styles.explanation}>The current values are a demo until you enter and save your own profile.</p>}
+          <p className={styles.notice}>Energy estimates use the Mifflin-St Jeor equation, an activity factor, and the app&apos;s goal adjustments. Portions and protein are estimates based on these settings; your needs may differ. Demo data has not been saved as your profile.</p>
           <button className="btn-shopee-primary" disabled={!isInputValid || isSaving} onClick={handleSave}>{isSaving ? "Saving..." : "Save profile"}</button>
-          <details className={styles.secondary}><summary>Example plate portions</summary>
+          <details className={styles.secondary}><summary>Additional guidance and simulated features</summary>
           {/* Isi Piringku Guidelines */}
           <div className="balance-card">
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
@@ -454,6 +454,32 @@ export default function BmiPage() {
             </div>
           </div>
 
+          {/* SeaBank Wellness Saver Card Integration */}
+          <div className="seabank-card">
+            <div className="seabank-card-header">
+              <div className="seabank-brand">
+                <Wallet size={16} />
+                <span>SeaBank Wellness Saver</span>
+              </div>
+              <span className="seabank-badge">Feature simulation</span>
+            </div>
+
+            <p className="seabank-desc">
+              These promotions are examples for demonstration only. No interest rates are changed and no payments or funds are sent to SeaBank.
+            </p>
+
+            <div className="seabank-rewards-row">
+              <div className="seabank-reward-chip">
+                Example interest: <strong>+0.5% p.a.</strong>
+              </div>
+              <div className="seabank-reward-chip">
+                Example meal cashback: <strong>25% daily</strong>
+              </div>
+              <div className="seabank-reward-chip">
+                Example transfer fee: <strong>Rp 0</strong>
+              </div>
+            </div>
+          </div>
           </details>
         </div>
       </div>

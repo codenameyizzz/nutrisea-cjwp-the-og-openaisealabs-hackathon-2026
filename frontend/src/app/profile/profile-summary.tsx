@@ -28,11 +28,17 @@ export default function ProfileSummary() {
     <section className={styles.page}>
       <div className={styles.card}>
         <p className={styles.eyebrow}>NUTRISEA ACCOUNT</p>
-        <h1>Your profile</h1>
         <p className={styles.intro}>
           Review your account information and health preferences.
         </p>
 
+        <div style={{ padding: "20px 0" }}>
+          <h2>Business and merchant access</h2>
+          <p>Manage your business with the same account. You can still shop as a customer.</p>
+          <Link href={availableRoles.includes("MERCHANT") ? "/merchant" : "/merchant/register"} className="btn-shopee-primary" style={{ display: "inline-block", marginTop: 12 }}>
+            {availableRoles.includes("MERCHANT") ? "Open merchant dashboard" : "Register as a merchant / check application"}
+          </Link>
+        </div>
         <dl className={styles.summary}>
           <div className={styles.summarySection}>
             <h2>Account information</h2>
@@ -105,13 +111,6 @@ export default function ProfileSummary() {
             )}
           </div>
         </dl>
-        <div className={styles.business}>
-          <h2>Business access</h2>
-          <p>You can manage a business and keep shopping with this account.</p>
-          <Link href={availableRoles.includes("MERCHANT") ? "/merchant" : "/merchant/register"}>
-            {availableRoles.includes("MERCHANT") ? "Open merchant dashboard" : "Register a business or check your application"}
-          </Link>
-        </div>
       </div>
     </section>
   );

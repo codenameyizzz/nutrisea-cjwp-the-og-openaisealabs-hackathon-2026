@@ -1,7 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Suspense } from "react";
 import "./globals.css";
-import "./commerce-shell.css";
 import { ClerkProvider } from "@clerk/nextjs";
 import { enUS } from "@clerk/localizations";
 import { AppProvider } from "@/context/AppContext";

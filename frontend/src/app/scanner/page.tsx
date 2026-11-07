@@ -18,10 +18,10 @@ const SAMPLES = [
 export default function ScannerPage() {
   const router = useRouter();
   const { userId, getToken } = useAuth();
-  const [sample, setSample] = useState<(typeof SAMPLES)[number] | null>(null);
+  const [sample, setSample] = useState(SAMPLES[0]);
   const [imageData, setImageData] = useState<string | null>(null);
   const [imageMimeType, setImageMimeType] = useState<string | null>(null);
-  const [preview, setPreview] = useState<string | null>(null);
+  const [preview, setPreview] = useState(SAMPLES[0].img);
   const [analysis, setAnalysis] = useState<ScanAnalysis | null>(null);
   const [isReading, setIsReading] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -51,17 +51,17 @@ export default function ScannerPage() {
     reader.onload = () => {
       if (version !== selectionVersion.current) return;
       const data = String(reader.result);
-      setPreview(data); setImageData(data.split(",")[1]); setImageMimeType(file.type); setSample(null); setIsReading(false);
+      setPreview(data); setImageData(data.split(",")[1]); setImageMimeType(file.type); setIsReading(false);
     };
     reader.readAsDataURL(file);
   };
 
   const analyze = async () => {
-    if (busy.current || isReading || (!imageData && !sample)) return;
+    if (busy.current || isReading) return;
     busy.current = true; setIsAnalyzing(true); resetResult();
     try {
       let result: ScanAnalysis;
-      if (!imageData && sample) {
+      if (!imageData) {
         result = { detected_dish: sample.name, qualitative_kcal_estimate: sample.kcal, preparation_style: null,
           protein_g: null, carbs_g: null, fat_g: null, sodium_mg: null, source: "demo" };
       } else {
@@ -99,42 +99,36 @@ export default function ScannerPage() {
   return <div className={styles.page}>
     <button className={styles.back} onClick={() => router.push("/")}><ArrowLeft size={18} aria-hidden="true" /> Back to menu</button>
     <header><h1>Food photo analysis</h1><p>Upload a photo, review the estimates, then confirm your meal details.</p></header>
-    <p className={styles.description}>Results are estimates based on the photo. The food type, portion size, and nutrient content may differ from the actual meal.</p>
+    <p className={styles.notice}>Results are estimates based on the photo. The food type, portion size, and nutrient content may differ from the actual meal.</p>
     {error && <p className={styles.error} role="alert">{error}</p>}
     <div className={styles.grid}>
       <section className={styles.card} aria-labelledby="photo-title">
         <h2 id="photo-title"><Camera size={20} aria-hidden="true" /> Meal photo</h2>
-        {preview ? (
-          // User-selected data URLs need the native image element.
-          // eslint-disable-next-line @next/next/no-img-element
-          <img className={styles.preview} src={preview} alt={imageData ? "Your uploaded meal photo" : "Illustrative image for a demo sample"} />
-        ) : <div className={styles.uploadPlaceholder}><Camera size={32} aria-hidden="true" /><p>Choose a clear photo of your meal.</p></div>}
+        {/* User-selected data URLs need the native image element. */}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img className={styles.preview} src={preview} alt={imageData ? "Your uploaded meal photo" : "Illustrative image for a demo sample"} />
         <p id="photo-help">Upload a JPG, PNG, or WebP photo (up to 8 MB)</p>
         <input ref={fileInput} id="meal-photo" type="file" hidden accept="image/jpeg,image/png,image/webp" disabled={isAnalyzing || isSaving || isReading} onChange={event => chooseImage(event.target.files?.[0])} />
-        <button className={imageData ? styles.upload : styles.primary} aria-describedby="photo-help" disabled={isAnalyzing || isSaving || isReading} onClick={() => fileInput.current?.click()}>{isReading ? "Reading photo..." : imageData ? "Change photo" : "Upload meal photo"}</button>
-        {imageData && <button className={styles.primary} disabled={isAnalyzing || isSaving || isReading} onClick={analyze}>
-          {isAnalyzing && <RefreshCw size={18} aria-hidden="true" />}
-          {isAnalyzing ? "Analyzing photo..." : "Estimate nutrition"}
-        </button>}
-        <details className={styles.details}><summary>Try a demo sample</summary>
+        <button className={styles.upload} aria-describedby="photo-help" disabled={isAnalyzing || isSaving || isReading} onClick={() => fileInput.current?.click()}>{imageData ? "Change photo" : "Choose a photo from your device"}</button>
+        <details><summary>View demo samples</summary>
           <p>The illustrative images and sample values are not AI analysis results or actual portion measurements.</p>
-          <div className={styles.samples}>{SAMPLES.map(item => <button key={item.name} aria-pressed={!imageData && item.name === sample?.name} disabled={isAnalyzing || isSaving || isReading} onClick={() => { selectionVersion.current++; setSample(item); setPreview(item.img); setImageData(null); setImageMimeType(null); resetResult(); }}>{item.name}</button>)}</div>
-          {sample && !imageData && <button className={styles.upload} disabled={isAnalyzing || isSaving || isReading} onClick={analyze}>View demo results</button>}
+          <div className={styles.samples}>{SAMPLES.map(item => <button key={item.name} aria-pressed={!imageData && item.name === sample.name} disabled={isAnalyzing || isSaving || isReading} onClick={() => { selectionVersion.current++; setSample(item); setPreview(item.img); setImageData(null); setImageMimeType(null); resetResult(); }}>{item.name}</button>)}</div>
         </details>
+        <button className={styles.primary} disabled={isAnalyzing || isSaving || isReading} onClick={analyze}>
+          {isAnalyzing && <RefreshCw size={18} aria-hidden="true" />}
+          {isReading ? "Reading photo..." : isAnalyzing ? "Analyzing photo..." : imageData ? "Estimate nutrition" : "View demo results"}
+        </button>
       </section>
       <section ref={resultRef} tabIndex={-1} className={styles.card} aria-labelledby="analysis-title">
         <h2 id="analysis-title">{analysis?.source === "demo" ? "Demo estimates" : "AI photo analysis results"}</h2>
         {!analysis ? <p role="status">{isAnalyzing ? "Your photo is being analyzed. No meal log has been saved." : "Choose a photo and start analysis. Results will appear here for you to review."}</p> : <>
-          <p className={styles.description}>{analysis.source === "demo" ? "Demo sample data. This cannot be saved as a meal log." : "AI photo estimate, not a laboratory measurement. Review before saving."}</p>
+          <p className={styles.notice}>{analysis.source === "demo" ? "Source: demo sample data. This cannot be saved as a meal log." : "Source: AI estimates from a photo. These results are not a meal log yet and are not laboratory measurements."}</p>
           <label htmlFor="scan-dish">Food name (editable)</label>
           <input id="scan-dish" value={dish} disabled={saved || isSaving} onChange={event => { setDish(event.target.value); setConfirmed(false); }} />
           <label htmlFor="scan-calories">Estimated energy (kcal)</label>
           <input id="scan-calories" type="number" min="0" step="1" placeholder="Unavailable" value={calories} disabled={saved || isSaving} onChange={event => { setCalories(event.target.value); setConfirmed(false); }} />
-          <details className={styles.details}><summary>Nutrition details</summary>
-            <dl className={styles.nutrients}>{([['Protein', analysis.protein_g, 'g'], ['Carbohydrates', analysis.carbs_g, 'g'], ['Fat', analysis.fat_g, 'g'], ['Sodium', analysis.sodium_mg, 'mg']] as const).map(([name,value,unit]) => <div key={name}><dt>{name}</dt><dd>{value === null ? "Unavailable" : `${value} ${unit}`}</dd></div>)}</dl>
-            <p className={styles.description}>Missing measurements stay unavailable; they are not filled with zero.</p>
-          </details>
-          {!canLogAnalysis(analysis, calories) && analysis.source !== "demo" && <p className={styles.description}>Logging requires complete nutrition data. These estimates cannot be saved yet.</p>}
+          <dl className={styles.nutrients}>{([['Protein', analysis.protein_g, 'g'], ['Carbohydrates', analysis.carbs_g, 'g'], ['Fat', analysis.fat_g, 'g'], ['Sodium', analysis.sodium_mg, 'mg']] as const).map(([name,value,unit]) => <div key={name}><dt>{name}</dt><dd>{value === null ? "Unavailable" : `${value} ${unit}`}</dd></div>)}</dl>
+          {!canLogAnalysis(analysis, calories) && <p className={styles.notice}>Logging is unavailable because nutrition data is incomplete or these are demo results. Missing values will not be filled with zero.</p>}
           <label className={styles.confirm}><input type="checkbox" checked={confirmed} disabled={saved || isSaving || !canLogAnalysis(analysis,calories)} onChange={event => setConfirmed(event.target.checked)} /> I have reviewed the food name and estimated energy.</label>
           <button className={styles.primary} disabled={!confirmed || !dish.trim() || !canLogAnalysis(analysis, calories) || isSaving || saved} onClick={saveMeal}>{isSaving ? "Saving..." : saved ? "Meal log saved" : "Save meal log"}</button>
           {saved && <p role="status">Your meal log was saved. This does not automatically change all recommendations or meal targets.</p>}
